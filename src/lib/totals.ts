@@ -88,11 +88,12 @@ export function computeTotals(receipt: Receipt): Totals {
     a.personName.localeCompare(b.personName),
   );
 
-  if (people.length > 0 && claimedItemCents > 0 && feeTotalCents > 0) {
-    const fees = allocateProportional(
-      feeTotalCents,
-      people.map((row) => row.itemCents),
-    );
+  const feeWeights = [
+    ...people.map((row) => row.itemCents),
+    itemSubtotalCents - claimedItemCents,
+  ];
+  if (feeTotalCents > 0 && itemSubtotalCents > 0) {
+    const fees = allocateProportional(feeTotalCents, feeWeights);
     people.forEach((row, idx) => {
       row.feeCents = fees[idx] ?? 0;
     });
@@ -124,7 +125,7 @@ export function allocateProportional(total: number, weights: number[]): number[]
   if (sum <= 0 || total === 0) return weights.map(() => 0);
   const exact = weights.map((w) => (total * w) / sum);
   const floors = exact.map(Math.floor);
-  let rem = total - floors.reduce((a, b) => a + b, 0);
+  const rem = total - floors.reduce((a, b) => a + b, 0);
   const order = exact
     .map((value, i) => ({ i, frac: value - floors[i] }))
     .sort((a, b) => b.frac - a.frac);

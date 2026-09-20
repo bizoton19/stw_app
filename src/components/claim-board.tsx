@@ -292,7 +292,9 @@ export function ClaimBoard({
                 disabled={busy || !getHostToken(receipt.id)}
                 onClick={() => void closeOut()}
               >
-                Close claiming & split
+                {remainingItems.length > 0
+                  ? "Close claiming — leftovers on the host"
+                  : "Close claiming & split"}
               </Button>
             ) : (
               <Button

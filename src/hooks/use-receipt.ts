@@ -24,7 +24,7 @@ export function useReceipt(id: string) {
 
   useEffect(() => {
     let cancelled = false;
-    void refresh();
+    void Promise.resolve().then(() => refresh());
 
     const source = new EventSource(`/api/receipts/${id}/live`);
     source.onmessage = (event) => {

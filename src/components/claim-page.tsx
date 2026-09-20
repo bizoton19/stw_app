@@ -20,17 +20,21 @@ export function ClaimPage({
 
   useEffect(() => {
     ensureDemoHost(hostQuery);
-    setGuest(getGuest(receiptId));
-    setIsHost(Boolean(getHostToken(receiptId)) || hostQuery);
+    const identity = getGuest(receiptId);
+    const host = Boolean(getHostToken(receiptId)) || hostQuery;
+    queueMicrotask(() => {
+      setGuest(identity);
+      setIsHost(host);
+    });
   }, [receiptId, hostQuery]);
 
   if (error && !receipt) {
     return (
       <PhoneShell eyebrow="Missing check">
         <div className="px-5 py-10 text-center">
-          <h1 className="font-heading text-2xl font-semibold">We can't find that tab</h1>
+          <h1 className="font-heading text-2xl font-semibold">We cannot find that tab</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Links live in this server's memory. If the preview restarted, start a
+            Links live in this server&apos;s memory. If the preview restarted, start a
             new receipt or open the sample at /r/demo.
           </p>
         </div>

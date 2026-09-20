@@ -109,9 +109,10 @@ async function withLock<T>(id: string, fn: () => T | Promise<T>): Promise<T> {
 }
 
 function toPublic(receipt: InternalReceipt): PublicReceipt {
-  const claims: Claim[] = receipt.claims.map(
-    ({ ownerToken: _token, ...claim }) => claim,
-  );
+  const claims: Claim[] = receipt.claims.map(({ ownerToken, ...claim }) => {
+    void ownerToken;
+    return claim;
+  });
   const publicReceipt: Receipt = {
     id: receipt.id,
     status: receipt.status,

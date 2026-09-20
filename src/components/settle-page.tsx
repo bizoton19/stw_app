@@ -10,7 +10,7 @@ export function SettlePage({ receiptId }: { receiptId: string }) {
   if (error && !receipt) {
     return (
       <PhoneShell eyebrow="Missing check">
-        <p className="px-5 py-10 text-sm text-muted-foreground">That tab isn't here anymore.</p>
+        <p className="px-5 py-10 text-sm text-muted-foreground">That tab is not here anymore.</p>
       </PhoneShell>
     );
   }

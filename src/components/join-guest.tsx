@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome } from "@/components/interview-chrome";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ export function JoinGuest({
   restaurant: string;
   onJoined: (guest: GuestIdentity) => void;
 }) {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
 
@@ -26,7 +28,7 @@ export function JoinGuest({
       kicker={restaurant || "You're at the table"}
       title="What should we call you?"
       onBack={() => {
-        window.location.href = "/";
+        router.push("/");
       }}
       footer={
         <ContinueButton

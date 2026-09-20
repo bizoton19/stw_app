@@ -318,7 +318,7 @@ export function HostInterview() {
             <div className="absolute inset-3 animate-bounce rounded-full bg-primary/90" />
           </div>
           <p className="mt-6 max-w-xs text-sm text-muted-foreground">
-            The scan is a stub right now — you'll review the reference bar tab
+            The scan is a stub right now — you will review the reference bar tab
             next and can fix any line.
           </p>
         </div>
@@ -617,7 +617,7 @@ export function HostInterview() {
           className="h-12 rounded-xl text-base"
         />
         <p className="mt-4 text-xs text-muted-foreground">
-          We'll generate a pre-filled message. Nobody gets charged from this
+          We will generate a pre-filled message. Nobody gets charged from this
           app — they still tap send themselves.
         </p>
       </InterviewChrome>

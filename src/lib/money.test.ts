@@ -75,6 +75,35 @@ describe("fee split", () => {
     assert.equal(alex.totalCents + sam.totalCents, 52400);
   });
 
+  it("does not dump all fees on the first person while the check is still open", () => {
+    const receipt: Receipt = {
+      id: "t2",
+      status: "open",
+      restaurant: "The Bar",
+      createdAt: "",
+      items: [
+        { id: "wine", name: "BQ Wine Package ($60)", qty: 7, totalCents: 42000 },
+        { id: "juice", name: "Apple Juice", qty: 1, totalCents: 400 },
+      ],
+      fees: [{ id: "tax", name: "Tax", amountCents: 10000 }],
+      claims: [
+        {
+          id: "c2",
+          itemId: "juice",
+          personName: "Sam",
+          units: 1,
+          createdAt: "2026-01-01T00:00:01.000Z",
+        },
+      ],
+    };
+    const totals = computeTotals(receipt);
+    const sam = totals.people.find((p) => p.personName === "Sam");
+    assert.ok(sam);
+    assert.equal(sam.itemCents, 400);
+    assert.ok(sam.feeCents < 1000);
+    assert.equal(sam.feeCents + Math.round((10000 * 42000) / 42400), 10000);
+  });
+
   it("keeps proportional remainders exact", () => {
     assert.deepEqual(allocateProportional(100, [1, 1, 1]), [34, 33, 33]);
     assert.equal(sumCents(allocateProportional(32735, [42400, 47180])), 32735);

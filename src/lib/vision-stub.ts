@@ -12,11 +12,14 @@ function delayMs(): number {
  * Stub receipt parser. Ignores image bytes and returns the reference bar tab.
  * Swap this module for a real vision call when VISION_MODEL_API_KEY exists.
  */
-export async function parseReceiptStub(_image?: {
-  name: string;
-  type: string;
-  size: number;
-}): Promise<ParseResult> {
+export async function parseReceiptStub(
+  _image?: {
+    name: string;
+    type: string;
+    size: number;
+  } | null,
+): Promise<ParseResult> {
+  void _image;
   await new Promise((r) => setTimeout(r, delayMs()));
   return structuredClone(SAMPLE_PARSE);
 }
