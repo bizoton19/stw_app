@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { motion } from "motion/react";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, QuietButton } from "@/components/interview-chrome";
@@ -111,7 +112,16 @@ export function ClaimBoard({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
-        <div className="mb-5 flex items-start justify-between gap-3 pt-2">
+        <div className="-ml-2 flex h-11 items-center">
+          <Link
+            href="/"
+            aria-label="Back"
+            className="pressable flex size-11 items-center justify-center rounded-full"
+          >
+            <ChevronLeft className="size-6" />
+          </Link>
+        </div>
+        <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <p className="text-[13px] font-medium text-ink-soft">
               {receipt.restaurant || "The check"}

@@ -14,7 +14,11 @@ export function PhoneShell({
           <WineMark className="size-6" />
           <p className="text-[13px] font-medium tracking-tight">Split the Wine</p>
           {meta ? (
-            <p className="ml-auto text-[11px] font-medium tabular-nums text-ink-soft">
+            <p
+              className={`ml-auto text-[11px] font-medium tabular-nums ${
+                meta === "Live" ? "text-primary" : "text-ink-soft"
+              }`}
+            >
               {meta}
             </p>
           ) : null}

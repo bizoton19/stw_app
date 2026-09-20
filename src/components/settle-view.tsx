@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { QuietButton } from "@/components/interview-chrome";
 import { centsToLabel } from "@/lib/money";
 import { computeTotals } from "@/lib/totals";
@@ -31,7 +32,16 @@ export function SettleView({ receipt }: { receipt: PublicReceipt }) {
   const leftover = totals.unclaimedItemCents > 0 && receipt.status !== "finalized";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+    <div className="flex min-h-0 flex-1 flex-col px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="-ml-2 flex h-11 items-center">
+        <Link
+          href={`/r/${receipt.id}`}
+          aria-label="Back to the claim board"
+          className="pressable flex size-11 items-center justify-center rounded-full"
+        >
+          <ChevronLeft className="size-6" />
+        </Link>
+      </div>
       <p className="text-[13px] font-medium text-ink-soft">
         {receipt.restaurant || "The check"}
       </p>
