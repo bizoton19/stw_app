@@ -43,7 +43,7 @@ const SYSTEM_PROMPT = `You extract restaurant/bar receipts for a check-splitting
 
 Return JSON only, matching the schema.
 - items: orderable food and drink lines. name, whole-number quantity, line total (not unit price). If quantity is missing, use 1.
-- fees: tax, VAT, gratuity/tip/service, admin, delivery, surcharges only.
+- fees: tax, VAT, gratuity/tip/service, admin, delivery, surcharges only when they are ADDED on top of the item subtotal. If the printed total equals the item sum (VAT-inclusive prices), omit included tax from fees.
 - Never put Subtotal, Total, Grand Total, Amount Due, Change, Cash, or card-tender lines in items or fees.
 - Numbers only: no currency symbols, no thousands separators.
 - If the image is not a receipt or is unreadable, return restaurant as "" and empty items and fees arrays.`;
@@ -102,6 +102,7 @@ export async function parseReceiptVision(image: {
       body: JSON.stringify({
         model,
         temperature: 0,
+        max_tokens: 2048,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
