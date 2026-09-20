@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addClaim, getPublicReceipt, getTotals, resetStoreForTests } from "./store";
+import { addClaim, addClaims, getPublicReceipt, getTotals, resetStoreForTests } from "./store";
 
 describe("claiming", () => {
   it("rejects overclaiming when concurrent requests race the last units", async () => {
@@ -45,5 +45,41 @@ describe("claiming", () => {
     assert.equal(totals.people.length, 1);
     assert.equal(totals.people[0].totalCents, totals.grandTotalCents);
     assert.equal(totals.grandTotalCents, 122315);
+  });
+
+  it("claims several lines together and leaves remaining unchanged if the batch would overclaim", async () => {
+    resetStoreForTests();
+    const demo = getPublicReceipt("demo");
+    const juice = demo.items.find((item) => item.name === "Apple Juice");
+    const botanist = demo.items.find((item) => item.name === "The Botanist");
+    assert.ok(juice);
+    assert.ok(botanist);
+    const result = await addClaims("demo", {
+      personName: "Maya",
+      personContact: "@maya",
+      claims: [
+        { itemId: juice.id, units: 1 },
+        { itemId: botanist.id, units: 1 },
+      ],
+    });
+    assert.equal(result.claims.length, 2);
+    assert.equal(getPublicReceipt("demo").remaining[juice.id], 0);
+    assert.equal(getPublicReceipt("demo").remaining[botanist.id], 0);
+
+    resetStoreForTests();
+    const wine = getPublicReceipt("demo").items.find((item) => item.name.startsWith("BQ Wine"));
+    assert.ok(wine);
+    await assert.rejects(
+      () =>
+        addClaims("demo", {
+          personName: "Maya",
+          claims: [
+            { itemId: wine.id, units: 7 },
+            { itemId: wine.id, units: 1 },
+          ],
+        }),
+      (err: unknown) => (err as { code?: string }).code === "not_enough_remaining",
+    );
+    assert.equal(getPublicReceipt("demo").remaining[wine.id], 7);
   });
 });

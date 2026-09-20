@@ -328,6 +328,78 @@ export async function addClaim(
   });
 }
 
+export async function addClaims(
+  id: string,
+  input: {
+    personName: string;
+    personContact?: string;
+    claims: { itemId: string; units: number }[];
+  },
+) {
+  return withLock(id, () => {
+    const receipt = requireReceipt(id);
+    if (receipt.status !== "open") {
+      throw Object.assign(new Error("not_open"), { code: "conflict" });
+    }
+    const name = input.personName.trim();
+    if (!name) {
+      throw Object.assign(new Error("name_required"), { code: "invalid" });
+    }
+    if (!Array.isArray(input.claims) || input.claims.length === 0) {
+      throw Object.assign(new Error("claims_required"), { code: "invalid" });
+    }
+
+    const requested = new Map<string, number>();
+    for (const row of input.claims) {
+      if (!Number.isInteger(row.units) || row.units < 1) {
+        throw Object.assign(new Error("invalid_units"), { code: "invalid" });
+      }
+      requested.set(row.itemId, (requested.get(row.itemId) ?? 0) + row.units);
+    }
+
+    for (const [itemId, units] of requested) {
+      const item = receipt.items.find((row) => row.id === itemId);
+      if (!item) {
+        throw Object.assign(new Error("item_not_found"), { code: "not_found", itemId });
+      }
+      const remaining = remainingForItem(item, receipt.claims);
+      if (units > remaining) {
+        throw Object.assign(new Error("not_enough_remaining"), {
+          code: "not_enough_remaining",
+          remaining,
+          itemId,
+        });
+      }
+    }
+
+    const created: InternalClaim[] = [];
+    for (const [itemId, units] of requested) {
+      const claim: InternalClaim = {
+        id: `cl_${shortId()}`,
+        itemId,
+        personName: name,
+        personContact: input.personContact?.trim() || undefined,
+        units,
+        createdAt: now(),
+        ownerToken: randomUUID(),
+      };
+      receipt.claims.push(claim);
+      state().claimsById.set(claim.id, receipt.id);
+      created.push(claim);
+    }
+    emit(receipt, "claim");
+    const publicReceipt = toPublic(receipt);
+    return {
+      claims: created.map(({ ownerToken, ...claim }) => {
+        void ownerToken;
+        return claim;
+      }),
+      tokens: Object.fromEntries(created.map((claim) => [claim.id, claim.ownerToken])),
+      remaining: publicReceipt.remaining,
+    };
+  });
+}
+
 export async function removeClaim(claimId: string, ownerToken: string | null) {
   const receiptId = state().claimsById.get(claimId);
   if (!receiptId) {

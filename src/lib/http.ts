@@ -9,8 +9,9 @@ export function claimTokenOf(req: Request): string | null {
 }
 
 export function jsonError(err: unknown) {
-  const code = (err as { code?: string; remaining?: number }).code ?? "error";
+  const code = (err as { code?: string; remaining?: number; itemId?: string }).code ?? "error";
   const remaining = (err as { remaining?: number }).remaining;
+  const itemId = (err as { itemId?: string }).itemId;
   const status =
     code === "not_found"
       ? 404
@@ -22,7 +23,7 @@ export function jsonError(err: unknown) {
             ? 400
             : 500;
   return NextResponse.json(
-    { error: code, remaining },
+    { error: code, remaining, itemId },
     { status },
   );
 }

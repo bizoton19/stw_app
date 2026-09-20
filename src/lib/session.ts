@@ -70,10 +70,12 @@ export async function api<T>(
     const err = new Error(data.error ?? "request_failed") as Error & {
       code?: string;
       remaining?: number;
+      itemId?: string;
       status: number;
     };
     err.code = data.error;
     err.remaining = data.remaining;
+    err.itemId = (data as { itemId?: string }).itemId;
     err.status = res.status;
     throw err;
   }

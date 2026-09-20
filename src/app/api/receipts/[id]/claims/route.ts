@@ -1,5 +1,5 @@
 import { jsonError } from "@/lib/http";
-import { addClaim } from "@/lib/store";
+import { addClaim, addClaims } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +14,27 @@ export async function POST(
       personName?: string;
       personContact?: string;
       units?: number;
+      claims?: { itemId?: string; units?: number }[];
     };
+    const personName = String(body.personName ?? "");
+    const personContact = body.personContact;
+
+    if (Array.isArray(body.claims)) {
+      const result = await addClaims(id, {
+        personName,
+        personContact,
+        claims: body.claims.map((row) => ({
+          itemId: String(row.itemId ?? ""),
+          units: Number(row.units),
+        })),
+      });
+      return Response.json(result);
+    }
+
     const result = await addClaim(id, {
       itemId: String(body.itemId ?? ""),
-      personName: String(body.personName ?? ""),
-      personContact: body.personContact,
+      personName,
+      personContact,
       units: Number(body.units),
     });
     return Response.json(result);

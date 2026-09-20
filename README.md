@@ -16,7 +16,7 @@ npm run start
 Open [http://127.0.0.1:43147](http://127.0.0.1:43147) on a phone-width viewport. Use `npm run start` (production) so the UI hydrates; `next dev` HMR can fail in some preview environments.
 
 - **Start with the receipt** — interview (photo or sample tab → review → pay-you → share)
-- **Open the sample tab** — `/r/demo`
+- **Open the sample tab** — `/r/demo` (tap lines to queue, then set quantities)
 - **Host tools** — `/r/demo?host=1`
 
 No env vars. Data lives in memory and resets when the server restarts.

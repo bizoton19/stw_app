@@ -23,7 +23,7 @@ export function JoinGuest({
   return (
     <InterviewChrome
       step={1}
-      total={2}
+      total={3}
       kicker={restaurant || "At the table"}
       title="What should we call you?"
       stepKey="join"
