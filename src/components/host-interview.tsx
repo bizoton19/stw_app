@@ -154,7 +154,6 @@ export function HostInterview() {
 
   function onPick(next: File | null, mode: "camera" | "library" | "sample") {
     setPickMode(mode);
-    setUseSample(mode === "sample");
     setFile(mode === "sample" ? null : next);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(next ? URL.createObjectURL(next) : null);
@@ -292,7 +291,7 @@ export function HostInterview() {
       </>
     );
     footer = (
-      <ContinueButton disabled={pickMode === null && !file} onClick={() => void startParse()}>
+      <ContinueButton disabled={pickMode === null} onClick={() => void startParse()}>
         {pickMode === "sample" ? "Use the sample bar tab" : busy ? "Working…" : "Continue"}
       </ContinueButton>
     );
