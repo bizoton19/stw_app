@@ -1,0 +1,31 @@
+"use client";
+
+import { PhoneShell } from "@/components/phone-shell";
+import { SettleView } from "@/components/settle-view";
+import { useReceipt } from "@/hooks/use-receipt";
+
+export function SettlePage({ receiptId }: { receiptId: string }) {
+  const { receipt, error } = useReceipt(receiptId);
+
+  if (error && !receipt) {
+    return (
+      <PhoneShell eyebrow="Missing check">
+        <p className="px-5 py-10 text-sm text-muted-foreground">That tab isn't here anymore.</p>
+      </PhoneShell>
+    );
+  }
+
+  if (!receipt) {
+    return (
+      <PhoneShell eyebrow="Totals">
+        <p className="px-5 py-16 text-center text-sm text-muted-foreground">Adding it up…</p>
+      </PhoneShell>
+    );
+  }
+
+  return (
+    <PhoneShell eyebrow="Settle">
+      <SettleView receipt={receipt} />
+    </PhoneShell>
+  );
+}
