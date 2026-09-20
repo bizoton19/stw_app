@@ -9,22 +9,22 @@ export function SettlePage({ receiptId }: { receiptId: string }) {
 
   if (error && !receipt) {
     return (
-      <PhoneShell eyebrow="Missing check">
-        <p className="px-5 py-10 text-sm text-muted-foreground">That tab is not here anymore.</p>
+      <PhoneShell meta="Missing">
+        <p className="px-5 py-10 text-[14px] text-muted-foreground">That tab is not here anymore.</p>
       </PhoneShell>
     );
   }
 
   if (!receipt) {
     return (
-      <PhoneShell eyebrow="Totals">
-        <p className="px-5 py-16 text-center text-sm text-muted-foreground">Adding it up…</p>
+      <PhoneShell meta="Totals">
+        <p className="px-5 py-16 text-center text-[14px] text-muted-foreground">Adding it up…</p>
       </PhoneShell>
     );
   }
 
   return (
-    <PhoneShell eyebrow="Settle">
+    <PhoneShell meta="Settle">
       <SettleView receipt={receipt} />
     </PhoneShell>
   );

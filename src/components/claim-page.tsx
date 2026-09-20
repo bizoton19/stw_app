@@ -28,14 +28,16 @@ export function ClaimPage({
     });
   }, [receiptId, hostQuery]);
 
+  const meta =
+    live === "live" ? "Live" : live === "offline" ? "Offline" : "Reconnecting";
+
   if (error && !receipt) {
     return (
-      <PhoneShell eyebrow="Missing check">
-        <div className="px-5 py-10 text-center">
-          <h1 className="font-heading text-2xl font-semibold">We cannot find that tab</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Links live in this server&apos;s memory. If the preview restarted, start a
-            new receipt or open the sample at /r/demo.
+      <PhoneShell meta="Missing">
+        <div className="px-5 py-10">
+          <h1 className="text-2xl font-semibold tracking-tight">That tab is gone</h1>
+          <p className="mt-2 text-[14px] text-muted-foreground">
+            Links live in this server&apos;s memory. Start a new receipt or open /r/demo.
           </p>
         </div>
       </PhoneShell>
@@ -44,9 +46,9 @@ export function ClaimPage({
 
   if (!receipt) {
     return (
-      <PhoneShell eyebrow="Loading">
-        <div className="px-5 py-16 text-center text-sm text-muted-foreground">
-          Pouring the check…
+      <PhoneShell meta="Loading">
+        <div className="px-5 py-16 text-center text-[14px] text-muted-foreground">
+          Opening the check…
         </div>
       </PhoneShell>
     );
@@ -54,7 +56,7 @@ export function ClaimPage({
 
   if (!guest && !isHost) {
     return (
-      <PhoneShell eyebrow={live === "live" ? "Live" : "Reconnecting"}>
+      <PhoneShell meta={meta}>
         <JoinGuest
           receiptId={receipt.id}
           restaurant={receipt.restaurant}
@@ -65,11 +67,7 @@ export function ClaimPage({
   }
 
   return (
-    <PhoneShell
-      eyebrow={
-        live === "live" ? "Live remaining" : live === "offline" ? "Offline" : "Reconnecting"
-      }
-    >
+    <PhoneShell meta={meta}>
       <ClaimBoard receipt={receipt} isHost={isHost} onChange={refresh} />
     </PhoneShell>
   );

@@ -3,7 +3,7 @@ import { PhoneShell } from "@/components/phone-shell";
 
 export default function HostPage() {
   return (
-    <PhoneShell eyebrow="New receipt">
+    <PhoneShell>
       <HostInterview />
     </PhoneShell>
   );

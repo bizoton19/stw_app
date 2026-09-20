@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import { QtyStepper } from "@/components/qty-stepper";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ContinueButton, QuietButton } from "@/components/interview-chrome";
 import { centsToLabel } from "@/lib/money";
 import { api, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
@@ -35,6 +35,7 @@ export function ClaimBoard({
     : undefined;
   const selectedItem = receipt.items.find((item) => item.id === selected);
   const max = selectedItem ? (receipt.remaining[selectedItem.id] ?? 0) : 0;
+  const closed = receipt.status === "finalized";
 
   async function claim() {
     if (!selectedItem || !guest) return;
@@ -62,9 +63,7 @@ export function ClaimBoard({
       const code = (err as { code?: string; remaining?: number }).code;
       const remaining = (err as { remaining?: number }).remaining;
       if (code === "not_enough_remaining") {
-        setMessage(
-          `Only ${remaining ?? 0} left on that line — pick a smaller number.`,
-        );
+        setMessage(`Only ${remaining ?? 0} left on that line.`);
         await onChange();
       } else if (code === "conflict") {
         setMessage("This check is closed.");
@@ -109,137 +108,121 @@ export function ClaimBoard({
     }
   }
 
-  const closed = receipt.status === "finalized";
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="mb-5 flex items-start justify-between gap-3 pt-2">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-ink">
+            <p className="text-[13px] font-medium text-ink-soft">
               {receipt.restaurant || "The check"}
             </p>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            <h1 className="text-[1.65rem] leading-tight font-semibold tracking-tight">
               {closed ? "Claiming is closed" : "What did you have?"}
             </h1>
           </div>
           {mine ? (
-            <Badge className="h-7 bg-secondary px-2 text-secondary-foreground">
+            <p className="pt-6 text-[13px] font-medium tabular-nums">
               You {centsToLabel(mine.totalCents)}
-            </Badge>
+            </p>
           ) : null}
         </div>
 
         {message ? (
-          <p className="mb-3 rounded-2xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {message}
-          </p>
+          <p className="mb-3 text-sm text-destructive">{message}</p>
         ) : null}
 
         {guest ? (
-          <p className="mb-4 text-sm text-muted-foreground">
-            Claiming as <span className="font-semibold text-foreground">{guest.name}</span>
+          <p className="mb-4 text-[13px] text-muted-foreground">
+            Claiming as {guest.name}
             {guest.contact ? ` · ${guest.contact}` : ""}
           </p>
         ) : null}
 
-        <section className="space-y-2">
+        <section>
           {remainingItems.length === 0 ? (
-            <div className="rounded-2xl bg-ice px-4 py-6 text-center text-sm text-sky-ink ring-1 ring-sky-ink/15">
+            <p className="py-8 text-center text-[14px] text-muted-foreground">
               Everything on this check is claimed.
-            </div>
+            </p>
           ) : (
-            remainingItems.map((item) => {
-              const left = receipt.remaining[item.id] ?? 0;
-              const active = selected === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={closed}
-                  onClick={() => {
-                    setSelected(item.id);
-                    setUnits(Math.min(units, left) || 1);
-                  }}
-                  className={`w-full rounded-2xl px-4 py-3 text-left ring-1 transition ${
-                    active
-                      ? "bg-primary text-primary-foreground ring-primary"
-                      : "bg-card ring-border"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{item.name}</p>
-                      <p className={`text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                        {centsToLabel(item.totalCents)} for {item.qty}
-                      </p>
-                    </div>
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        active ? "bg-white/15" : "bg-ice text-sky-ink"
-                      }`}
+            <ul className="divide-y divide-border border-y border-border">
+              {remainingItems.map((item) => {
+                const left = receipt.remaining[item.id] ?? 0;
+                const active = selected === item.id;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      disabled={closed}
+                      onClick={() => {
+                        setSelected(item.id);
+                        setUnits(Math.min(units, left) || 1);
+                      }}
+                      className="pressable flex w-full items-start justify-between gap-3 py-3.5 text-left"
                     >
-                      {left} left
-                    </span>
-                  </div>
-                </button>
-              );
-            })
+                      <span>
+                        <span className="block text-[15px] font-medium">{item.name}</span>
+                        <span className="text-[12px] text-muted-foreground">
+                          {centsToLabel(item.totalCents)} for {item.qty}
+                        </span>
+                      </span>
+                      <motion.span
+                        key={`${item.id}-${left}`}
+                        initial={{ opacity: 0.4, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`text-[12px] font-medium tabular-nums ${
+                          active ? "text-primary" : "text-ink-soft"
+                        }`}
+                      >
+                        {left} left
+                      </motion.span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </section>
 
         {goneItems.length > 0 ? (
-          <section className="mt-6">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Claimed out
-            </p>
-            <ul className="space-y-2 opacity-70">
+          <section className="mt-8">
+            <p className="mb-2 text-[12px] font-medium text-muted-foreground">Claimed out</p>
+            <ul className="space-y-1 text-[14px] text-muted-foreground">
               {goneItems.map((item) => (
-                <li key={item.id} className="rounded-2xl bg-muted px-4 py-3 text-sm">
-                  {item.name}
-                </li>
+                <li key={item.id}>{item.name}</li>
               ))}
             </ul>
           </section>
         ) : null}
 
-        <section className="mt-6">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-ink">
-            Who claimed what
-          </p>
+        <section className="mt-8">
+          <p className="mb-2 text-[12px] font-medium text-muted-foreground">Who claimed what</p>
           {receipt.items.map((item) => {
             const claims = receipt.claims.filter((c) => c.itemId === item.id);
             if (claims.length === 0) return null;
             return (
-              <div key={item.id} className="mb-3 rounded-2xl bg-card p-3 ring-1 ring-border">
-                <p className="text-sm font-semibold">{item.name}</p>
-                <ul className="mt-2 space-y-1">
+              <div key={item.id} className="mb-4">
+                <p className="text-[14px] font-medium">{item.name}</p>
+                <ul className="mt-1 space-y-1">
                   {claims.map((claim) => {
-                    const mineToDrop =
-                      getClaimToken(receipt.id, claim.id) && !closed;
+                    const mineToDrop = getClaimToken(receipt.id, claim.id) && !closed;
                     return (
                       <li
                         key={claim.id}
-                        className="flex items-center justify-between gap-2 text-sm"
+                        className="flex items-center justify-between gap-2 text-[13px] text-muted-foreground"
                       >
                         <span>
-                          <span className="font-medium">{claim.personName}</span>
-                          <span className="text-muted-foreground">
-                            {" "}
-                            · {claim.units}
-                            {claim.personContact ? ` · ${claim.personContact}` : " · no contact"}
-                          </span>
+                          {claim.personName} · {claim.units}
+                          {claim.personContact ? ` · ${claim.personContact}` : ""}
                         </span>
                         {mineToDrop ? (
-                          <Button
+                          <button
                             type="button"
-                            variant="ghost"
-                            className="h-9 px-2 text-xs"
+                            className="pressable h-9 px-2 text-[12px] font-medium text-foreground"
                             disabled={busy}
                             onClick={() => void unclaim(claim.id)}
                           >
                             Unclaim
-                          </Button>
+                          </button>
                         ) : null}
                       </li>
                     );
@@ -251,14 +234,14 @@ export function ClaimBoard({
         </section>
       </div>
 
-      <div className="border-t border-border/70 bg-background/90 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+      <div className="border-t border-border bg-background px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {selectedItem && !closed && guest ? (
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p id="qty-label" className="text-sm font-semibold">
+            <div className="min-w-0">
+              <p id="qty-label" className="truncate text-[14px] font-medium">
                 {selectedItem.name}
               </p>
-              <p className="text-xs text-muted-foreground">{max} still unclaimed</p>
+              <p className="text-[12px] text-muted-foreground">{max} still unclaimed</p>
             </div>
             <QtyStepper
               value={Math.min(units, max)}
@@ -270,41 +253,36 @@ export function ClaimBoard({
           </div>
         ) : null}
         {closed ? (
-          <Button
-            className="h-12 w-full rounded-full"
-            render={<Link href={`/r/${receipt.id}/settle`} />}
+          <Link
+            href={`/r/${receipt.id}/settle`}
+            className="pressable inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
           >
             See who owes what
-          </Button>
+          </Link>
         ) : (
-          <div className="space-y-2">
-            <button
-              type="button"
-              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+          <div className="space-y-1">
+            <ContinueButton
               disabled={busy || !selectedItem || !guest || max < 1}
               onClick={() => void claim()}
             >
               {busy ? "Claiming…" : "Claim"}
-            </button>
+            </ContinueButton>
             {isHost ? (
-              <button
-                type="button"
-                className="inline-flex h-12 w-full items-center justify-center rounded-full border border-border bg-background text-sm font-semibold transition hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+              <QuietButton
                 disabled={busy || !getHostToken(receipt.id)}
                 onClick={() => void closeOut()}
               >
                 {remainingItems.length > 0
-                  ? "Close claiming — leftovers on the host"
-                  : "Close claiming & split"}
-              </button>
+                  ? "Close — leftovers on the host"
+                  : "Close claiming"}
+              </QuietButton>
             ) : (
-              <Button
-                variant="outline"
-                className="h-12 w-full rounded-full"
-                render={<Link href={`/r/${receipt.id}/settle`} />}
+              <Link
+                href={`/r/${receipt.id}/settle`}
+                className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium"
               >
                 Running totals
-              </Button>
+              </Link>
             )}
           </div>
         )}

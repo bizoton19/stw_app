@@ -3,9 +3,7 @@
 import { Camera, ImageIcon, Sparkles, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ContinueButton, InterviewChrome } from "@/components/interview-chrome";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { centsToLabel } from "@/lib/money";
@@ -22,15 +20,26 @@ type Step =
   | "pay"
   | "share";
 
-const STEP_INDEX: Record<Step, number> = {
-  ready: 1,
-  capture: 2,
-  parsing: 3,
-  restaurant: 4,
-  items: 5,
-  fees: 6,
-  pay: 7,
-  share: 8,
+const ORDER: Step[] = [
+  "ready",
+  "capture",
+  "parsing",
+  "restaurant",
+  "items",
+  "fees",
+  "pay",
+  "share",
+];
+
+const COPY: Record<Step, { kicker: string; title: string }> = {
+  ready: { kicker: "Fair split", title: "Got the check in front of you?" },
+  capture: { kicker: "The receipt", title: "How should we add the tab?" },
+  parsing: { kicker: "Reading", title: "Looking over every pour…" },
+  restaurant: { kicker: "The place", title: "What's the name on the check?" },
+  items: { kicker: "The drinks", title: "Does this look right?" },
+  fees: { kicker: "Tax & tip", title: "These follow what people ordered." },
+  pay: { kicker: "Getting paid", title: "How should people pay you?" },
+  share: { kicker: "Share", title: "Send this. They claim what they drank." },
 };
 
 const PAY_OPTIONS: { method: PayMethod; label: string; hint: string }[] = [
@@ -57,17 +66,55 @@ function toDraftFees(fees: Fee[]): DraftFee[] {
   }));
 }
 
+const fieldClass = "h-12 rounded-xl border-border bg-transparent text-base";
+
+function Choice({
+  selected,
+  title,
+  hint,
+  icon,
+  onClick,
+}: {
+  selected?: boolean;
+  title: string;
+  hint: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`pressable flex min-h-14 w-full items-center gap-3 border-b border-border py-4 text-left last:border-b-0 ${
+        selected ? "opacity-100" : ""
+      }`}
+    >
+      <span className="flex size-10 items-center justify-center text-foreground">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium">{title}</span>
+        <span className="text-[13px] text-muted-foreground">{hint}</span>
+      </span>
+      <span
+        className={`size-4 rounded-full border ${
+          selected ? "border-primary bg-primary" : "border-border"
+        }`}
+      />
+    </button>
+  );
+}
+
 export function HostInterview() {
   const router = useRouter();
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("ready");
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [useSample, setUseSample] = useState(false);
+  const [pickMode, setPickMode] = useState<"camera" | "library" | "sample" | null>(null);
   const [restaurant, setRestaurant] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
@@ -79,6 +126,12 @@ export function HostInterview() {
   const hostInfo: HostInfo = { method, handle: handle.trim() };
   const itemSubtotal = items.reduce((s, i) => s + i.totalCents, 0);
   const feeTotal = fees.reduce((s, f) => s + f.amountCents, 0);
+  const stepIndex = ORDER.indexOf(step) + 1;
+
+  function go(next: Step) {
+    setDirection(ORDER.indexOf(next) >= ORDER.indexOf(step) ? 1 : -1);
+    setStep(next);
+  }
 
   function applyReceipt(receipt: PublicReceipt) {
     setRestaurant(receipt.restaurant);
@@ -99,9 +152,10 @@ export function HostInterview() {
     return created.receiptId;
   }
 
-  function onPick(next: File | null, sample: boolean) {
-    setUseSample(sample);
-    setFile(sample ? null : next);
+  function onPick(next: File | null, mode: "camera" | "library" | "sample") {
+    setPickMode(mode);
+    setUseSample(mode === "sample");
+    setFile(mode === "sample" ? null : next);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(next ? URL.createObjectURL(next) : null);
     setError(null);
@@ -110,7 +164,7 @@ export function HostInterview() {
   async function startParse() {
     setError(null);
     setBusy(true);
-    setStep("parsing");
+    go("parsing");
     try {
       const id = await ensureDraft();
       const token = sessionStorage.getItem(`stw-host:${id}`);
@@ -122,9 +176,11 @@ export function HostInterview() {
         hostToken: token,
       });
       applyReceipt(receipt);
+      setDirection(1);
       setStep("restaurant");
     } catch {
-      setError("Couldn't read that photo. Enter the lines yourself — same next steps.");
+      setError("Couldn't read that photo. Enter the lines yourself.");
+      setDirection(1);
       setStep("restaurant");
     } finally {
       setBusy(false);
@@ -153,9 +209,8 @@ export function HostInterview() {
           publish: true,
         }),
       });
-      const url = `${window.location.origin}${path}`;
-      setClaimUrl(url);
-      setStep("share");
+      setClaimUrl(`${window.location.origin}${path}`);
+      go("share");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't publish");
     } finally {
@@ -163,112 +218,52 @@ export function HostInterview() {
     }
   }
 
-  const continueLabel = busy ? "Working…" : "Continue";
+  const back: Partial<Record<Step, () => void>> = {
+    capture: () => go("ready"),
+    parsing: () => go("capture"),
+    restaurant: () => go("capture"),
+    items: () => go("restaurant"),
+    fees: () => go("items"),
+    pay: () => go("fees"),
+  };
+
+  let body: React.ReactNode;
+  let footer: React.ReactNode;
 
   if (step === "ready") {
-    return (
-      <InterviewChrome
-        step={STEP_INDEX.ready}
-        total={8}
-        kicker="Fair split"
-        title="Got the check in front of you?"
-        footer={
-          <ContinueButton onClick={() => setStep("capture")}>
-            Yes — start with the receipt
-          </ContinueButton>
-        }
-      >
-        <p className="text-[15px] leading-relaxed text-muted-foreground">
-          Photograph the tab, fix anything the scan misses, then send a link.
-          Friends claim what they actually ordered. Tax and tip follow the
-          drinks — not the headcount.
-        </p>
-        <ul className="mt-6 space-y-3 text-sm">
-          {[
-            "One photo, then a short review",
-            "Guests don't need the app — just the link",
-            "Whole glasses only. No splitting a pour in half",
-          ].map((line) => (
-            <li
-              key={line}
-              className="flex gap-3 rounded-2xl bg-ice px-4 py-3 ring-1 ring-sky-ink/10"
-            >
-              <span className="mt-0.5 size-2 shrink-0 rounded-full bg-primary" />
-              {line}
-            </li>
-          ))}
-        </ul>
-      </InterviewChrome>
+    body = (
+      <p className="text-[15px] leading-relaxed text-muted-foreground">
+        One photo, a short review, then a link. Whole glasses only — no splitting a pour in half.
+      </p>
     );
-  }
-
-  if (step === "capture") {
-    return (
-      <InterviewChrome
-        step={STEP_INDEX.capture}
-        total={8}
-        kicker="The receipt"
-        title="How do you want to add the tab?"
-        onBack={() => setStep("ready")}
-        footer={
-          <ContinueButton
-            disabled={!useSample && !file}
-            onClick={() => void startParse()}
-          >
-            {useSample ? "Use the sample bar tab" : continueLabel}
-          </ContinueButton>
-        }
-      >
-        <div className="grid gap-3">
-          <button
-            type="button"
+    footer = (
+      <ContinueButton onClick={() => go("capture")}>Yes — start with the receipt</ContinueButton>
+    );
+  } else if (step === "capture") {
+    body = (
+      <>
+        <div className="border-t border-border">
+          <Choice
+            icon={<Camera className="size-5" />}
+            title="Take a photo"
+            hint="Camera, when this device allows it"
+            selected={pickMode === "camera"}
             onClick={() => cameraRef.current?.click()}
-            className="flex min-h-14 items-center gap-3 rounded-2xl bg-card px-4 py-4 text-left ring-1 ring-border transition hover:ring-primary"
-          >
-            <span className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Camera className="size-5" />
-            </span>
-            <span>
-              <span className="block font-semibold">Take a photo</span>
-              <span className="text-sm text-muted-foreground">
-                Uses the camera when this browser allows it
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
+          />
+          <Choice
+            icon={<ImageIcon className="size-5" />}
+            title="Choose from library"
+            hint="JPEG, PNG, or a screenshot"
+            selected={pickMode === "library"}
             onClick={() => libraryRef.current?.click()}
-            className="flex min-h-14 items-center gap-3 rounded-2xl bg-card px-4 py-4 text-left ring-1 ring-border transition hover:ring-primary"
-          >
-            <span className="flex size-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-              <ImageIcon className="size-5" />
-            </span>
-            <span>
-              <span className="block font-semibold">Choose from library</span>
-              <span className="text-sm text-muted-foreground">
-                Upload a JPEG, PNG, or screenshot
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onPick(null, true)}
-            className={`flex min-h-14 items-center gap-3 rounded-2xl px-4 py-4 text-left ring-1 transition ${
-              useSample
-                ? "bg-ice ring-sky-ink/40"
-                : "bg-card ring-border hover:ring-primary"
-            }`}
-          >
-            <span className="flex size-11 items-center justify-center rounded-full bg-ice text-primary">
-              <Sparkles className="size-5" />
-            </span>
-            <span>
-              <span className="block font-semibold">Use the sample bar tab</span>
-              <span className="text-sm text-muted-foreground">
-                16 lines, wine package vs apple juice — no camera needed
-              </span>
-            </span>
-          </button>
+          />
+          <Choice
+            icon={<Sparkles className="size-5" />}
+            title="Use the sample bar tab"
+            hint="Wine package vs apple juice — no camera"
+            selected={pickMode === "sample"}
+            onClick={() => onPick(null, "sample")}
+          />
         </div>
         <input
           ref={cameraRef}
@@ -276,79 +271,46 @@ export function HostInterview() {
           accept="image/*"
           capture="environment"
           className="sr-only"
-          onChange={(e) => onPick(e.target.files?.[0] ?? null, false)}
+          onChange={(e) => onPick(e.target.files?.[0] ?? null, "camera")}
         />
         <input
           ref={libraryRef}
           type="file"
           accept="image/*"
           className="sr-only"
-          onChange={(e) => onPick(e.target.files?.[0] ?? null, false)}
+          onChange={(e) => onPick(e.target.files?.[0] ?? null, "library")}
         />
         {previewUrl ? (
-          <div className="mt-4 overflow-hidden rounded-2xl ring-1 ring-border">
+          <div className="mt-4 overflow-hidden rounded-xl border border-border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="Receipt preview" className="max-h-56 w-full object-cover" />
+            <img src={previewUrl} alt="Receipt preview" className="max-h-48 w-full object-cover" />
           </div>
         ) : null}
-        <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-          Scanning is stubbed until a vision key is wired in. Any photo still
-          lands you on the sample tab so you can finish the split today.
+        <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
+          Scanning is stubbed until a vision key is wired in. Any photo still lands on the sample tab.
         </p>
-      </InterviewChrome>
+      </>
     );
-  }
-
-  if (step === "parsing") {
-    return (
-      <InterviewChrome
-        step={STEP_INDEX.parsing}
-        total={8}
-        kicker="Reading"
-        title="Looking over every pour and plate…"
-        footer={
-          <ContinueButton disabled>
-            Reading the receipt
-          </ContinueButton>
-        }
-      >
-        <div className="flex flex-col items-center py-10 text-center">
-          <div className="relative size-24">
-            <div className="absolute inset-0 animate-pulse rounded-full bg-secondary" />
-            <div className="absolute inset-3 animate-bounce rounded-full bg-primary/90" />
-          </div>
-          <p className="mt-6 max-w-xs text-sm text-muted-foreground">
-            The scan is a stub right now — you will review the reference bar tab
-            next and can fix any line.
-          </p>
-        </div>
-      </InterviewChrome>
+    footer = (
+      <ContinueButton disabled={pickMode === null && !file} onClick={() => void startParse()}>
+        {pickMode === "sample" ? "Use the sample bar tab" : busy ? "Working…" : "Continue"}
+      </ContinueButton>
     );
-  }
-
-  if (step === "restaurant") {
-    return (
-      <InterviewChrome
-        step={STEP_INDEX.restaurant}
-        total={8}
-        kicker="The place"
-        title="What's the name on the check?"
-        onBack={() => setStep("capture")}
-        footer={
-          <ContinueButton
-            disabled={!restaurant.trim()}
-            onClick={() => setStep("items")}
-          >
-            Continue
-          </ContinueButton>
-        }
-      >
-        {error ? (
-          <p className="mb-4 rounded-2xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-        <Label htmlFor="restaurant" className="mb-2">
+  } else if (step === "parsing") {
+    body = (
+      <div className="flex flex-col items-center py-12 text-center">
+        <div className="size-10 animate-spin rounded-full border-[1.5px] border-border border-t-primary" />
+        <p className="mt-6 max-w-xs text-[14px] text-muted-foreground">
+          You will review every line next and can fix anything.
+        </p>
+      </div>
+    );
+    footer = <ContinueButton disabled>Reading the receipt</ContinueButton>;
+  } else if (step === "restaurant") {
+    body = (
+      <>
+        {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
+        <Label htmlFor="restaurant" className="mb-2 text-[13px] font-medium">
           Restaurant or bar
         </Label>
         <Input
@@ -356,55 +318,35 @@ export function HostInterview() {
           value={restaurant}
           onChange={(e) => setRestaurant(e.target.value)}
           placeholder="The Bar"
-          className="h-12 rounded-xl text-base"
+          className={fieldClass}
           autoComplete="organization"
         />
-      </InterviewChrome>
+      </>
     );
-  }
-
-  if (step === "items") {
-    return (
-      <InterviewChrome
-        step={STEP_INDEX.items}
-        total={8}
-        kicker="The drinks"
-        title="Does this look right?"
-        onBack={() => setStep("restaurant")}
-        footer={
-          <div className="space-y-3">
-            <p className="text-center text-sm text-muted-foreground">
-              Items {centsToLabel(itemSubtotal)}
-            </p>
-            <ContinueButton
-              disabled={items.length === 0 || items.some((i) => !i.name.trim() || i.qty < 1)}
-              onClick={() => setStep("fees")}
-            >
-              Looks good
-            </ContinueButton>
-          </div>
-        }
-      >
-        <p className="mb-4 text-sm text-muted-foreground">
-          Fix misreads, add a missed pour. Quantities stay whole numbers.
+    footer = (
+      <ContinueButton disabled={!restaurant.trim()} onClick={() => go("items")}>
+        Continue
+      </ContinueButton>
+    );
+  } else if (step === "items") {
+    body = (
+      <>
+        <p className="mb-4 text-[14px] text-muted-foreground">
+          Fix misreads. Quantities stay whole numbers.
         </p>
-        <div className="space-y-3">
+        <ul className="divide-y divide-border border-y border-border">
           {items.map((item, index) => (
-            <div key={item.id} className="rounded-2xl bg-card p-3 ring-1 ring-border">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <Label htmlFor={`item-name-${item.id}`} className="text-xs text-muted-foreground">
-                  Line {index + 1}
-                </Label>
-                <Button
+            <li key={item.id} className="py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[12px] text-muted-foreground">Line {index + 1}</span>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-10"
+                  className="pressable flex size-10 items-center justify-center"
                   aria-label={`Remove ${item.name || "line"}`}
                   onClick={() => setItems(items.filter((row) => row.id !== item.id))}
                 >
                   <Trash2 className="size-4" />
-                </Button>
+                </button>
               </div>
               <Input
                 id={`item-name-${item.id}`}
@@ -416,55 +358,43 @@ export function HostInterview() {
                     ),
                   )
                 }
-                className="h-11 rounded-xl"
+                className={fieldClass}
                 placeholder="Item name"
               />
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor={`item-qty-${item.id}`} className="mb-1 text-xs">
-                    Qty
-                  </Label>
-                  <Input
-                    id={`item-qty-${item.id}`}
-                    inputMode="numeric"
-                    value={item.qty}
-                    onChange={(e) => {
-                      const qty = Math.max(1, Math.floor(Number(e.target.value) || 0));
-                      setItems(
-                        items.map((row) => (row.id === item.id ? { ...row, qty } : row)),
-                      );
-                    }}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`item-total-${item.id}`} className="mb-1 text-xs">
-                    Line total
-                  </Label>
-                  <Input
-                    id={`item-total-${item.id}`}
-                    inputMode="decimal"
-                    value={item.totalInput}
-                    onChange={(e) => {
-                      const totalInput = e.target.value;
-                      const totalCents = Math.round((Number(totalInput) || 0) * 100);
-                      setItems(
-                        items.map((row) =>
-                          row.id === item.id ? { ...row, totalInput, totalCents } : row,
-                        ),
-                      );
-                    }}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
+                <Input
+                  id={`item-qty-${item.id}`}
+                  inputMode="numeric"
+                  aria-label="Quantity"
+                  value={item.qty}
+                  onChange={(e) => {
+                    const qty = Math.max(1, Math.floor(Number(e.target.value) || 0));
+                    setItems(items.map((row) => (row.id === item.id ? { ...row, qty } : row)));
+                  }}
+                  className={fieldClass}
+                />
+                <Input
+                  id={`item-total-${item.id}`}
+                  inputMode="decimal"
+                  aria-label="Line total"
+                  value={item.totalInput}
+                  onChange={(e) => {
+                    const totalInput = e.target.value;
+                    const totalCents = Math.round((Number(totalInput) || 0) * 100);
+                    setItems(
+                      items.map((row) =>
+                        row.id === item.id ? { ...row, totalInput, totalCents } : row,
+                      ),
+                    );
+                  }}
+                  className={fieldClass}
+                />
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-3 h-11 w-full rounded-full"
+        </ul>
+        <QuietButton
+          className="mt-2"
           onClick={() =>
             setItems([
               ...items,
@@ -479,46 +409,40 @@ export function HostInterview() {
           }
         >
           Add a line
-        </Button>
-      </InterviewChrome>
+        </QuietButton>
+      </>
     );
-  }
-
-  if (step === "fees") {
-    return (
-      <InterviewChrome
-        step={STEP_INDEX.fees}
-        total={8}
-        kicker="Tax & tip"
-        title="These get split by what people ordered"
-        onBack={() => setStep("items")}
-        footer={
-          <div className="space-y-3">
-            <p className="text-center text-sm text-muted-foreground">
-              Grand {centsToLabel(itemSubtotal + feeTotal)}
-            </p>
-            <ContinueButton onClick={() => setStep("pay")}>Continue</ContinueButton>
-          </div>
-        }
-      >
-        <p className="mb-4 text-sm text-muted-foreground">
-          Admin, gratuity, tax — never an even split across headcount. Leave
-          “Subtotal” and “Total” off this list.
+    footer = (
+      <div>
+        <p className="mb-2 text-center text-[13px] tabular-nums text-muted-foreground">
+          Items {centsToLabel(itemSubtotal)}
         </p>
-        <div className="space-y-3">
+        <ContinueButton
+          disabled={items.length === 0 || items.some((i) => !i.name.trim() || i.qty < 1)}
+          onClick={() => go("fees")}
+        >
+          Looks good
+        </ContinueButton>
+      </div>
+    );
+  } else if (step === "fees") {
+    body = (
+      <>
+        <p className="mb-4 text-[14px] text-muted-foreground">
+          Admin, gratuity, tax — never an even split by headcount.
+        </p>
+        <ul className="divide-y divide-border border-y border-border">
           {fees.map((fee) => (
-            <div key={fee.id} className="rounded-2xl bg-card p-3 ring-1 ring-border">
+            <li key={fee.id} className="py-3">
               <div className="mb-2 flex justify-end">
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-10"
+                  className="pressable flex size-10 items-center justify-center"
                   aria-label={`Remove ${fee.name || "fee"}`}
                   onClick={() => setFees(fees.filter((row) => row.id !== fee.id))}
                 >
                   <Trash2 className="size-4" />
-                </Button>
+                </button>
               </div>
               <Input
                 value={fee.name}
@@ -529,11 +453,11 @@ export function HostInterview() {
                     ),
                   )
                 }
-                className="h-11 rounded-xl"
+                className={fieldClass}
                 placeholder="Fee name"
               />
               <Input
-                className="mt-2 h-11 rounded-xl"
+                className={`mt-2 ${fieldClass}`}
                 inputMode="decimal"
                 value={fee.amountInput}
                 onChange={(e) => {
@@ -546,13 +470,11 @@ export function HostInterview() {
                   );
                 }}
               />
-            </div>
+            </li>
           ))}
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-3 h-11 w-full rounded-full"
+        </ul>
+        <QuietButton
+          className="mt-2"
           onClick={() =>
             setFees([
               ...fees,
@@ -566,47 +488,41 @@ export function HostInterview() {
           }
         >
           Add a fee
-        </Button>
-      </InterviewChrome>
+        </QuietButton>
+      </>
     );
-  }
-
-  if (step === "pay") {
-    return (
-      <InterviewChrome
-        step={STEP_INDEX.pay}
-        total={8}
-        kicker="Getting paid back"
-        title="How should people pay you?"
-        onBack={() => setStep("fees")}
-        footer={
-          <ContinueButton disabled={!handle.trim() || busy} onClick={() => void publish()}>
-            {busy ? "Publishing…" : "Create the claim link"}
-          </ContinueButton>
-        }
-      >
-        {error ? (
-          <p className="mb-4 rounded-2xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-        <div className="grid grid-cols-2 gap-2">
+    footer = (
+      <div>
+        <p className="mb-2 text-center text-[13px] tabular-nums text-muted-foreground">
+          Grand {centsToLabel(itemSubtotal + feeTotal)}
+        </p>
+        <ContinueButton onClick={() => go("pay")}>Continue</ContinueButton>
+      </div>
+    );
+  } else if (step === "pay") {
+    body = (
+      <>
+        {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
+        <div className="grid grid-cols-2 gap-px bg-border">
           {PAY_OPTIONS.map((option) => (
             <button
               key={option.method}
               type="button"
               onClick={() => setMethod(option.method)}
-              className={`min-h-14 rounded-2xl px-3 py-3 text-left text-sm font-semibold ring-1 transition ${
-                method === option.method
-                  ? "bg-primary text-primary-foreground ring-primary"
-                  : "bg-card ring-border"
+              className={`pressable min-h-14 bg-background px-3 py-3 text-left text-[14px] font-medium ${
+                method === option.method ? "text-foreground" : "text-muted-foreground"
               }`}
             >
+              <span
+                className={`mr-2 inline-block size-2 rounded-full ${
+                  method === option.method ? "bg-primary" : "bg-border"
+                }`}
+              />
               {option.label}
             </button>
           ))}
         </div>
-        <Label htmlFor="handle" className="mt-4 mb-2">
+        <Label htmlFor="handle" className="mt-5 mb-2 text-[13px] font-medium">
           Your {PAY_OPTIONS.find((o) => o.method === method)?.hint}
         </Label>
         <Input
@@ -614,80 +530,83 @@ export function HostInterview() {
           value={handle}
           onChange={(e) => setHandle(e.target.value)}
           placeholder="@alex"
-          className="h-12 rounded-xl text-base"
+          className={fieldClass}
         />
-        <p className="mt-4 text-xs text-muted-foreground">
-          We will generate a pre-filled message. Nobody gets charged from this
-          app — they still tap send themselves.
+        <p className="mt-4 text-[12px] text-muted-foreground">
+          A pre-filled message. Nobody is charged from this app.
         </p>
-      </InterviewChrome>
+      </>
+    );
+    footer = (
+      <ContinueButton disabled={!handle.trim() || busy} onClick={() => void publish()}>
+        {busy ? "Publishing…" : "Create the claim link"}
+      </ContinueButton>
+    );
+  } else {
+    body = (
+      <>
+        <p className="break-all rounded-xl border border-border px-3 py-3 font-mono text-[13px]">
+          {claimUrl}
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <QuietButton
+            onClick={async () => {
+              await navigator.clipboard.writeText(claimUrl);
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1500);
+            }}
+          >
+            {copied ? "Copied" : "Copy link"}
+          </QuietButton>
+          <QuietButton
+            onClick={async () => {
+              if (navigator.share) {
+                await navigator.share({
+                  title: "Split the Wine",
+                  text: `Claim what you ordered at ${restaurant}`,
+                  url: claimUrl,
+                });
+              } else {
+                await navigator.clipboard.writeText(claimUrl);
+                setCopied(true);
+              }
+            }}
+          >
+            Share
+          </QuietButton>
+        </div>
+        <div className="mt-8 flex items-center justify-between text-[14px]">
+          <span className="text-muted-foreground">Check total</span>
+          <span className="tabular-nums font-medium">{centsToLabel(itemSubtotal + feeTotal)}</span>
+        </div>
+      </>
+    );
+    footer = (
+      <div className="space-y-1">
+        <ContinueButton onClick={() => router.push(`/r/${receiptId}?host=1`)}>
+          Open the live board
+        </ContinueButton>
+        <QuietButton onClick={() => router.push("/")}>Done for now</QuietButton>
+      </div>
     );
   }
 
   return (
     <InterviewChrome
-      step={STEP_INDEX.share}
+      step={stepIndex}
       total={8}
-      kicker="Share"
-      title="Send this link. They claim what they drank."
-      footer={
-        <div className="space-y-2">
-          <ContinueButton onClick={() => router.push(`/r/${receiptId}?host=1`)}>
-            Open the live board
-          </ContinueButton>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 w-full rounded-full"
-            onClick={() => router.push("/")}
-          >
-            Done for now
-          </Button>
-        </div>
+      kicker={COPY[step].kicker}
+      title={COPY[step].title}
+      onBack={
+        step === "ready"
+          ? () => router.push("/")
+          : back[step]
       }
+      direction={direction}
+      stepKey={step}
+      footer={footer}
     >
-      <div className="rounded-2xl bg-ice p-4 ring-1 ring-sky-ink/20">
-        <p className="break-all font-mono text-sm text-foreground">{claimUrl}</p>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-12 rounded-full"
-          onClick={async () => {
-            await navigator.clipboard.writeText(claimUrl);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
-          }}
-        >
-          {copied ? "Copied" : "Copy link"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-12 rounded-full"
-          onClick={async () => {
-            if (navigator.share) {
-              await navigator.share({
-                title: "Split the Wine",
-                text: `Claim what you ordered at ${restaurant}`,
-                url: claimUrl,
-              });
-            } else {
-              await navigator.clipboard.writeText(claimUrl);
-              setCopied(true);
-            }
-          }}
-        >
-          Share
-        </Button>
-      </div>
-      <div className="mt-6 flex items-center justify-between rounded-2xl bg-card px-4 py-3 ring-1 ring-border">
-        <span className="text-sm text-muted-foreground">Check total</span>
-        <Badge className="h-6 bg-primary px-2 text-primary-foreground">
-          {centsToLabel(itemSubtotal + feeTotal)}
-        </Badge>
-      </div>
+      {body}
     </InterviewChrome>
   );
 }

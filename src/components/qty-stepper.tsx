@@ -1,7 +1,7 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion } from "motion/react";
 
 export function QtyStepper({
   value,
@@ -17,35 +17,34 @@ export function QtyStepper({
   labelledBy?: string;
 }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-full bg-ice px-1 py-1 ring-1 ring-sky-ink/15">
-      <Button
+    <div className="inline-flex items-center">
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="size-11 rounded-full"
+        className="pressable flex size-11 items-center justify-center rounded-full"
         aria-label="Decrease quantity"
         disabled={value <= min}
         onClick={() => onChange(Math.max(min, value - 1))}
       >
         <Minus className="size-4" />
-      </Button>
-      <span
+      </button>
+      <motion.span
+        key={value}
+        initial={{ y: 6, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="min-w-8 text-center text-[15px] font-medium tabular-nums"
         aria-labelledby={labelledBy}
-        className="min-w-8 text-center text-base font-semibold tabular-nums"
       >
         {value}
-      </span>
-      <Button
+      </motion.span>
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
-        className="size-11 rounded-full"
+        className="pressable flex size-11 items-center justify-center rounded-full"
         aria-label="Increase quantity"
         disabled={value >= max}
         onClick={() => onChange(Math.min(max, value + 1))}
       >
         <Plus className="size-4" />
-      </Button>
+      </button>
     </div>
   );
 }
