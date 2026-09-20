@@ -169,12 +169,25 @@ export function HostInterview() {
       const token = sessionStorage.getItem(`stw-host:${id}`);
       const form = new FormData();
       if (file) form.set("image", file);
-      const { receipt } = await api<{ receipt: PublicReceipt }>(`/api/receipts/${id}/parse`, {
+      if (pickMode === "sample") form.set("sample", "1");
+      const { receipt, parse } = await api<{
+        receipt: PublicReceipt;
+        parse?: { source: string; reason: string };
+      }>(`/api/receipts/${id}/parse`, {
         method: "POST",
         body: form,
         hostToken: token,
       });
       applyReceipt(receipt);
+      if (parse?.reason === "empty") {
+        setError("We couldn't find any drinks. Add them on the next screens.");
+      } else if (parse?.reason === "failed") {
+        setError("Couldn't read that photo. Here's the sample tab so you can keep going.");
+      } else if (parse?.reason === "no_key") {
+        setError("Scanning isn't configured here. Using the sample tab.");
+      } else {
+        setError(null);
+      }
       setDirection(1);
       setStep("restaurant");
     } catch {
@@ -286,7 +299,8 @@ export function HostInterview() {
           </div>
         ) : null}
         <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
-          Scanning is stubbed until a vision key is wired in. Any photo still lands on the sample tab.
+          Photos are read on the server. You still review every line. If scanning
+          isn&apos;t available, we use the sample bar tab so you can keep going.
         </p>
       </>
     );
@@ -299,8 +313,9 @@ export function HostInterview() {
     body = (
       <div className="flex flex-col items-center py-12 text-center">
         <div className="size-10 animate-spin rounded-full border-[1.5px] border-border border-t-primary" />
-        <p className="mt-6 max-w-xs text-[14px] text-muted-foreground">
-          You will review every line next and can fix anything.
+        <p className="mt-6 max-w-xs text-[14px] leading-relaxed text-muted-foreground">
+          This can take a few seconds. You will review every line next and can
+          fix anything.
         </p>
       </div>
     );
@@ -331,7 +346,9 @@ export function HostInterview() {
     body = (
       <>
         <p className="mb-4 text-[14px] text-muted-foreground">
-          Fix misreads. Quantities stay whole numbers.
+          {items.length === 0
+            ? "Nothing came through. Add what was on the check."
+            : "Fix misreads. Quantities stay whole numbers."}
         </p>
         <ul className="divide-y divide-border border-y border-border">
           {items.map((item, index) => (

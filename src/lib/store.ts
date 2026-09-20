@@ -12,7 +12,7 @@ import type {
   PublicReceipt,
   Receipt,
 } from "./types";
-import { parseReceiptStub, validateParse } from "./vision-stub";
+import { parseReceiptImage, type ParseMeta, type ReceiptImage } from "./parse-receipt";
 
 type InternalClaim = Claim & { ownerToken: string };
 
@@ -188,28 +188,25 @@ export function assertHost(id: string, token: string | null): InternalReceipt {
   return receipt;
 }
 
-export async function parseReceipt(id: string, image?: { name: string; type: string; size: number }) {
+export async function parseReceipt(
+  id: string,
+  image?: ReceiptImage,
+  opts?: { forceStub?: boolean },
+): Promise<{ receipt: PublicReceipt; parse: ParseMeta }> {
   return withLock(id, async () => {
     const receipt = requireReceipt(id);
     if (receipt.status !== "draft") {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
-    try {
-      const parsed = validateParse(await parseReceiptStub(image));
-      receipt.restaurant = parsed.restaurant;
-      receipt.items = itemsFromParse(parsed);
-      receipt.fees = feesFromParse(parsed);
-      receipt.imageName = image?.name ?? receipt.imageName;
-      receipt.parseFlag = undefined;
-    } catch {
-      receipt.parseFlag = "parse_failed";
-      if (receipt.items.length === 0) {
-        receipt.items = [];
-        receipt.fees = [];
-      }
-    }
+    const { result, parse } = await parseReceiptImage(image, opts);
+    receipt.restaurant = result.restaurant;
+    receipt.items = itemsFromParse(result);
+    receipt.fees = feesFromParse(result);
+    receipt.imageName = image?.name ?? receipt.imageName;
+    receipt.parseFlag =
+      parse.reason === "ok" || parse.reason === "no_image" ? undefined : parse.reason;
     emit(receipt, "updated");
-    return toPublic(receipt);
+    return { receipt: toPublic(receipt), parse };
   });
 }
 
