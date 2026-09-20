@@ -278,24 +278,25 @@ export function ClaimBoard({
           </Button>
         ) : (
           <div className="space-y-2">
-            <Button
-              className="h-12 w-full rounded-full bg-primary text-base font-semibold"
+            <button
+              type="button"
+              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
               disabled={busy || !selectedItem || !guest || max < 1}
               onClick={() => void claim()}
             >
               {busy ? "Claiming…" : "Claim"}
-            </Button>
+            </button>
             {isHost ? (
-              <Button
-                variant="outline"
-                className="h-12 w-full rounded-full"
+              <button
+                type="button"
+                className="inline-flex h-12 w-full items-center justify-center rounded-full border border-border bg-background text-sm font-semibold transition hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
                 disabled={busy || !getHostToken(receipt.id)}
                 onClick={() => void closeOut()}
               >
                 {remainingItems.length > 0
                   ? "Close claiming — leftovers on the host"
                   : "Close claiming & split"}
-              </Button>
+              </button>
             ) : (
               <Button
                 variant="outline"

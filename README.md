@@ -9,10 +9,11 @@ This is the first product slice: a slick interview-style app (red, light blue, w
 ```bash
 npm install
 npm test
-npm run dev
+npm run build
+npm run start
 ```
 
-Open [http://127.0.0.1:43147](http://127.0.0.1:43147).
+Open [http://127.0.0.1:43147](http://127.0.0.1:43147). For local iteration, `npm run dev` is fine on a machine where the Next.js HMR websocket can connect.
 
 - **New receipt** — TurboTax-style host interview (photo or sample tab → review lines → pay-you → share link)
 - **Try the sample tab** — guest claim board on the reference bar tab (`/r/demo`)

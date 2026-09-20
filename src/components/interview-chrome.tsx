@@ -3,6 +3,7 @@
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 export function InterviewChrome({
   step,
@@ -64,14 +65,21 @@ export function InterviewChrome({
 
 export function ContinueButton({
   children,
+  className,
+  disabled,
   ...props
-}: React.ComponentProps<typeof Button>) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <Button
+    <button
+      type="button"
+      disabled={disabled}
+      className={cn(
+        "inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50",
+        className,
+      )}
       {...props}
-      className="h-12 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
     >
       {children}
-    </Button>
+    </button>
   );
 }
