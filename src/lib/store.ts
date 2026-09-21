@@ -42,9 +42,17 @@ function state(): StoreState {
       locks: new Map(),
       listeners: new Map(),
     };
-    seedDemo(globalForStore.__splitTheWine);
+    if (demoEnabled()) {
+      seedDemo(globalForStore.__splitTheWine);
+    }
   }
   return globalForStore.__splitTheWine;
+}
+
+function demoEnabled() {
+  if (process.env.ALLOW_DEMO === "1" || process.env.ALLOW_DEMO === "true") return true;
+  // Local/dev convenience; production Railway should leave ALLOW_DEMO unset.
+  return process.env.NODE_ENV !== "production";
 }
 
 function shortId(): string {
@@ -190,11 +198,12 @@ export function assertHost(id: string, token: string | null): InternalReceipt {
 
 export async function parseReceipt(
   id: string,
+  hostToken: string | null,
   image?: ReceiptImage,
   opts?: { forceStub?: boolean },
 ): Promise<{ receipt: PublicReceipt; parse: ParseMeta }> {
   return withLock(id, async () => {
-    const receipt = requireReceipt(id);
+    const receipt = assertHost(id, hostToken);
     if (receipt.status !== "draft") {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
