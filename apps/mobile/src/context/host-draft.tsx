@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { api, createDraftReceipt, parseReceiptWithImage } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
+import { nextUnusedPayMethod, preferredPayMethod } from "@/lib/pay-region";
 import { saveHostToken } from "@/lib/session";
 import type { Fee, HostPayment, Item, PayMethod, PickedImage, PublicReceipt } from "@/lib/types";
 
@@ -45,7 +46,9 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [restaurant, setRestaurant] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
-  const [payments, setPayments] = useState<HostPayment[]>([{ method: "venmo", handle: "" }]);
+  const [payments, setPayments] = useState<HostPayment[]>([
+    { method: preferredPayMethod(), handle: "" },
+  ]);
   const [claimUrl, setClaimUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -61,13 +64,11 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const addPayment = useCallback((method: PayMethod = "cashapp") => {
+  const addPayment = useCallback((method?: PayMethod) => {
     setPayments((prev) => {
       const used = new Set(prev.map((p) => p.method));
       const nextMethod =
-        method && !used.has(method)
-          ? method
-          : (["venmo", "paypal", "zelle", "cashapp", "other"] as PayMethod[]).find((m) => !used.has(m));
+        method && !used.has(method) ? method : nextUnusedPayMethod(used);
       if (!nextMethod) return prev;
       return [...prev, { method: nextMethod, handle: "" }];
     });

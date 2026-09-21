@@ -1,8 +1,10 @@
 import type { HostInfo, HostPayment, PayMethod } from "./types";
+import { nextUnusedPayMethod, payMethodsForRegion, preferredPayMethod } from "./pay-region";
 
-export const PAY_METHODS: PayMethod[] = ["venmo", "paypal", "zelle", "cashapp", "other"];
+/** Region-ordered catalog (suggestions). Host may still pick any method. */
+export const PAY_METHODS: PayMethod[] = payMethodsForRegion();
 
-const METHODS = PAY_METHODS;
+const METHODS: PayMethod[] = ["venmo", "paypal", "zelle", "cashapp", "other"];
 
 function isMethod(value: unknown): value is PayMethod {
   return typeof value === "string" && (METHODS as string[]).includes(value);
@@ -107,3 +109,5 @@ export function validateHostPayments(
   }
   return { ok: true, payments: cleaned };
 }
+
+export { preferredPayMethod, nextUnusedPayMethod, payMethodsForRegion };

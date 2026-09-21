@@ -6,8 +6,9 @@ import { Field } from "@/components/field";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
-import { PAY_METHODS, validateHostPayments } from "@/lib/host-pay";
+import { validateHostPayments } from "@/lib/host-pay";
 import { PAY_METHOD_META } from "@/lib/pay";
+import { deviceRegionCode, payMethodsForRegion, payRegionBucket } from "@/lib/pay-region";
 import type { PayMethod } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
@@ -18,10 +19,22 @@ export default function HostPay() {
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
+  const methods = useMemo(() => payMethodsForRegion(), []);
+  const regionHint = useMemo(() => {
+    const region = deviceRegionCode();
+    const bucket = payRegionBucket(region);
+    if (!region) return null;
+    if (bucket === "us") return `Suggested first for ${region}: Venmo, Cash App, Zelle`;
+    if (bucket === "eu") return `Suggested first for ${region}: PayPal or bank details (Other)`;
+    if (bucket === "latam") return `Suggested first for ${region}: PayPal or Other`;
+    if (bucket === "ca") return `Suggested first for ${region}: PayPal`;
+    return null;
+  }, []);
+
   const unused = useMemo(() => {
     const used = new Set(draft.payments.map((p) => p.method));
-    return PAY_METHODS.filter((m) => !used.has(m));
-  }, [draft.payments]);
+    return methods.filter((m) => !used.has(m));
+  }, [draft.payments, methods]);
 
   function goConfirm() {
     const result = validateHostPayments(draft.payments);
@@ -107,11 +120,12 @@ export default function HostPay() {
         <Text style={styles.lead}>
           Add every app you accept. We check the format for typos, then you confirm before
           publishing.
+          {regionHint ? `\n${regionHint}` : ""}
         </Text>
         {draft.payments.map((payment, index) => (
           <View key={`${payment.method}-${index}`} style={styles.card}>
             <View style={styles.methodRow}>
-              {PAY_METHODS.map((method) => {
+              {methods.map((method) => {
                 const taken = draft.payments.some(
                   (p, i) => i !== index && p.method === method,
                 );
