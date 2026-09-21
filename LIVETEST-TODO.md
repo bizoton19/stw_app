@@ -20,8 +20,8 @@ Spell-outs used below:
 
 ## 0. Accounts (you do these in a browser)
 
-- [ ] **Apple Developer Program** enrolled ($99/yr) — https://developer.apple.com
-- [ ] **App Store Connect** access with that same Apple ID — https://appstoreconnect.apple.com
+- [x] **Apple Developer Program** — enrollment submitted / **pending** approval — https://developer.apple.com
+- [ ] **App Store Connect** access once membership is Active — https://appstoreconnect.apple.com
 - [ ] Create the iOS app record: name **Split the Wine**, bundle id **`com.splitthewine.app`**
 - [ ] **Expo** account — https://expo.dev → sign up / sign in
 - [ ] Install EAS CLI on your Mac: `npm i -g eas-cli` then `eas login`
