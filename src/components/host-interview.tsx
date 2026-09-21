@@ -355,33 +355,30 @@ export function HostInterview() {
             : "Fix misreads. Quantities stay whole numbers."}
         </p>
         <ul className="divide-y divide-border border-y border-border">
-          {items.map((item, index) => (
-            <li key={item.id} className="py-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-[12px] text-muted-foreground">Line {index + 1}</span>
-                <button
-                  type="button"
-                  className="pressable flex size-10 items-center justify-center"
-                  aria-label={`Remove ${item.name || "line"}`}
-                  onClick={() => setItems(items.filter((row) => row.id !== item.id))}
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-              <Input
-                id={`item-name-${item.id}`}
-                value={item.name}
-                onChange={(e) =>
-                  setItems(
-                    items.map((row) =>
-                      row.id === item.id ? { ...row, name: e.target.value } : row,
-                    ),
-                  )
-                }
-                className={fieldClass}
-                placeholder="Item name"
-              />
-              <div className="mt-2 grid grid-cols-2 gap-2">
+          {items.map((item) => (
+            <li key={item.id} className="flex items-end gap-2 py-3">
+              <label className="min-w-0 flex-1">
+                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
+                  item
+                </span>
+                <Input
+                  id={`item-name-${item.id}`}
+                  value={item.name}
+                  onChange={(e) =>
+                    setItems(
+                      items.map((row) =>
+                        row.id === item.id ? { ...row, name: e.target.value } : row,
+                      ),
+                    )
+                  }
+                  className={fieldClass}
+                  placeholder="Item name"
+                />
+              </label>
+              <label className="w-14 shrink-0">
+                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
+                  qty
+                </span>
                 <Input
                   id={`item-qty-${item.id}`}
                   inputMode="numeric"
@@ -391,8 +388,13 @@ export function HostInterview() {
                     const qty = Math.max(1, Math.floor(Number(e.target.value) || 0));
                     setItems(items.map((row) => (row.id === item.id ? { ...row, qty } : row)));
                   }}
-                  className={fieldClass}
+                  className={`${fieldClass} text-center tabular-nums`}
                 />
+              </label>
+              <label className="w-20 shrink-0">
+                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
+                  amt
+                </span>
                 <Input
                   id={`item-total-${item.id}`}
                   inputMode="decimal"
@@ -407,9 +409,17 @@ export function HostInterview() {
                       ),
                     );
                   }}
-                  className={fieldClass}
+                  className={`${fieldClass} text-center tabular-nums`}
                 />
-              </div>
+              </label>
+              <button
+                type="button"
+                className="pressable flex h-10 w-9 shrink-0 items-center justify-center"
+                aria-label={`Remove ${item.name || "line"}`}
+                onClick={() => setItems(items.filter((row) => row.id !== item.id))}
+              >
+                <Trash2 className="size-4" />
+              </button>
             </li>
           ))}
         </ul>
@@ -453,43 +463,52 @@ export function HostInterview() {
         </p>
         <ul className="divide-y divide-border border-y border-border">
           {fees.map((fee) => (
-            <li key={fee.id} className="py-3">
-              <div className="mb-2 flex justify-end">
-                <button
-                  type="button"
-                  className="pressable flex size-10 items-center justify-center"
-                  aria-label={`Remove ${fee.name || "fee"}`}
-                  onClick={() => setFees(fees.filter((row) => row.id !== fee.id))}
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-              <Input
-                value={fee.name}
-                onChange={(e) =>
-                  setFees(
-                    fees.map((row) =>
-                      row.id === fee.id ? { ...row, name: e.target.value } : row,
-                    ),
-                  )
-                }
-                className={fieldClass}
-                placeholder="Fee name"
-              />
-              <Input
-                className={`mt-2 ${fieldClass}`}
-                inputMode="decimal"
-                value={fee.amountInput}
-                onChange={(e) => {
-                  const amountInput = e.target.value;
-                  const amountCents = Math.round((Number(amountInput) || 0) * 100);
-                  setFees(
-                    fees.map((row) =>
-                      row.id === fee.id ? { ...row, amountInput, amountCents } : row,
-                    ),
-                  );
-                }}
-              />
+            <li key={fee.id} className="flex items-end gap-2 py-3">
+              <label className="min-w-0 flex-1">
+                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
+                  fee
+                </span>
+                <Input
+                  value={fee.name}
+                  onChange={(e) =>
+                    setFees(
+                      fees.map((row) =>
+                        row.id === fee.id ? { ...row, name: e.target.value } : row,
+                      ),
+                    )
+                  }
+                  className={fieldClass}
+                  placeholder="Fee name"
+                />
+              </label>
+              <label className="w-20 shrink-0">
+                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
+                  amt
+                </span>
+                <Input
+                  className={`${fieldClass} text-center tabular-nums`}
+                  inputMode="decimal"
+                  aria-label="Amount"
+                  value={fee.amountInput}
+                  onChange={(e) => {
+                    const amountInput = e.target.value;
+                    const amountCents = Math.round((Number(amountInput) || 0) * 100);
+                    setFees(
+                      fees.map((row) =>
+                        row.id === fee.id ? { ...row, amountInput, amountCents } : row,
+                      ),
+                    );
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="pressable flex h-10 w-9 shrink-0 items-center justify-center"
+                aria-label={`Remove ${fee.name || "fee"}`}
+                onClick={() => setFees(fees.filter((row) => row.id !== fee.id))}
+              >
+                <Trash2 className="size-4" />
+              </button>
             </li>
           ))}
         </ul>

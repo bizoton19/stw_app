@@ -42,7 +42,8 @@ export default function HostItems() {
         {draft.items.length === 0 ? <Text style={styles.lead}>{t("items.empty")}</Text> : null}
         {draft.items.map((item) => (
           <View key={item.id} style={styles.row}>
-            <View style={styles.nameRow}>
+            <View style={styles.nameCol}>
+              <Text style={styles.colLabel}>{t("items.nameLabel")}</Text>
               <TextInput
                 value={item.name}
                 placeholder={t("items.itemName")}
@@ -55,50 +56,48 @@ export default function HostItems() {
                   )
                 }
               />
-              <PressScale
-                accessibilityLabel={t("items.remove", {
-                  name: item.name.trim() || t("items.line"),
-                })}
-                onPress={() => draft.setItems(draft.items.filter((row) => row.id !== item.id))}
-                style={styles.trash}
-              >
-                <Trash2 size={15} color={colors.inkSoft} />
-              </PressScale>
             </View>
-            <View style={styles.metaRow}>
-              <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>{t("items.qty")}</Text>
-                <TextInput
-                  value={String(item.qty)}
-                  keyboardType="number-pad"
-                  style={styles.metaValue}
-                  accessibilityLabel={t("items.qty")}
-                  onChangeText={(raw) => {
-                    const qty = Math.max(1, Math.floor(Number(raw) || 0));
-                    draft.setItems(
-                      draft.items.map((row) => (row.id === item.id ? { ...row, qty } : row)),
-                    );
-                  }}
-                />
-              </View>
-              <View style={[styles.metaField, styles.metaFieldAmt]}>
-                <Text style={styles.metaLabel}>{t("items.amt")}</Text>
-                <TextInput
-                  value={item.totalInput}
-                  keyboardType="decimal-pad"
-                  style={styles.metaValue}
-                  accessibilityLabel={t("items.amt")}
-                  onChangeText={(totalInput) => {
-                    const totalCents = Math.round((Number(totalInput) || 0) * 100);
-                    draft.setItems(
-                      draft.items.map((row) =>
-                        row.id === item.id ? { ...row, totalInput, totalCents } : row,
-                      ),
-                    );
-                  }}
-                />
-              </View>
+            <View style={styles.qtyCol}>
+              <Text style={styles.colLabel}>{t("items.qty")}</Text>
+              <TextInput
+                value={String(item.qty)}
+                keyboardType="number-pad"
+                style={styles.numInput}
+                accessibilityLabel={t("items.qty")}
+                onChangeText={(raw) => {
+                  const qty = Math.max(1, Math.floor(Number(raw) || 0));
+                  draft.setItems(
+                    draft.items.map((row) => (row.id === item.id ? { ...row, qty } : row)),
+                  );
+                }}
+              />
             </View>
+            <View style={styles.amtCol}>
+              <Text style={styles.colLabel}>{t("items.amt")}</Text>
+              <TextInput
+                value={item.totalInput}
+                keyboardType="decimal-pad"
+                style={styles.numInput}
+                accessibilityLabel={t("items.amt")}
+                onChangeText={(totalInput) => {
+                  const totalCents = Math.round((Number(totalInput) || 0) * 100);
+                  draft.setItems(
+                    draft.items.map((row) =>
+                      row.id === item.id ? { ...row, totalInput, totalCents } : row,
+                    ),
+                  );
+                }}
+              />
+            </View>
+            <PressScale
+              accessibilityLabel={t("items.remove", {
+                name: item.name.trim() || t("items.line"),
+              })}
+              onPress={() => draft.setItems(draft.items.filter((row) => row.id !== item.id))}
+              style={styles.trash}
+            >
+              <Trash2 size={15} color={colors.inkSoft} />
+            </PressScale>
           </View>
         ))}
         <QuietButton
@@ -122,18 +121,30 @@ export default function HostItems() {
   );
 }
 
+const INPUT_H = 36;
+
 const styles = StyleSheet.create({
   lead: { fontSize: 13, color: colors.muted, marginBottom: 8 },
   row: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-    gap: 6,
   },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  nameCol: { flex: 1, minWidth: 0 },
+  qtyCol: { width: 52 },
+  amtCol: { width: 72 },
+  colLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.inkSoft,
+    letterSpacing: 0.2,
+    marginBottom: 4,
+  },
   nameInput: {
-    flex: 1,
-    height: 36,
+    height: INPUT_H,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
@@ -142,33 +153,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.ink,
   },
-  trash: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 2 },
-  metaField: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    minWidth: 72,
-  },
-  metaFieldAmt: { flex: 1 },
-  metaLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.inkSoft,
-    letterSpacing: 0.2,
-  },
-  metaValue: {
-    flexGrow: 0,
-    minWidth: 44,
-    height: 32,
+  numInput: {
+    height: INPUT_H,
     paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: colors.ink,
     fontVariant: ["tabular-nums"],
+    textAlign: "center",
+  },
+  trash: {
+    width: 36,
+    height: INPUT_H,
+    alignItems: "center",
+    justifyContent: "center",
   },
   footNote: {
     textAlign: "center",

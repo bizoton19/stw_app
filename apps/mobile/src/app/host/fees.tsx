@@ -1,10 +1,10 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
-import { Field } from "@/components/field";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
+import { t } from "@/lib/i18n";
 import { centsToLabel } from "@/lib/money";
 import { colors } from "@/lib/theme";
 
@@ -19,48 +19,64 @@ export default function HostFees() {
       <InterviewChrome
         step={6}
         total={8}
-        kicker="Tax & tip"
-        title="These follow what people ordered."
+        kicker={t("fees.kicker")}
+        title={t("fees.title")}
         onBack={() => router.back()}
         keyboard
+        dense
         footer={
           <View>
-            <Text style={styles.footNote}>Grand {centsToLabel(itemSubtotal + feeTotal)}</Text>
-            <PrimaryButton onPress={() => router.push("/host/pay")}>Continue</PrimaryButton>
+            <Text style={styles.footNote}>
+              {t("fees.grand", { amount: centsToLabel(itemSubtotal + feeTotal) })}
+            </Text>
+            <PrimaryButton onPress={() => router.push("/host/pay")}>
+              {t("fees.continue")}
+            </PrimaryButton>
           </View>
         }
       >
-        <Text style={styles.lead}>Admin, gratuity, tax — never an even split by headcount.</Text>
+        <Text style={styles.lead}>{t("fees.lead")}</Text>
         {draft.fees.map((fee) => (
           <View key={fee.id} style={styles.row}>
-            <View style={{ alignItems: "flex-end" }}>
-              <PressScale
-                accessibilityLabel={`Remove ${fee.name || "fee"}`}
-                onPress={() => draft.setFees(draft.fees.filter((row) => row.id !== fee.id))}
-                style={styles.trash}
-              >
-                <Trash2 size={16} color={colors.ink} />
-              </PressScale>
+            <View style={styles.nameCol}>
+              <Text style={styles.colLabel}>{t("fees.nameLabel")}</Text>
+              <TextInput
+                value={fee.name}
+                placeholder={t("fees.feeName")}
+                placeholderTextColor={colors.muted}
+                style={styles.nameInput}
+                autoCorrect={false}
+                onChangeText={(name) =>
+                  draft.setFees(draft.fees.map((row) => (row.id === fee.id ? { ...row, name } : row)))
+                }
+              />
             </View>
-            <Field
-              value={fee.name}
-              placeholder="Fee name"
-              onChangeText={(name) =>
-                draft.setFees(draft.fees.map((row) => (row.id === fee.id ? { ...row, name } : row)))
-              }
-            />
-            <Field
-              value={fee.amountInput}
-              keyboardType="decimal-pad"
-              onChangeText={(amountInput) => {
-                const amountCents = Math.round((Number(amountInput) || 0) * 100);
-                draft.setFees(
-                  draft.fees.map((row) =>
-                    row.id === fee.id ? { ...row, amountInput, amountCents } : row,
-                  ),
-                );
-              }}
-            />
+            <View style={styles.amtCol}>
+              <Text style={styles.colLabel}>{t("fees.amt")}</Text>
+              <TextInput
+                value={fee.amountInput}
+                keyboardType="decimal-pad"
+                style={styles.numInput}
+                accessibilityLabel={t("fees.amt")}
+                onChangeText={(amountInput) => {
+                  const amountCents = Math.round((Number(amountInput) || 0) * 100);
+                  draft.setFees(
+                    draft.fees.map((row) =>
+                      row.id === fee.id ? { ...row, amountInput, amountCents } : row,
+                    ),
+                  );
+                }}
+              />
+            </View>
+            <PressScale
+              accessibilityLabel={t("fees.remove", {
+                name: fee.name.trim() || t("fees.fee"),
+              })}
+              onPress={() => draft.setFees(draft.fees.filter((row) => row.id !== fee.id))}
+              style={styles.trash}
+            >
+              <Trash2 size={15} color={colors.inkSoft} />
+            </PressScale>
           </View>
         ))}
         <QuietButton
@@ -76,21 +92,62 @@ export default function HostFees() {
             ])
           }
         >
-          Add a fee
+          {t("fees.add")}
         </QuietButton>
       </InterviewChrome>
     </AppShell>
   );
 }
 
+const INPUT_H = 36;
+
 const styles = StyleSheet.create({
-  lead: { fontSize: 14, color: colors.muted, marginBottom: 12 },
+  lead: { fontSize: 13, color: colors.muted, marginBottom: 8 },
   row: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  trash: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  nameCol: { flex: 1, minWidth: 0 },
+  amtCol: { width: 80 },
+  colLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.inkSoft,
+    letterSpacing: 0.2,
+    marginBottom: 4,
+  },
+  nameInput: {
+    height: INPUT_H,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.ink,
+  },
+  numInput: {
+    height: INPUT_H,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.ink,
+    fontVariant: ["tabular-nums"],
+    textAlign: "center",
+  },
+  trash: {
+    width: 36,
+    height: INPUT_H,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   footNote: {
     textAlign: "center",
     fontSize: 13,
