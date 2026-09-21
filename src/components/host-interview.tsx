@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { centsToLabel } from "@/lib/money";
 import { validateHostPayments } from "@/lib/host-pay";
+import { payMethodsForRegion } from "@/lib/pay-region";
 import { api, saveHostToken } from "@/lib/session";
 import type { Fee, HostInfo, Item, PayMethod, PublicReceipt } from "@/lib/types";
 
@@ -533,8 +534,10 @@ export function HostInterview() {
       </div>
     );
   } else if (step === "pay") {
+    const regionMethods = new Set(payMethodsForRegion());
+    const payOptions = PAY_OPTIONS.filter((o) => regionMethods.has(o.method));
     const used = new Set(payments.map((p) => p.method));
-    const unused = PAY_OPTIONS.filter((o) => !used.has(o.method));
+    const unused = payOptions.filter((o) => !used.has(o.method));
     if (payConfirming) {
       const checked = validateHostPayments(payments);
       const rows = checked.ok ? checked.payments : hostInfo.payments;
@@ -581,7 +584,7 @@ export function HostInterview() {
               className="mb-4 rounded-xl border border-border p-3"
             >
               <div className="mb-3 flex flex-wrap gap-2">
-                {PAY_OPTIONS.map((option) => {
+                {payOptions.map((option) => {
                   const taken = payments.some((p, i) => i !== index && p.method === option.method);
                   if (taken) return null;
                   const on = payment.method === option.method;

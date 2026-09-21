@@ -1,11 +1,8 @@
-import { getLocales } from "expo-localization";
 import type { PayMethod } from "./types";
 
 /**
- * Static region → preferred payment order (suggestions only).
- * Host still picks freely among offered methods; we just order chips / defaults.
- * Not driven by language — by device regionCode.
- * MonCash / Natcash are Haiti-only.
+ * Browser region → preferred payment order (suggestions only).
+ * MonCash / Natcash are Haiti-only (region HT).
  */
 
 const CORE: PayMethod[] = ["venmo", "paypal", "zelle", "cashapp", "other"];
@@ -15,7 +12,6 @@ const US_ORDER: PayMethod[] = ["venmo", "cashapp", "zelle", "paypal", "other"];
 const CA_ORDER: PayMethod[] = ["paypal", "venmo", "cashapp", "zelle", "other"];
 const LATAM_ORDER: PayMethod[] = ["paypal", "other", "cashapp", "venmo", "zelle"];
 const EU_ORDER: PayMethod[] = ["paypal", "other", "venmo", "cashapp", "zelle"];
-/** Haiti — MonCash + Natcash first. */
 const HT_ORDER: PayMethod[] = [
   "moncash",
   "natcash",
@@ -86,12 +82,18 @@ const EU = new Set([
 
 export type PayRegionBucket = "us" | "ca" | "ht" | "latam" | "eu" | "default";
 
-export function deviceRegionCode(): string | null {
-  const code = getLocales()[0]?.regionCode?.toUpperCase();
-  return code || null;
+export function browserRegionCode(): string | null {
+  if (typeof navigator === "undefined") return null;
+  try {
+    const region = new Intl.Locale(navigator.language).region;
+    return region ? region.toUpperCase() : null;
+  } catch {
+    const parts = navigator.language.split("-");
+    return parts.length > 1 ? parts[parts.length - 1]!.toUpperCase() : null;
+  }
 }
 
-export function payRegionBucket(regionCode: string | null = deviceRegionCode()): PayRegionBucket {
+export function payRegionBucket(regionCode: string | null = browserRegionCode()): PayRegionBucket {
   if (!regionCode) return "default";
   if (regionCode === "US") return "us";
   if (regionCode === "CA") return "ca";
@@ -105,7 +107,7 @@ function catalogFor(bucket: PayRegionBucket): PayMethod[] {
   return bucket === "ht" ? [...CORE, ...HT_ONLY] : [...CORE];
 }
 
-export function payMethodsForRegion(regionCode: string | null = deviceRegionCode()): PayMethod[] {
+export function payMethodsForRegion(regionCode: string | null = browserRegionCode()): PayMethod[] {
   const bucket = payRegionBucket(regionCode);
   const order =
     bucket === "us"
@@ -122,16 +124,4 @@ export function payMethodsForRegion(regionCode: string | null = deviceRegionCode
   const catalog = catalogFor(bucket);
   const missing = catalog.filter((m) => !order.includes(m));
   return [...order.filter((m) => catalog.includes(m)), ...missing];
-}
-
-export function preferredPayMethod(regionCode: string | null = deviceRegionCode()): PayMethod {
-  return payMethodsForRegion(regionCode)[0] ?? "paypal";
-}
-
-export function nextUnusedPayMethod(
-  used: Iterable<PayMethod>,
-  regionCode: string | null = deviceRegionCode(),
-): PayMethod | undefined {
-  const taken = new Set(used);
-  return payMethodsForRegion(regionCode).find((m) => !taken.has(m));
 }
