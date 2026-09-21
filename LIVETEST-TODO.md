@@ -6,6 +6,7 @@ Closed friend test: Expo iOS build → Apple TestFlight → Railway HTTPS API.
 - [x] Deploy API to Railway — `https://api-production-72488.up.railway.app`
 - [x] Set `OPENROUTER_API_KEY`, `OPENROUTER_HTTP_REFERER`, `ALLOWED_ORIGINS` on Railway
 - [x] Phase 0 API harden (host-token parse, demo gated, CORS allowlist)
+- [x] Persist receipts to shared Railway Postgres in schema **`split_the_wine`** (redeploys no longer wipe tabs)
 
 Spell-outs used below:
 - **EAS** = Expo Application Services (Expo’s cloud build / submit service)
@@ -88,7 +89,7 @@ From `apps/mobile`:
 
 - [ ] Two phones: one **hosts** (photo → parse → share link), one **claims**
 - [ ] Pay deep links open Venmo / Cash App / PayPal when installed
-- [ ] Tell friends: **redeploying Railway wipes all open tabs** (in-memory store)
+- [ ] Tell friends: API redeploys keep tabs (Postgres schema `split_the_wine`); still don’t post the Railway URL publicly
 - [ ] Don’t post the Railway URL publicly
 - [ ] Cap / alert OpenRouter spend in the OpenRouter dashboard
 
@@ -98,9 +99,10 @@ From `apps/mobile`:
 
 - [ ] Privacy Policy URL
 - [ ] App Store screenshots + description
-- [ ] Persistent storage (Postgres) so restarts don’t wipe dinners
+- [ ] Persistent storage (Postgres) so restarts don’t wipe dinners — **done for friend-test** (`split_the_wine` schema on shared instance)
 - [ ] Rate limits / stronger invite or claim gating
 - [ ] Drop local-network ATS exceptions from production profile entirely
+- [ ] Object storage for receipt images (optional; parse-once is fine for now)
 
 ---
 

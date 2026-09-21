@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { id } = await ctx.params;
-    return Response.json(getPublicReceipt(id));
+    return Response.json(await getPublicReceipt(id));
   } catch (err) {
     return jsonError(err);
   }

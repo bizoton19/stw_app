@@ -82,6 +82,8 @@ railway init          # or link existing project
 railway variables set OPENROUTER_API_KEY=sk-or-...
 railway variables set OPENROUTER_HTTP_REFERER=https://YOUR-APP.up.railway.app
 railway variables set ALLOWED_ORIGINS=https://YOUR-APP.up.railway.app
+# Shared Postgres (reuse instance; this app uses schema `split_the_wine` only)
+railway variables set DATABASE_URL=postgresql://...
 # leave ALLOW_DEMO unset in production
 railway up
 ```

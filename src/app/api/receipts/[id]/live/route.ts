@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { id } = await ctx.params;
-    getPublicReceipt(id);
+    await getPublicReceipt(id);
 
     const encoder = new TextEncoder();
     let unsubscribe = () => {};

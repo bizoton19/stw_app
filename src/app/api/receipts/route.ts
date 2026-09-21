@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       // Native client creates drafts with `{}` — image arrives on /parse.
       await req.json().catch(() => null);
     }
-    const created = createReceipt({ imageName });
+    const created = await createReceipt({ imageName });
     return Response.json(created);
   } catch (err) {
     return jsonError(err);

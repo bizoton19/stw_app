@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await ctx.params;
-    return Response.json(getTotals(id));
+    return Response.json(await getTotals(id));
   } catch (err) {
     return jsonError(err);
   }

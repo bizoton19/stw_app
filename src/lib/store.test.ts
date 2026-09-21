@@ -5,7 +5,7 @@ import { addClaim, addClaims, getPublicReceipt, getTotals, resetStoreForTests } 
 describe("claiming", () => {
   it("rejects overclaiming when concurrent requests race the last units", async () => {
     resetStoreForTests();
-    const demo = getPublicReceipt("demo");
+    const demo = await getPublicReceipt("demo");
     const wine = demo.items.find((item) => item.name.startsWith("BQ Wine"));
     assert.ok(wine);
     const requests = Array.from({ length: 10 }, (_, i) =>
@@ -27,12 +27,12 @@ describe("claiming", () => {
     assert.equal(wins.length, 7);
     assert.equal(losses.length, 3);
     assert.ok(losses.every((r) => !r.ok && r.code === "not_enough_remaining"));
-    assert.equal(getPublicReceipt("demo").remaining[wine.id], 0);
+    assert.equal((await getPublicReceipt("demo")).remaining[wine.id], 0);
   });
 
   it("computes proportional totals after a full claim of the sample tab", async () => {
     resetStoreForTests();
-    const demo = getPublicReceipt("demo");
+    const demo = await getPublicReceipt("demo");
     for (const item of demo.items) {
       await addClaim("demo", {
         itemId: item.id,
@@ -40,7 +40,7 @@ describe("claiming", () => {
         units: item.qty,
       });
     }
-    const totals = getTotals("demo");
+    const totals = await getTotals("demo");
     assert.equal(totals.unclaimedItemCents, 0);
     assert.equal(totals.people.length, 1);
     assert.equal(totals.people[0].totalCents, totals.grandTotalCents);
@@ -49,7 +49,7 @@ describe("claiming", () => {
 
   it("claims several lines together and leaves remaining unchanged if the batch would overclaim", async () => {
     resetStoreForTests();
-    const demo = getPublicReceipt("demo");
+    const demo = await getPublicReceipt("demo");
     const juice = demo.items.find((item) => item.name === "Apple Juice");
     const botanist = demo.items.find((item) => item.name === "The Botanist");
     assert.ok(juice);
@@ -63,11 +63,11 @@ describe("claiming", () => {
       ],
     });
     assert.equal(result.claims.length, 2);
-    assert.equal(getPublicReceipt("demo").remaining[juice.id], 0);
-    assert.equal(getPublicReceipt("demo").remaining[botanist.id], 0);
+    assert.equal((await getPublicReceipt("demo")).remaining[juice.id], 0);
+    assert.equal((await getPublicReceipt("demo")).remaining[botanist.id], 0);
 
     resetStoreForTests();
-    const wine = getPublicReceipt("demo").items.find((item) => item.name.startsWith("BQ Wine"));
+    const wine = (await getPublicReceipt("demo")).items.find((item) => item.name.startsWith("BQ Wine"));
     assert.ok(wine);
     await assert.rejects(
       () =>
@@ -80,6 +80,6 @@ describe("claiming", () => {
         }),
       (err: unknown) => (err as { code?: string }).code === "not_enough_remaining",
     );
-    assert.equal(getPublicReceipt("demo").remaining[wine.id], 7);
+    assert.equal((await getPublicReceipt("demo")).remaining[wine.id], 7);
   });
 });
