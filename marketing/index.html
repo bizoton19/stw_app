@@ -92,20 +92,20 @@
             <span class="font-bold text-2xl tracking-tight">Split the Wine</span>
         </div>
         <div class="flex items-center gap-6">
-            <a href="#how-it-works" class="text-sm font-semibold text-inkSoft hover:text-merlot transition-colors">How it works</a>
+            <a href="#how-it-works" class="text-sm font-semibold text-inkSoft hover:text-merlot transition-colors" data-i18n="nav.how">How it works</a>
             
             <!-- Language Dropdown -->
             <div class="relative inline-block text-left" id="lang-menu">
                 <button type="button" id="lang-btn" class="flex items-center gap-1.5 text-sm font-semibold text-inkSoft hover:text-merlot transition-colors focus:outline-none" aria-expanded="false" aria-haspopup="true">
                     <i data-lucide="globe" class="w-4 h-4"></i>
-                    EN
+                    <span id="current-lang-label">EN</span>
                     <i data-lucide="chevron-down" class="w-3 h-3"></i>
                 </button>
                 <div id="lang-dropdown" class="hidden absolute right-0 mt-2 w-32 origin-top-right rounded-xl bg-white shadow-sm border border-[#E6E0D8] focus:outline-none z-10 p-1 transform opacity-0 scale-95 transition-all duration-100 ease-out" role="menu">
-                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-ink bg-paper font-medium" role="menuitem">English</a>
-                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" role="menuitem">Español</a>
-                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" role="menuitem">Français</a>
-                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" role="menuitem">Kreyòl</a>
+                    <button type="button" class="lang-option w-full text-left block rounded-lg px-4 py-2 text-sm text-ink bg-paper font-medium" data-lang="en" role="menuitem">English</button>
+                    <button type="button" class="lang-option w-full text-left block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" data-lang="es" role="menuitem">Español</button>
+                    <button type="button" class="lang-option w-full text-left block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" data-lang="fr" role="menuitem">Français</button>
+                    <button type="button" class="lang-option w-full text-left block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" data-lang="ht" role="menuitem">Kreyòl</button>
                 </div>
             </div>
         </div>
@@ -113,11 +113,11 @@
 
     <!-- Hero Section -->
     <main class="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-24 text-center">
-        <h1 class="text-5xl md:text-7xl font-bold tracking-tight text-ink max-w-4xl fade-up delay-100">
+        <h1 class="text-5xl md:text-7xl font-bold tracking-tight text-ink max-w-4xl fade-up delay-100" data-i18n="hero.title">
             Split the tab. <br/>
             <span class="text-merlot">Skip the math.</span>
         </h1>
-        <p class="mt-6 text-lg md:text-xl text-inkSoft max-w-2xl fade-up delay-200">
+        <p class="mt-6 text-lg md:text-xl text-inkSoft max-w-2xl fade-up delay-200" data-i18n="hero.subtitle">
             Photograph the check. Friends claim what they ordered. Pay the host — we never touch the money, and we don't need your social graph.
         </p>
         
@@ -134,14 +134,14 @@
         <!-- Privacy highlight -->
         <div class="mt-8 inline-flex items-center gap-2 bg-[#E6E0D8] bg-opacity-40 px-4 py-2 rounded-full fade-up delay-300">
             <i data-lucide="shield-check" class="w-4 h-4 text-merlot"></i>
-            <span class="text-sm font-medium text-inkSoft">No accounts required. Links expire. Total privacy.</span>
+            <span class="text-sm font-medium text-inkSoft" data-i18n="hero.privacy">No accounts required. Links expire. Total privacy.</span>
         </div>
     </main>
 
     <!-- Steps Section -->
     <section id="how-it-works" class="bg-white py-24 px-6 border-t border-[#E6E0D8]">
         <div class="max-w-5xl mx-auto">
-            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">Four steps. Zero friction.</h2>
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16" data-i18n="steps.title">Four steps. Zero friction.</h2>
             
             <div class="grid md:grid-cols-4 gap-8">
                 <!-- Step 1 -->
@@ -149,8 +149,8 @@
                     <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
                         <i data-lucide="camera" class="w-8 h-8 text-merlot"></i>
                     </div>
-                    <h3 class="text-lg font-bold mb-2">1. Snap the Check</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed">
+                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.1.title">1. Snap the Check</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed" data-i18n="steps.1.desc">
                         Take a photo. Our AI reads the line items and prices instantly. You just confirm it looks right.
                     </p>
                 </div>
@@ -160,8 +160,8 @@
                     <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
                         <i data-lucide="share" class="w-8 h-8 text-merlot"></i>
                     </div>
-                    <h3 class="text-lg font-bold mb-2">2. Drop the Link</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed">
+                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.2.title">2. Drop the Link</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed" data-i18n="steps.2.desc">
                         Send the link in your group chat. Guests open it in their browser—no app download required.
                     </p>
                 </div>
@@ -171,8 +171,8 @@
                     <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
                         <i data-lucide="mouse-pointer-click" class="w-8 h-8 text-merlot"></i>
                     </div>
-                    <h3 class="text-lg font-bold mb-2">3. Claim Drinks and Food</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed">
+                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.3.title">3. Claim Drinks and Food</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed" data-i18n="steps.3.desc">
                         Everyone taps what they ordered. Tax and tip are calculated proportionally automatically.
                     </p>
                 </div>
@@ -182,8 +182,8 @@
                     <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
                         <i data-lucide="smartphone-nfc" class="w-8 h-8 text-merlot"></i>
                     </div>
-                    <h3 class="text-lg font-bold mb-2">4. Settle Up</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed mb-4">
+                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.4.title">4. Settle Up</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed mb-4" data-i18n="steps.4.desc">
                         Guests tap to pay. We open your preferred app pre-filled. We never hold your funds.
                     </p>
                     <div class="flex flex-wrap justify-center gap-2 mt-auto">
@@ -200,26 +200,26 @@
     <!-- Ephemeral/Privacy Callout -->
     <section class="bg-merlot text-paper py-24 px-6">
         <div class="max-w-4xl mx-auto text-center">
-            <h2 class="text-3xl md:text-4xl font-bold mb-6">Your data isn't the product.</h2>
-            <p class="text-lg opacity-90 max-w-2xl mx-auto leading-relaxed mb-10">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6" data-i18n="privacy.title">Your data isn't the product.</h2>
+            <p class="text-lg opacity-90 max-w-2xl mx-auto leading-relaxed mb-10" data-i18n="privacy.subtitle">
                 You already have a group chat. We don't need your contacts or your social graph. 
                 Split the Wine uses ephemeral links designed for tonight's dinner. Once the tab is settled, the link vanishes.
             </p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
                 <div class="bg-white/10 p-6 rounded-2xl backdrop-blur-sm">
                     <i data-lucide="user-x" class="w-6 h-6 mb-4 text-paper opacity-80"></i>
-                    <h4 class="font-bold mb-2 text-lg">No Guest Accounts</h4>
-                    <p class="text-sm opacity-80">Only the host needs the app. Guests claim via the web in seconds without signing up.</p>
+                    <h4 class="font-bold mb-2 text-lg" data-i18n="privacy.1.title">No Guest Accounts</h4>
+                    <p class="text-sm opacity-80" data-i18n="privacy.1.desc">Only the host needs the app. Guests claim via the web in seconds without signing up.</p>
                 </div>
                 <div class="bg-white/10 p-6 rounded-2xl backdrop-blur-sm">
                     <i data-lucide="timer-off" class="w-6 h-6 mb-4 text-paper opacity-80"></i>
-                    <h4 class="font-bold mb-2 text-lg">Short-lived Tabs</h4>
-                    <p class="text-sm opacity-80">Receipt links expire automatically. We don't build a ledger of your spending history.</p>
+                    <h4 class="font-bold mb-2 text-lg" data-i18n="privacy.2.title">Short-lived Tabs</h4>
+                    <p class="text-sm opacity-80" data-i18n="privacy.2.desc">Receipt links expire automatically. We don't build a ledger of your spending history.</p>
                 </div>
                 <div class="bg-white/10 p-6 rounded-2xl backdrop-blur-sm">
                     <i data-lucide="wallet" class="w-6 h-6 mb-4 text-paper opacity-80"></i>
-                    <h4 class="font-bold mb-2 text-lg">Direct Payments</h4>
-                    <p class="text-sm opacity-80">We don't process payments or take a cut. Money moves directly between your existing apps.</p>
+                    <h4 class="font-bold mb-2 text-lg" data-i18n="privacy.3.title">Direct Payments</h4>
+                    <p class="text-sm opacity-80" data-i18n="privacy.3.desc">We don't process payments or take a cut. Money moves directly between your existing apps.</p>
                 </div>
             </div>
         </div>
@@ -234,27 +234,136 @@
             </svg>
             <span class="font-bold text-ink">Split the Wine</span>
         </div>
-        <p class="text-sm text-inkSoft mb-4">Built for the table, not the ledger.</p>
+        <p class="text-sm text-inkSoft mb-4" data-i18n="footer.tagline">Built for the table, not the ledger.</p>
         <div class="flex justify-center gap-6 text-sm text-inkSoft">
-            <a href="privacy.html" class="hover:text-merlot transition-colors">Privacy Policy</a>
-            <a href="mailto:support@splitthewine.app" class="hover:text-merlot transition-colors">Contact Support</a>
+            <a href="privacy.html" class="hover:text-merlot transition-colors" data-i18n="footer.privacy">Privacy Policy</a>
+            <a href="mailto:support@splitthewine.app" class="hover:text-merlot transition-colors" data-i18n="footer.contact">Contact Support</a>
         </div>
     </footer>
 
     <script>
+        // Translations Dictionary
+        const i18n = {
+            en: {
+                "nav.how": "How it works",
+                "hero.title": "Split the tab. <br/> <span class=\"text-merlot\">Skip the math.</span>",
+                "hero.subtitle": "Photograph the check. Friends claim what they ordered. Pay the host — we never touch the money, and we don't need your social graph.",
+                "hero.privacy": "No accounts required. Links expire. Total privacy.",
+                "steps.title": "Four steps. Zero friction.",
+                "steps.1.title": "1. Snap the Check",
+                "steps.1.desc": "Take a photo. Our AI reads the line items and prices instantly. You just confirm it looks right.",
+                "steps.2.title": "2. Drop the Link",
+                "steps.2.desc": "Send the link in your group chat. Guests open it in their browser—no app download required.",
+                "steps.3.title": "3. Claim Drinks and Food",
+                "steps.3.desc": "Everyone taps what they ordered. Tax and tip are calculated proportionally automatically.",
+                "steps.4.title": "4. Settle Up",
+                "steps.4.desc": "Guests tap to pay. We open your preferred app pre-filled. We never hold your funds.",
+                "privacy.title": "Your data isn't the product.",
+                "privacy.subtitle": "You already have a group chat. We don't need your contacts or your social graph. Split the Wine uses ephemeral links designed for tonight's dinner. Once the tab is settled, the link vanishes.",
+                "privacy.1.title": "No Guest Accounts",
+                "privacy.1.desc": "Only the host needs the app. Guests claim via the web in seconds without signing up.",
+                "privacy.2.title": "Short-lived Tabs",
+                "privacy.2.desc": "Receipt links expire automatically. We don't build a ledger of your spending history.",
+                "privacy.3.title": "Direct Payments",
+                "privacy.3.desc": "We don't process payments or take a cut. Money moves directly between your existing apps.",
+                "footer.tagline": "Built for the table, not the ledger.",
+                "footer.privacy": "Privacy Policy",
+                "footer.contact": "Contact Support"
+            },
+            es: {
+                "nav.how": "Cómo funciona",
+                "hero.title": "Divide la cuenta. <br/> <span class=\"text-merlot\">Olvídate de las matemáticas.</span>",
+                "hero.subtitle": "Fotografía la cuenta. Tus amigos eligen lo que pidieron. Págale al anfitrión — nunca tocamos el dinero y no necesitamos tus contactos.",
+                "hero.privacy": "Sin cuentas. Los enlaces caducan. Privacidad total.",
+                "steps.title": "Cuatro pasos. Cero fricción.",
+                "steps.1.title": "1. Toma una foto",
+                "steps.1.desc": "Toma una foto. Nuestra IA lee los artículos y precios al instante. Solo confirmas que se vea bien.",
+                "steps.2.title": "2. Comparte el enlace",
+                "steps.2.desc": "Envía el enlace a tu grupo. Los invitados lo abren en su navegador, sin descargar la app.",
+                "steps.3.title": "3. Reclama tus bebidas",
+                "steps.3.desc": "Cada quien selecciona lo que pidió. Los impuestos y propinas se calculan proporcionalmente.",
+                "steps.4.title": "4. Paga tu parte",
+                "steps.4.desc": "Los invitados tocan para pagar. Abrimos tu app favorita prellenada. Nunca retenemos tus fondos.",
+                "privacy.title": "Tus datos no son el producto.",
+                "privacy.subtitle": "Ya tienes un chat de grupo. No necesitamos tus contactos ni tu red social. Split the Wine usa enlaces efímeros. Una vez liquidada la cuenta, el enlace desaparece.",
+                "privacy.1.title": "Sin Cuentas",
+                "privacy.1.desc": "Solo el anfitrión necesita la app. Los invitados reclaman vía web en segundos sin registrarse.",
+                "privacy.2.title": "Cuentas Efímeras",
+                "privacy.2.desc": "Los enlaces caducan automáticamente. No construimos un historial de tus gastos.",
+                "privacy.3.title": "Pagos Directos",
+                "privacy.3.desc": "No procesamos pagos ni cobramos comisión. El dinero se mueve directamente entre tus apps.",
+                "footer.tagline": "Construido para la mesa, no para el banco.",
+                "footer.privacy": "Privacidad",
+                "footer.contact": "Soporte"
+            },
+            fr: {
+                "nav.how": "Comment ça marche",
+                "hero.title": "Divisez l'addition. <br/> <span class=\"text-merlot\">Oubliez les maths.</span>",
+                "hero.subtitle": "Photographiez l'addition. Vos amis sélectionnent ce qu'ils ont pris. Payez l'hôte — nous ne touchons jamais l'argent.",
+                "hero.privacy": "Aucun compte requis. Liens éphémères. Confidentialité totale.",
+                "steps.title": "Quatre étapes. Zéro friction.",
+                "steps.1.title": "1. Prenez l'addition en photo",
+                "steps.1.desc": "Notre IA lit les articles et les prix instantanément. Vous n'avez qu'à confirmer.",
+                "steps.2.title": "2. Partagez le lien",
+                "steps.2.desc": "Envoyez le lien dans votre groupe. Les invités l'ouvrent dans leur navigateur, sans télécharger l'application.",
+                "steps.3.title": "3. Sélectionnez vos consos",
+                "steps.3.desc": "Chacun sélectionne ce qu'il a commandé. Les taxes et pourboires sont calculés automatiquement.",
+                "steps.4.title": "4. Réglez la note",
+                "steps.4.desc": "Appuyez pour payer. Nous ouvrons votre application préférée pré-remplie.",
+                "privacy.title": "Vos données ne sont pas le produit.",
+                "privacy.subtitle": "Vous avez déjà un groupe de discussion. Split the Wine utilise des liens éphémères. Une fois l'addition réglée, le lien disparaît.",
+                "privacy.1.title": "Pas de compte invité",
+                "privacy.1.desc": "Seul l'hôte a besoin de l'application. Les invités participent via le web en quelques secondes.",
+                "privacy.2.title": "Additions éphémères",
+                "privacy.2.desc": "Les liens expirent automatiquement. Nous ne conservons pas votre historique de dépenses.",
+                "privacy.3.title": "Paiements directs",
+                "privacy.3.desc": "Nous ne traitons pas les paiements. L'argent circule directement entre vos applications.",
+                "footer.tagline": "Conçu pour la table, pas pour la compta.",
+                "footer.privacy": "Confidentialité",
+                "footer.contact": "Support"
+            },
+            ht: {
+                "nav.how": "Kijan li mache",
+                "hero.title": "Separe adisyon an. <br/> <span class=\"text-merlot\">Bliye kalkil yo.</span>",
+                "hero.subtitle": "Fè foto adisyon an. Zanmi ou yo chwazi sa yo te pran. Peye moun ki envite a — nou pa janm manyen lajan an.",
+                "hero.privacy": "Pa bezwen kont. Lyen yo ekspire. Vi prive total.",
+                "steps.title": "Kat etap. Zewo tèt fè mal.",
+                "steps.1.title": "1. Fè foto adisyon an",
+                "steps.1.desc": "Fè yon foto. Entèlijans atifisyèl nou an li atik ak pri yo menm kote a. Ou jis konfime li kòrèk.",
+                "steps.2.title": "2. Voye lyen an",
+                "steps.2.desc": "Voye lyen an nan gwoup ou a. Envite yo ouvri li nan navigatè yo, yo pa bezwen telechaje aplikasyon an.",
+                "steps.3.title": "3. Chwazi sa w te pran",
+                "steps.3.desc": "Tout moun klike sou sa yo te kòmande. Taks ak fiyè yo kalkile otomatikman.",
+                "steps.4.title": "4. Peye",
+                "steps.4.desc": "Envite yo klike pou peye. Nou ouvri aplikasyon ou pito a tou ranpli. Nou pa janm kenbe lajan ou.",
+                "privacy.title": "Done ou se pa pwodwi nou.",
+                "privacy.subtitle": "Ou gen yon gwoup deja. Split the Wine itilize lyen ki la pou yon ti tan. Lè tout moun fin peye, lyen an efase.",
+                "privacy.1.title": "Pa Gen Kont Pou Envite",
+                "privacy.1.desc": "Se sèl moun k ap resevwa a ki bezwen aplikasyon an. Envite yo patisipe sou entènèt nan kèk segonn.",
+                "privacy.2.title": "Adisyon Ki Pa Rete",
+                "privacy.2.desc": "Lyen yo ekspire otomatikman. Nou pa kenbe yon istwa sou sa ou depanse.",
+                "privacy.3.title": "Peman Dirèk",
+                "privacy.3.desc": "Nou pa trete peman. Lajan an pase dirèkteman nan aplikasyon ou yo.",
+                "footer.tagline": "Fè pou tab la, pa pou bank lan.",
+                "footer.privacy": "Vi Prive",
+                "footer.contact": "Sipò"
+            }
+        };
+
         // Initialize Lucide icons
         lucide.createIcons();
 
         // Language Dropdown Logic
         const langBtn = document.getElementById('lang-btn');
         const langDropdown = document.getElementById('lang-dropdown');
+        const currentLangLabel = document.getElementById('current-lang-label');
+        const langOptions = document.querySelectorAll('.lang-option');
         let langOpen = false;
 
         function toggleLangMenu(force) {
             langOpen = force !== undefined ? force : !langOpen;
             if (langOpen) {
                 langDropdown.classList.remove('hidden');
-                // slight delay to allow display:block to apply before animating opacity
                 setTimeout(() => {
                     langDropdown.classList.remove('opacity-0', 'scale-95');
                     langDropdown.classList.add('opacity-100', 'scale-100');
@@ -278,6 +387,50 @@
                 toggleLangMenu(false);
             }
         });
+
+        // Apply Language
+        function setLanguage(lang) {
+            if (!i18n[lang]) return;
+            
+            // Update button label
+            currentLangLabel.innerText = lang.toUpperCase();
+
+            // Update all translations
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) {
+                    el.innerHTML = i18n[lang][key]; // innerHTML so <br/> tags work in title
+                }
+            });
+            
+            // Store preference
+            try {
+                localStorage.setItem('stw-marketing-lang', lang);
+            } catch (e) {}
+        }
+
+        // Handle language selection clicks
+        langOptions.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const lang = btn.getAttribute('data-lang');
+                setLanguage(lang);
+                toggleLangMenu(false);
+            });
+        });
+
+        // Load saved language or browser default
+        try {
+            const savedLang = localStorage.getItem('stw-marketing-lang');
+            if (savedLang && i18n[savedLang]) {
+                setLanguage(savedLang);
+            } else {
+                const browserLang = navigator.language.slice(0, 2).toLowerCase();
+                if (i18n[browserLang]) {
+                    setLanguage(browserLang);
+                }
+            }
+        } catch (e) {}
     </script>
 </body>
 </html>
