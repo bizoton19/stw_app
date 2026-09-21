@@ -37,9 +37,9 @@ export function ClaimBoard({
     ? totals.people.find((p) => p.personName === guest.name)
     : undefined;
   const closed = receipt.status === "finalized";
-  const totalSteps = isHost ? 2 : 3;
-  const pickStep = isHost ? 1 : 2;
-  const qtyStep = isHost ? 2 : 3;
+  const totalSteps = 3;
+  const pickStep = 2;
+  const qtyStep = 3;
   const activeQueued = queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
 
   useEffect(() => {
@@ -179,6 +179,7 @@ export function ClaimBoard({
           title="Claiming is closed"
           mine={mine?.totalCents}
           guest={guest}
+          isHost={isHost}
         />
         <History
           receipt={receipt}
@@ -332,13 +333,10 @@ export function ClaimBoard({
       {guest ? (
         <p className="mb-4 text-[13px] text-muted-foreground">
           Claiming as {guest.name}
+          {isHost ? " (host)" : ""}
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
-      ) : (
-        <p className="mb-4 text-[13px] text-muted-foreground">
-          Add your name on the join screen to claim.
-        </p>
-      )}
+      ) : null}
       {message ? <p className="mb-3 text-sm text-destructive">{message}</p> : null}
 
       {remainingItems.length === 0 ? (
@@ -406,11 +404,13 @@ function BoardHeader({
   title,
   mine,
   guest,
+  isHost,
 }: {
   receipt: PublicReceipt;
   title: string;
   mine?: number;
   guest: { name: string; contact: string } | null;
+  isHost?: boolean;
 }) {
   return (
     <div className="pt-3">
@@ -430,6 +430,7 @@ function BoardHeader({
       {guest ? (
         <p className="mb-4 text-[13px] text-muted-foreground">
           Claiming as {guest.name}
+          {isHost ? " (host)" : ""}
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
       ) : null}

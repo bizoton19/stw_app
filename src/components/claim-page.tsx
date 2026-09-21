@@ -54,12 +54,14 @@ export function ClaimPage({
     );
   }
 
-  if (!guest && !isHost) {
+  if (!guest) {
     return (
       <PhoneShell meta={meta}>
         <JoinGuest
           receiptId={receipt.id}
           restaurant={receipt.restaurant}
+          isHost={isHost}
+          defaultName={receipt.hostInfo?.handle?.replace(/^@/, "") ?? ""}
           onJoined={setGuest}
         />
       </PhoneShell>

@@ -11,13 +11,17 @@ export function JoinGuest({
   receiptId,
   restaurant,
   onJoined,
+  isHost = false,
+  defaultName = "",
 }: {
   receiptId: string;
   restaurant: string;
   onJoined: (guest: GuestIdentity) => void;
+  isHost?: boolean;
+  defaultName?: string;
 }) {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName);
   const [contact, setContact] = useState("");
 
   return (
@@ -25,7 +29,7 @@ export function JoinGuest({
       step={1}
       total={3}
       kicker={restaurant || "At the table"}
-      title="What should we call you?"
+      title={isHost ? "You're hosting — claim under what name?" : "What should we call you?"}
       stepKey="join"
       onBack={() => router.push("/")}
       footer={
@@ -42,7 +46,9 @@ export function JoinGuest({
       }
     >
       <p className="mb-6 text-[15px] leading-relaxed text-muted-foreground">
-        A name is enough. Add a handle so the host can reach you if something looks off.
+        {isHost
+          ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
+          : "A name is enough. Add a handle so the host can reach you if something looks off."}
       </p>
       <Label htmlFor="guest-name" className="mb-2 text-[13px] font-medium">
         Name

@@ -2,7 +2,7 @@ import { Alert, Image, Platform, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, ImageIcon, Sparkles } from "lucide-react-native";
+import { Camera, ImageIcon } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ChoiceRow } from "@/components/choice-row";
 import { useHostDraft } from "@/context/host-draft";
@@ -16,7 +16,7 @@ export default function HostCapture() {
     if (Platform.OS === "web" || !Device.isDevice) {
       Alert.alert(
         "Camera needs a real phone",
-        "Simulators and Expo web don't have a working camera. Pick from the library, or use the sample tab. On a physical device in Expo Go, this opens the system camera.",
+        "Simulators and Expo web don't have a working camera. Pick from the library instead.",
       );
       await pickLibrary("camera");
       return;
@@ -47,7 +47,7 @@ export default function HostCapture() {
   async function pickLibrary(mode: "camera" | "library" = "library") {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted && Platform.OS !== "web") {
-      Alert.alert("Photos need permission", "Allow photo access, or use the sample tab.");
+      Alert.alert("Photos need permission", "Allow photo access to continue.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -74,10 +74,10 @@ export default function HostCapture() {
         onBack={() => router.back()}
         footer={
           <PrimaryButton
-            disabled={draft.pickMode === null}
+            disabled={draft.pickMode === null || !draft.image}
             onPress={() => router.push("/host/parsing")}
           >
-            {draft.pickMode === "sample" ? "Use the sample bar tab" : "Continue"}
+            Continue
           </PrimaryButton>
         }
       >
@@ -100,20 +100,13 @@ export default function HostCapture() {
             selected={draft.pickMode === "library"}
             onPress={() => void pickLibrary()}
           />
-          <ChoiceRow
-            icon={<Sparkles size={20} color={colors.ink} />}
-            title="Use the sample bar tab"
-            hint="Wine package vs apple juice — no camera"
-            selected={draft.pickMode === "sample"}
-            onPress={() => draft.setPick("sample")}
-          />
         </View>
         {draft.image ? (
           <Image source={{ uri: draft.image.uri }} style={styles.preview} />
         ) : null}
         <Text style={styles.note}>
-          Photos are read on the server. You still review every line. If scanning isn't
-          available, we use the sample bar tab so you can keep going.
+          Photos are read on the server. You still review every line and can fix anything before
+          sharing.
         </Text>
       </InterviewChrome>
     </AppShell>

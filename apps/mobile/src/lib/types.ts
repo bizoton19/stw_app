@@ -47,7 +47,7 @@ export type PersonTotal = {
   itemCents: number;
   feeCents: number;
   totalCents: number;
-  lines: { itemName: string; units: number; cents: number }[];
+  lines: { itemId: string; itemName: string; units: number; cents: number }[];
 };
 
 export type Totals = {

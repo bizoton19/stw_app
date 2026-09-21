@@ -20,18 +20,6 @@ export default function Home() {
           >
             Start with the receipt
           </Link>
-          <Link
-            href="/r/demo"
-            className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium"
-          >
-            Open the sample tab
-          </Link>
-          <p className="pt-3 text-center text-[12px] text-muted-foreground">
-            Hosting the sample?{" "}
-            <Link href="/r/demo?host=1" className="font-medium text-foreground">
-              Host tools
-            </Link>
-          </p>
         </div>
       </main>
     </PhoneShell>

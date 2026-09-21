@@ -44,8 +44,8 @@ export default function SettleScreen() {
   return (
     <AppShell>
       <InterviewChrome
-        step={flow.isHost ? 2 : 3}
-        total={flow.isHost ? 2 : 3}
+        step={3}
+        total={3}
         kicker={receipt.restaurant || "The check"}
         title="Who owes what"
         onBack={() => router.back()}
@@ -80,7 +80,10 @@ export default function SettleScreen() {
             const amount = centsToLabel(person.totalCents);
             const text = messageFor(person.personName, amount, handle, method);
             return (
-              <View key={person.personName} style={styles.person}>
+              <View
+                key={`${person.personName}\0${person.personContact ?? ""}`}
+                style={styles.person}
+              >
                 <View style={styles.personHead}>
                   <View>
                     <Text style={styles.name}>{person.personName}</Text>
@@ -89,7 +92,7 @@ export default function SettleScreen() {
                   <Text style={styles.amount}>{amount}</Text>
                 </View>
                 {person.lines.map((line) => (
-                  <Text key={line.itemName} style={styles.muted}>
+                  <Text key={line.itemId} style={styles.muted}>
                     {line.units}× {line.itemName} · {centsToLabel(line.cents)}
                   </Text>
                 ))}

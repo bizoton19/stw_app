@@ -95,7 +95,7 @@ export default function HostItems() {
             draft.setItems([
               ...draft.items,
               {
-                id: `new_${Date.now().toString(36)}`,
+                id: `new_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
                 name: "",
                 qty: 1,
                 totalCents: 0,

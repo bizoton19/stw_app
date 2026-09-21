@@ -23,7 +23,7 @@ export default function ClaimScreen() {
         <View style={{ padding: 20, paddingTop: 40 }}>
           <Text style={styles.title}>That tab is gone</Text>
           <Text style={styles.muted}>
-            Links live in this server's memory. Start a new receipt or open the sample tab.
+            Links live in this server's memory. Start a new receipt from home.
           </Text>
           <View style={{ marginTop: 24 }}>
             <PrimaryButton onPress={() => router.replace("/")}>Back home</PrimaryButton>
@@ -43,7 +43,7 @@ export default function ClaimScreen() {
     );
   }
 
-  if (!flow.guest && !flow.isHost) {
+  if (!flow.guest) {
     return <JoinScreen />;
   }
 
@@ -57,15 +57,17 @@ export default function ClaimScreen() {
 function JoinScreen() {
   const router = useRouter();
   const flow = useClaimFlow();
-  const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  const [name, setName] = useState(
+    () => flow.guest?.name || flow.receipt?.hostInfo?.handle?.replace(/^@/, "") || "",
+  );
+  const [contact, setContact] = useState(() => flow.guest?.contact || "");
   return (
     <AppShell>
       <InterviewChrome
         step={1}
         total={3}
         kicker={flow.receipt?.restaurant || "At the table"}
-        title="What should we call you?"
+        title={flow.isHost ? "You're hosting — claim under what name?" : "What should we call you?"}
         onBack={() => router.replace("/")}
         keyboard
         footer={
@@ -78,7 +80,9 @@ function JoinScreen() {
         }
       >
         <Text style={styles.lead}>
-          A name is enough. Add a handle so the host can reach you if something looks off.
+          {flow.isHost
+            ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
+            : "A name is enough. Add a handle so the host can reach you if something looks off."}
         </Text>
         <Field label="Name" value={name} onChangeText={setName} placeholder="Alex" autoComplete="name" />
         <Field
@@ -106,8 +110,8 @@ function PickBoard() {
     ? totals.people.find((p) => p.personName === flow.guest?.name)
     : undefined;
   const closed = receipt.status === "finalized";
-  const totalSteps = flow.isHost ? 2 : 3;
-  const pickStep = flow.isHost ? 1 : 2;
+  const totalSteps = 3;
+  const pickStep = 2;
   const activeQueued = flow.queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
 
   if (closed) {
@@ -207,11 +211,10 @@ function PickBoard() {
       {flow.guest ? (
         <Text style={styles.as}>
           Claiming as {flow.guest.name}
+          {flow.isHost ? " (host)" : ""}
           {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
         </Text>
-      ) : (
-        <Text style={styles.as}>Add your name on the join screen to claim.</Text>
-      )}
+      ) : null}
       {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
       {remainingItems.length === 0 ? (
         <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>

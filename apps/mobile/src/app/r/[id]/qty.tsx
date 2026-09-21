@@ -12,8 +12,8 @@ export default function QtyScreen() {
   const router = useRouter();
   const flow = useClaimFlow();
   const receipt = flow.receipt;
-  const totalSteps = flow.isHost ? 2 : 3;
-  const qtyStep = flow.isHost ? 2 : 3;
+  const totalSteps = 3;
+  const qtyStep = 3;
 
   const queuedItems = (receipt?.items ?? []).filter(
     (item) => flow.queued.includes(item.id) && (receipt?.remaining[item.id] ?? 0) > 0,

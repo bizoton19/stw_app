@@ -13,6 +13,7 @@ export type ReceiptImage = {
 };
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const EMPTY_PARSE: ParseResult = { restaurant: "", items: [], fees: [] };
 
 export function hasOpenRouterKey(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY?.trim());
@@ -22,14 +23,17 @@ export async function parseReceiptImage(
   image?: ReceiptImage | null,
   opts?: { forceStub?: boolean },
 ): Promise<{ result: ParseResult; parse: ParseMeta }> {
-  if (opts?.forceStub || !image) {
+  if (opts?.forceStub) {
     return { result: await parseReceiptStub(image), parse: { source: "stub", reason: "no_image" } };
   }
+  if (!image) {
+    return { result: EMPTY_PARSE, parse: { source: "stub", reason: "no_image" } };
+  }
   if (image.size > MAX_IMAGE_BYTES || image.bytes.length > MAX_IMAGE_BYTES) {
-    return { result: await parseReceiptStub(image), parse: { source: "stub", reason: "failed" } };
+    return { result: EMPTY_PARSE, parse: { source: "stub", reason: "failed" } };
   }
   if (!hasOpenRouterKey()) {
-    return { result: await parseReceiptStub(image), parse: { source: "stub", reason: "no_key" } };
+    return { result: EMPTY_PARSE, parse: { source: "stub", reason: "no_key" } };
   }
   try {
     const { parseReceiptVision } = await import("./vision");
@@ -39,6 +43,6 @@ export async function parseReceiptImage(
     }
     return { result, parse: { source: "vision", reason: "ok" } };
   } catch {
-    return { result: await parseReceiptStub(image), parse: { source: "stub", reason: "failed" } };
+    return { result: EMPTY_PARSE, parse: { source: "stub", reason: "failed" } };
   }
 }

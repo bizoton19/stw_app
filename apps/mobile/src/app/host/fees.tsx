@@ -68,7 +68,7 @@ export default function HostFees() {
             draft.setFees([
               ...draft.fees,
               {
-                id: `new_${Date.now().toString(36)}`,
+                id: `new_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
                 name: "",
                 amountCents: 0,
                 amountInput: "0.00",

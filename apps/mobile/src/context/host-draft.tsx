@@ -6,7 +6,7 @@ import type { Fee, Item, PayMethod, PickedImage, PublicReceipt } from "@/lib/typ
 
 export type DraftItem = Item & { totalInput: string };
 export type DraftFee = Fee & { amountInput: string };
-export type PickMode = "camera" | "library" | "sample" | null;
+export type PickMode = "camera" | "library" | null;
 
 function toDraftItems(items: Item[]): DraftItem[] {
   return items.map((item) => ({ ...item, totalInput: (item.totalCents / 100).toFixed(2) }));
@@ -52,7 +52,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const setPick = useCallback((mode: PickMode, next?: PickedImage | null) => {
     setPickMode(mode);
-    setImage(mode === "sample" ? null : (next ?? null));
+    setImage(next ?? null);
     setError(null);
   }, []);
 
@@ -78,16 +78,17 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       const { getHostToken } = await import("@/lib/session");
       const { receipt, parse } = await parseReceiptWithImage(id, {
         image,
-        sample: pickMode === "sample",
         hostToken: getHostToken(id),
       });
       applyReceipt(receipt);
       if (parse?.reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {
-        setError("Couldn't read that photo. Here's the sample tab so you can keep going.");
+        setError("Couldn't read that photo. Add the lines on the next screens.");
       } else if (parse?.reason === "no_key") {
-        setError("Scanning isn't configured here. Using the sample tab.");
+        setError("Scanning isn't configured here. Add the lines on the next screens.");
+      } else if (parse?.reason === "no_image") {
+        setError("No photo attached. Add the lines on the next screens.");
       } else {
         setError(null);
       }
@@ -102,7 +103,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         );
       }
     }
-  }, [applyReceipt, ensureDraft, image, pickMode]);
+  }, [applyReceipt, ensureDraft, image]);
 
   const publish = useCallback(async () => {
     if (!receiptId) throw new Error("no_receipt");

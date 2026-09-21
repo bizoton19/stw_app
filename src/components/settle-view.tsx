@@ -84,7 +84,7 @@ export function SettleView({ receipt }: { receipt: PublicReceipt }) {
             const sms = `sms:?&body=${encodeURIComponent(text)}`;
             const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
             return (
-              <li key={person.personName}>
+              <li key={`${person.personName}\0${person.personContact ?? ""}`}>
                 <div className="flex items-baseline justify-between gap-3">
                   <div>
                     <p className="font-medium">{person.personName}</p>
@@ -96,7 +96,7 @@ export function SettleView({ receipt }: { receipt: PublicReceipt }) {
                 </div>
                 <ul className="mt-2 space-y-1 text-[12px] text-muted-foreground">
                   {person.lines.map((line) => (
-                    <li key={line.itemName}>
+                    <li key={line.itemId}>
                       {line.units}× {line.itemName} · {centsToLabel(line.cents)}
                     </li>
                   ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ImageIcon, Sparkles, Trash2 } from "lucide-react";
+import { Camera, ImageIcon, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
@@ -114,7 +114,7 @@ export function HostInterview() {
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [pickMode, setPickMode] = useState<"camera" | "library" | "sample" | null>(null);
+  const [pickMode, setPickMode] = useState<"camera" | "library" | null>(null);
   const [restaurant, setRestaurant] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
@@ -152,9 +152,9 @@ export function HostInterview() {
     return created.receiptId;
   }
 
-  function onPick(next: File | null, mode: "camera" | "library" | "sample") {
+  function onPick(next: File | null, mode: "camera" | "library") {
     setPickMode(mode);
-    setFile(mode === "sample" ? null : next);
+    setFile(next);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(next ? URL.createObjectURL(next) : null);
     setError(null);
@@ -169,7 +169,6 @@ export function HostInterview() {
       const token = sessionStorage.getItem(`stw-host:${id}`);
       const form = new FormData();
       if (file) form.set("image", file);
-      if (pickMode === "sample") form.set("sample", "1");
       const { receipt, parse } = await api<{
         receipt: PublicReceipt;
         parse?: { source: string; reason: string };
@@ -182,9 +181,11 @@ export function HostInterview() {
       if (parse?.reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {
-        setError("Couldn't read that photo. Here's the sample tab so you can keep going.");
+        setError("Couldn't read that photo. Add the lines on the next screens.");
       } else if (parse?.reason === "no_key") {
-        setError("Scanning isn't configured here. Using the sample tab.");
+        setError("Scanning isn't configured here. Add the lines on the next screens.");
+      } else if (parse?.reason === "no_image") {
+        setError("No photo attached. Add the lines on the next screens.");
       } else {
         setError(null);
       }
@@ -269,13 +270,6 @@ export function HostInterview() {
             selected={pickMode === "library"}
             onClick={() => libraryRef.current?.click()}
           />
-          <Choice
-            icon={<Sparkles className="size-5" />}
-            title="Use the sample bar tab"
-            hint="Wine package vs apple juice — no camera"
-            selected={pickMode === "sample"}
-            onClick={() => onPick(null, "sample")}
-          />
         </div>
         <input
           ref={cameraRef}
@@ -299,14 +293,14 @@ export function HostInterview() {
           </div>
         ) : null}
         <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
-          Photos are read on the server. You still review every line. If scanning
-          isn&apos;t available, we use the sample bar tab so you can keep going.
+          Photos are read on the server. You still review every line and can fix anything before
+          sharing.
         </p>
       </>
     );
     footer = (
-      <ContinueButton disabled={pickMode === null} onClick={() => void startParse()}>
-        {pickMode === "sample" ? "Use the sample bar tab" : busy ? "Working…" : "Continue"}
+      <ContinueButton disabled={pickMode === null || !file} onClick={() => void startParse()}>
+        {busy ? "Working…" : "Continue"}
       </ContinueButton>
     );
   } else if (step === "parsing") {

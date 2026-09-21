@@ -65,7 +65,12 @@ export function computeTotals(receipt: Receipt): Totals {
     for (const [name, agg] of byPerson) {
       const row = person(name, agg.contact);
       row.itemCents += agg.cents;
-      row.lines.push({ itemName: item.name, units: agg.units, cents: agg.cents });
+      row.lines.push({
+        itemId: item.id,
+        itemName: item.name,
+        units: agg.units,
+        cents: agg.cents,
+      });
     }
   }
 
