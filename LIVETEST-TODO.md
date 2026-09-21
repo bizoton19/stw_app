@@ -31,11 +31,11 @@ Spell-outs used below:
 
 Apple and EAS will reject or look broken without these.
 
-- [ ] **App icon** — final marketing-quality icon (1024×1024 PNG, no transparency for App Store)
-  - Update `apps/mobile/assets/images/icon.png`
-  - Update `apps/mobile/assets/expo.icon` (iOS layered icon) if you keep using it
-  - Android adaptive pieces under `apps/mobile/assets/images/android-icon-*.png` if you care about Android later
-- [ ] **Splash** — `apps/mobile/assets/images/splash-icon.png` matches the brand
+- [x] **Draft app icon** installed — merlot split-bottle on cream (`apps/mobile/assets/images/icon.png`); iOS now uses that PNG (not the old Expo blueprint `.icon`)
+- [x] **Draft splash** — `apps/mobile/assets/images/splash-icon.png`
+- [x] **Draft Android adaptive** — `android-icon-foreground/background/monochrome.png`
+- [ ] **Approve or revise drafts** — originals also in `apps/mobile/assets/drafts/`
+- [ ] **Final marketing icon** (1024×1024 PNG, no transparency) before public App Store
 - [ ] Optional later for public App Store: screenshots (6.7" and 6.1" iPhone), subtitle, description, Privacy Policy URL
 
 ---

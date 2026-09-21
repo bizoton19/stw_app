@@ -8,7 +8,7 @@
     "scheme": "splitthewine",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.splitthewine.app",
       "supportsTablet": false,
       "infoPlist": {
