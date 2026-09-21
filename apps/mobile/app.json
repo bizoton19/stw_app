@@ -65,6 +65,16 @@
       ],
       "expo-sharing",
       [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsImageWithMaxCount": 1
+          },
+          "androidIntentFilters": ["image/*"],
+          "iosShareExtensionName": "Split the Wine"
+        }
+      ],
+      [
         "expo-localization",
         {
           "supportedLocales": {

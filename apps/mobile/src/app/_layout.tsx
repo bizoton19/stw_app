@@ -3,6 +3,8 @@ import { StatusBar } from "expo-status-bar";
 import { AppState } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ShareIntentProvider } from "expo-share-intent";
+import { ShareIntentGate } from "@/components/share-intent-gate";
 import { colors } from "@/lib/theme";
 import { hydrateApiUrl } from "@/lib/config";
 import { refreshLocaleFromDevice } from "@/lib/i18n";
@@ -23,20 +25,28 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.paper }}>
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.paper },
-            animation: "slide_from_right",
-            gestureEnabled: true,
-            fullScreenGestureEnabled: true,
-            animationDuration: 320,
-          }}
-        />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ShareIntentProvider
+      options={{
+        debug: false,
+        resetOnBackground: true,
+      }}
+    >
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.paper }}>
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <ShareIntentGate />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.paper },
+              animation: "slide_from_right",
+              gestureEnabled: true,
+              fullScreenGestureEnabled: true,
+              animationDuration: 320,
+            }}
+          />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ShareIntentProvider>
   );
 }

@@ -1,8 +1,10 @@
+import { useEffect, useRef } from "react";
 import { Alert, Image, Platform, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, ImageIcon } from "lucide-react-native";
+import { useShareIntentContext } from "expo-share-intent";
+import { Camera, ImageIcon, Share2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ChoiceRow } from "@/components/choice-row";
 import { useHostDraft } from "@/context/host-draft";
@@ -11,6 +13,22 @@ import { colors } from "@/lib/theme";
 export default function HostCapture() {
   const router = useRouter();
   const draft = useHostDraft();
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
+  const consumedShareRef = useRef(false);
+
+  useEffect(() => {
+    if (consumedShareRef.current) return;
+    if (!hasShareIntent) return;
+    const file = shareIntent.files?.[0];
+    if (!file?.path) return;
+    consumedShareRef.current = true;
+    draft.setPick("share", {
+      uri: file.path,
+      fileName: file.fileName ?? null,
+      mimeType: file.mimeType ?? "image/jpeg",
+    });
+    resetShareIntent(false);
+  }, [draft.setPick, hasShareIntent, resetShareIntent, shareIntent.files]);
 
   async function takePhoto() {
     if (Platform.OS === "web" || !Device.isDevice) {
@@ -100,13 +118,22 @@ export default function HostCapture() {
             selected={draft.pickMode === "library"}
             onPress={() => void pickLibrary()}
           />
+          {draft.pickMode === "share" && draft.image ? (
+            <ChoiceRow
+              icon={<Share2 size={20} color={colors.ink} />}
+              title="Shared from Photos"
+              hint="Opened from the system share sheet"
+              selected
+              onPress={() => undefined}
+            />
+          ) : null}
         </View>
         {draft.image ? (
           <Image source={{ uri: draft.image.uri }} style={styles.preview} />
         ) : null}
         <Text style={styles.note}>
-          Photos are read on the server. You still review every line and can fix anything before
-          sharing.
+          Tip: from Camera or Photos, tap Share → Split the Wine to skip opening the app first.
+          Photos are read on the server. You still review every line before sharing.
         </Text>
       </InterviewChrome>
     </AppShell>

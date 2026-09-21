@@ -14,8 +14,9 @@ export default function HomeScreen() {
           <Text style={styles.kicker}>Fair split</Text>
           <Text style={styles.title}>Ready to split this check?</Text>
           <Text style={styles.body}>
-            Photograph the tab. Friends claim what they actually ordered. Tax and tip follow
-            the drinks — not the headcount.
+            Photograph the tab — or share a receipt photo from Camera/Photos straight into the
+            app. Friends claim what they actually ordered. Tax and tip follow the drinks — not
+            the headcount.
           </Text>
         </View>
         <View style={styles.actions}>

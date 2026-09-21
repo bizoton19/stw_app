@@ -7,7 +7,7 @@ import type { Fee, HostPayment, Item, PayMethod, PickedImage, PublicReceipt } fr
 
 export type DraftItem = Item & { totalInput: string };
 export type DraftFee = Fee & { amountInput: string };
-export type PickMode = "camera" | "library" | null;
+export type PickMode = "camera" | "library" | "share" | null;
 
 function toDraftItems(items: Item[]): DraftItem[] {
   return items.map((item) => ({ ...item, totalInput: (item.totalCents / 100).toFixed(2) }));
