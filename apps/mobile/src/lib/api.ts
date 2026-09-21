@@ -1,12 +1,18 @@
 import { Platform } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
 import { getApiUrl } from "./config";
-import type { PickedImage } from "./types";
+import type { PickedImage, PublicReceipt } from "./types";
 
 export type ApiError = Error & {
   code?: string;
   remaining?: number;
   itemId?: string;
   status?: number;
+};
+
+type ParseResponse = {
+  receipt: PublicReceipt;
+  parse?: { source: string; reason: string };
 };
 
 export async function api<T>(
@@ -46,6 +52,65 @@ export async function pingApi(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function createDraftReceipt(): Promise<{ receiptId: string; hostToken: string }> {
+  return api("/api/receipts", { method: "POST", body: "{}" });
+}
+
+/** Native FormData file uploads often fail on device; use FileSystem.uploadAsync instead. */
+export async function parseReceiptWithImage(
+  receiptId: string,
+  opts: {
+    image?: PickedImage | null;
+    sample?: boolean;
+    hostToken?: string | null;
+  },
+): Promise<ParseResponse> {
+  const path = `/api/receipts/${receiptId}/parse`;
+
+  if (opts.sample || !opts.image) {
+    return api<ParseResponse>(path, {
+      method: "POST",
+      hostToken: opts.hostToken,
+      body: JSON.stringify({ sample: opts.sample ? true : undefined }),
+    });
+  }
+
+  if (Platform.OS === "web") {
+    const form = new FormData();
+    await appendReceiptImage(form, opts.image);
+    return api<ParseResponse>(path, {
+      method: "POST",
+      body: form,
+      hostToken: opts.hostToken,
+    });
+  }
+
+  const headers: Record<string, string> = {};
+  if (opts.hostToken) headers["x-host-token"] = opts.hostToken;
+
+  const result = await FileSystem.uploadAsync(`${getApiUrl()}${path}`, opts.image.uri, {
+    httpMethod: "POST",
+    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+    fieldName: "image",
+    mimeType: opts.image.mimeType ?? "image/jpeg",
+    headers,
+  });
+
+  let data: ParseResponse & { error?: string } = { receipt: undefined as unknown as PublicReceipt };
+  try {
+    data = JSON.parse(result.body) as ParseResponse & { error?: string };
+  } catch {
+    /* ignore */
+  }
+  if (result.status < 200 || result.status >= 300) {
+    const err = new Error(data.error ?? "request_failed") as ApiError;
+    err.code = data.error;
+    err.status = result.status;
+    throw err;
+  }
+  return data;
 }
 
 export async function appendReceiptImage(form: FormData, image: PickedImage) {

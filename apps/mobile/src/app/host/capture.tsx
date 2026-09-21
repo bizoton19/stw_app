@@ -31,7 +31,8 @@ export default function HostCapture() {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
-      quality: 0.85,
+      quality: 0.7,
+      exif: false,
       cameraType: ImagePicker.CameraType.back,
     });
     if (result.canceled || !result.assets[0]) return;
@@ -51,7 +52,8 @@ export default function HostCapture() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 0.85,
+      quality: 0.7,
+      exif: false,
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];

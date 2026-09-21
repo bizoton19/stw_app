@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { api, appendReceiptImage } from "@/lib/api";
+import { api, createDraftReceipt, parseReceiptWithImage } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
 import { saveHostToken } from "@/lib/session";
 import type { Fee, Item, PayMethod, PickedImage, PublicReceipt } from "@/lib/types";
@@ -64,31 +64,21 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const ensureDraft = useCallback(async () => {
     if (receiptId) return receiptId;
-    const form = new FormData();
-    if (image) await appendReceiptImage(form, image);
-    const created = await api<{ receiptId: string; hostToken: string }>("/api/receipts", {
-      method: "POST",
-      body: form,
-    });
+    // Create without multipart — RN FormData file uploads often fail on device.
+    const created = await createDraftReceipt();
     await saveHostToken(created.receiptId, created.hostToken);
     setReceiptId(created.receiptId);
     return created.receiptId;
-  }, [image, receiptId]);
+  }, [receiptId]);
 
   const runParse = useCallback(async () => {
     setError(null);
     try {
       const id = await ensureDraft();
       const { getHostToken } = await import("@/lib/session");
-      const form = new FormData();
-      if (image) await appendReceiptImage(form, image);
-      if (pickMode === "sample") form.append("sample", "1");
-      const { receipt, parse } = await api<{
-        receipt: PublicReceipt;
-        parse?: { source: string; reason: string };
-      }>(`/api/receipts/${id}/parse`, {
-        method: "POST",
-        body: form,
+      const { receipt, parse } = await parseReceiptWithImage(id, {
+        image,
+        sample: pickMode === "sample",
         hostToken: getHostToken(id),
       });
       applyReceipt(receipt);
@@ -101,8 +91,16 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       } else {
         setError(null);
       }
-    } catch {
-      setError("Couldn't reach the server. Check the API URL on the home screen, then enter the lines yourself.");
+    } catch (err) {
+      const code = (err as { code?: string; message?: string }).code
+        ?? (err as { message?: string }).message;
+      if (code && code !== "Network request failed" && code !== "request_failed") {
+        setError(`Server said ${code}. You can still enter the lines yourself.`);
+      } else {
+        setError(
+          "Couldn't reach the server. Check the API URL on the home screen, then enter the lines yourself.",
+        );
+      }
     }
   }, [applyReceipt, ensureDraft, image, pickMode]);
 

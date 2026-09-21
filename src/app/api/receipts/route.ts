@@ -13,6 +13,9 @@ export async function POST(req: Request) {
       if (file instanceof File && file.size > 0) {
         imageName = file.name;
       }
+    } else if (contentType.includes("application/json")) {
+      // Native client creates drafts with `{}` — image arrives on /parse.
+      await req.json().catch(() => null);
     }
     const created = createReceipt({ imageName });
     return Response.json(created);

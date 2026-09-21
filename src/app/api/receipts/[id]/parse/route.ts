@@ -28,8 +28,13 @@ export async function POST(
     let forceStub = false;
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
-      forceStub = String(form.get("sample") ?? "") === "1";
+      forceStub = String(form.get("sample") ?? "") === "1" || String(form.get("sample") ?? "") === "true";
       image = await imageFromForm(form);
+    } else if (contentType.includes("application/json")) {
+      const body = (await req.json().catch(() => ({}))) as {
+        sample?: boolean | string;
+      };
+      forceStub = body.sample === true || body.sample === "1" || body.sample === "true";
     }
     const result = await parseReceipt(id, image, { forceStub });
     return Response.json(result);
