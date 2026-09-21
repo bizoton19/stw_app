@@ -1,4 +1,4 @@
-# Payment brand glyphs
+# Payment glyphs
 
-Venmo, PayPal, and Cash App path data from [Simple Icons](https://simpleicons.org) (CC0 1.0).
-Zelle mark is a generic stylized “Z” — not an official Zelle asset (Zelle isn’t in Simple Icons).
+- **Official tiles:** see [`official/`](./official/) (PayPal Newsroom + Cash App press kits).
+- **Legacy Simple Icons SVGs** (CC0) kept for reference only; the app UI uses `official/*.png` when present.
