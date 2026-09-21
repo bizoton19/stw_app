@@ -89,17 +89,19 @@
         <p class="mt-6 text-lg md:text-xl text-inkSoft max-w-2xl fade-up delay-200">
             Photograph the check. Friends claim what they ordered. Pay the host — we never touch the money, and we don't need your social graph.
         </p>
-        <div class="mt-10 flex gap-4 fade-up delay-300">
-            <a href="#" class="bg-merlot text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-                Download for iOS
+        
+        <!-- App Store Badges -->
+        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 fade-up delay-300">
+            <a href="#" class="transition-transform hover:-translate-y-0.5 hover:opacity-90">
+                <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1276560000" alt="Download on the App Store" style="height: 48px; border-radius: 8px;">
             </a>
-            <a href="#" class="bg-white text-ink border border-gray-200 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition-all shadow-sm">
-                Get Android APK
+            <a href="#" class="transition-transform hover:-translate-y-0.5 hover:opacity-90">
+                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" style="height: 68px; margin-top: -10px; margin-bottom: -10px;">
             </a>
         </div>
 
         <!-- Privacy highlight -->
-        <div class="mt-12 inline-flex items-center gap-2 bg-[#E6E0D8] bg-opacity-40 px-4 py-2 rounded-full fade-up delay-300">
+        <div class="mt-8 inline-flex items-center gap-2 bg-[#E6E0D8] bg-opacity-40 px-4 py-2 rounded-full fade-up delay-300">
             <i data-lucide="shield-check" class="w-4 h-4 text-merlot"></i>
             <span class="text-sm font-medium text-inkSoft">No accounts required. Links expire. Total privacy.</span>
         </div>
@@ -150,9 +152,15 @@
                         <i data-lucide="smartphone-nfc" class="w-8 h-8 text-merlot"></i>
                     </div>
                     <h3 class="text-lg font-bold mb-2">4. Settle Up</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed">
-                        Guests tap to pay. We open Venmo, CashApp, Zelle, or PayPal pre-filled. We never hold your funds.
+                    <p class="text-inkSoft text-sm leading-relaxed mb-4">
+                        Guests tap to pay. We open your preferred app pre-filled. We never hold your funds.
                     </p>
+                    <div class="flex flex-wrap justify-center gap-2 mt-auto">
+                        <span class="inline-flex items-center gap-1.5 bg-[#008CFF]/10 text-[#008CFF] px-2 py-1 rounded text-xs font-semibold">Venmo</span>
+                        <span class="inline-flex items-center gap-1.5 bg-[#00D632]/10 text-[#00D632] px-2 py-1 rounded text-xs font-semibold">Cash App</span>
+                        <span class="inline-flex items-center gap-1.5 bg-[#6D1ED4]/10 text-[#6D1ED4] px-2 py-1 rounded text-xs font-semibold">Zelle</span>
+                        <span class="inline-flex items-center gap-1.5 bg-[#003087]/10 text-[#003087] px-2 py-1 rounded text-xs font-semibold">PayPal</span>
+                    </div>
                 </div>
             </div>
         </div>
