@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split the Wine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        merlot: '#6E2E35',
+                        paper: '#F6F4F1',
+                        ink: '#2A241C',
+                        inkSoft: '#7A7268',
+                        muted: '#8A847C',
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F6F4F1;
+            color: #2A241C;
+            scroll-behavior: smooth;
+        }
+
+        /* Simple Animations */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Floating receipt animation */
+        .float-receipt {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col selection:bg-merlot selection:text-white">
+
+    <!-- Navigation -->
+    <nav class="max-w-5xl mx-auto w-full px-6 py-8 flex justify-between items-center fade-up">
+        <div class="flex items-center gap-2">
+            <!-- WineMark SVG -->
+            <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.2 3.5h3.6v3.2h-3.6V3.5Z" fill="#6E2E35" />
+                <path d="M21.4 6.7h5.2v6.8h-5.2V6.7Z" fill="#6E2E35" />
+                <path d="M16.5 13.5h15v5.2l-2.2 1.1-2.4-1.3-2.6 1.4-2.5-1.2-2.3 1.2-3-1.2V13.5Z" fill="#6E2E35" />
+                <path d="M16.5 21.2l3 .9 2.3-1.1 2.5 1.2 2.6-1.3 2.4 1.2 2.2-1 0 5.4-2.1 1.1-2.5-1.2-2.5 1.3-2.6-1.2-2.4 1.1-2.9-1.1v-5.3Z" fill="#6E2E35" />
+                <path d="M16.5 28.8l2.9.9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.1-.9v5.5l-2 .9-2.6-1.1-2.5 1.2-2.6-1.2-2.4 1.1-2.9-.9v-5.4Z" fill="#6E2E35" />
+                <path d="M16.5 36.4l2.9.8 2.4-1 2.6 1.1 2.5-1.1 2.6 1.1 2-.8v5.2a3 3 0 0 1-3 3H19.5a3 3 0 0 1-3-3v-5.3Z" fill="#6E2E35" />
+            </svg>
+            <span class="font-bold text-xl tracking-tight">Split the Wine</span>
+        </div>
+        <div>
+            <a href="#how-it-works" class="text-sm font-semibold text-inkSoft hover:text-merlot transition-colors">How it works</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <main class="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-24 text-center">
+        <h1 class="text-5xl md:text-7xl font-bold tracking-tight text-ink max-w-4xl fade-up delay-100">
+            Split the tab. <br/>
+            <span class="text-merlot">Skip the math.</span>
+        </h1>
+        <p class="mt-6 text-lg md:text-xl text-inkSoft max-w-2xl fade-up delay-200">
+            Photograph the check. Friends claim what they ordered. Pay the host — we never touch the money, and we don't need your social graph.
+        </p>
+        <div class="mt-10 flex gap-4 fade-up delay-300">
+            <a href="#" class="bg-merlot text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+                Download for iOS
+            </a>
+            <a href="#" class="bg-white text-ink border border-gray-200 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition-all shadow-sm">
+                Get Android APK
+            </a>
+        </div>
+
+        <!-- Privacy highlight -->
+        <div class="mt-12 inline-flex items-center gap-2 bg-[#E6E0D8] bg-opacity-40 px-4 py-2 rounded-full fade-up delay-300">
+            <i data-lucide="shield-check" class="w-4 h-4 text-merlot"></i>
+            <span class="text-sm font-medium text-inkSoft">No accounts required. Links expire. Total privacy.</span>
+        </div>
+    </main>
+
+    <!-- Steps Section -->
+    <section id="how-it-works" class="bg-white py-24 px-6 border-t border-[#E6E0D8]">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">Four steps. Zero friction.</h2>
+            
+            <div class="grid md:grid-cols-4 gap-8">
+                <!-- Step 1 -->
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
+                        <i data-lucide="camera" class="w-8 h-8 text-merlot"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">1. Snap the Check</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed">
+                        Take a photo. Our AI reads the line items and prices instantly. You just confirm it looks right.
+                    </p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
+                        <i data-lucide="share" class="w-8 h-8 text-merlot"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">2. Drop the Link</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed">
+                        Send the link in your group chat. Guests open it in their browser—no app download required.
+                    </p>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
+                        <i data-lucide="mouse-pointer-click" class="w-8 h-8 text-merlot"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">3. Claim Drinks</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed">
+                        Everyone taps what they ordered. Tax and tip are calculated proportionally automatically.
+                    </p>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
+                        <i data-lucide="smartphone-nfc" class="w-8 h-8 text-merlot"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">4. Settle Up</h3>
+                    <p class="text-inkSoft text-sm leading-relaxed">
+                        Guests tap to pay. We open Venmo, CashApp, Zelle, or PayPal pre-filled. We never hold your funds.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ephemeral/Privacy Callout -->
+    <section class="bg-merlot text-paper py-24 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">Your data isn't the product.</h2>
+            <p class="text-lg opacity-90 max-w-2xl mx-auto leading-relaxed mb-10">
+                You already have a group chat. We don't need your contacts or your social graph. 
+                Split the Wine uses ephemeral links designed for tonight's dinner. Once the tab is settled, the link vanishes.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div class="bg-white/10 p-6 rounded-2xl backdrop-blur-sm">
+                    <i data-lucide="user-x" class="w-6 h-6 mb-4 text-paper opacity-80"></i>
+                    <h4 class="font-bold mb-2 text-lg">No Guest Accounts</h4>
+                    <p class="text-sm opacity-80">Only the host needs the app. Guests claim via the web in seconds without signing up.</p>
+                </div>
+                <div class="bg-white/10 p-6 rounded-2xl backdrop-blur-sm">
+                    <i data-lucide="timer-off" class="w-6 h-6 mb-4 text-paper opacity-80"></i>
+                    <h4 class="font-bold mb-2 text-lg">Short-lived Tabs</h4>
+                    <p class="text-sm opacity-80">Receipt links expire automatically. We don't build a ledger of your spending history.</p>
+                </div>
+                <div class="bg-white/10 p-6 rounded-2xl backdrop-blur-sm">
+                    <i data-lucide="wallet" class="w-6 h-6 mb-4 text-paper opacity-80"></i>
+                    <h4 class="font-bold mb-2 text-lg">Direct Payments</h4>
+                    <p class="text-sm opacity-80">We don't process payments or take a cut. Money moves directly between your existing apps.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-paper py-12 px-6 border-t border-[#E6E0D8] text-center">
+        <div class="flex justify-center items-center gap-2 opacity-50 mb-4">
+            <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.2 3.5h3.6v3.2h-3.6V3.5Z" fill="#2A241C" />
+                <path d="M21.4 6.7h5.2v6.8h-5.2V6.7Z" fill="#2A241C" />
+                <path d="M16.5 13.5h15v5.2l-2.2 1.1-2.4-1.3-2.6 1.4-2.5-1.2-2.3 1.2-3-1.2V13.5Z" fill="#2A241C" />
+                <path d="M16.5 21.2l3 .9 2.3-1.1 2.5 1.2 2.6-1.3 2.4 1.2 2.2-1 0 5.4-2.1 1.1-2.5-1.2-2.5 1.3-2.6-1.2-2.4 1.1-2.9-1.1v-5.3Z" fill="#2A241C" />
+                <path d="M16.5 28.8l2.9.9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.1-.9v5.5l-2 .9-2.6-1.1-2.5 1.2-2.6-1.2-2.4 1.1-2.9-.9v-5.4Z" fill="#2A241C" />
+                <path d="M16.5 36.4l2.9.8 2.4-1 2.6 1.1 2.5-1.1 2.6 1.1 2-.8v5.2a3 3 0 0 1-3 3H19.5a3 3 0 0 1-3-3v-5.3Z" fill="#2A241C" />
+            </svg>
+            <span class="font-bold text-ink">Split the Wine</span>
+        </div>
+        <p class="text-sm text-inkSoft">Built for the table, not the ledger.</p>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
