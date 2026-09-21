@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Check } from "lucide-react-native";
+import { Check, Receipt, Users } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { Field } from "@/components/field";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
@@ -126,18 +127,29 @@ function PickBoard() {
         title="Claiming is closed"
         onBack={() => router.replace("/")}
         footer={
-          <PrimaryButton
-            onPress={() =>
-              router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })
-            }
-          >
-            See who owes what
-          </PrimaryButton>
+          <View>
+            <PrimaryButton
+              onPress={() =>
+                router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })
+              }
+            >
+              See who owes what
+            </PrimaryButton>
+            {flow.isHost ? (
+              <QuietButton
+                disabled={flow.busy}
+                onPress={() => void flow.reopen()}
+              >
+                Reopen claiming
+              </QuietButton>
+            ) : null}
+          </View>
         }
       >
         {mine ? (
           <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text>
         ) : null}
+        {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         <History />
       </InterviewChrome>
     );
@@ -270,18 +282,25 @@ function History() {
   const closed = receipt.status === "finalized";
   return (
     <View style={{ marginTop: 32 }}>
-      <Text style={styles.section}>Who claimed what</Text>
+      <View style={styles.sectionRow}>
+        <Users size={14} color={colors.muted} strokeWidth={2} />
+        <Text style={styles.section}>Who claimed what</Text>
+      </View>
       {receipt.items.map((item) => {
         const claims = receipt.claims.filter((c) => c.itemId === item.id);
         if (claims.length === 0) return null;
         return (
           <View key={item.id} style={{ marginBottom: 16 }}>
-            <Text style={styles.itemName}>{item.name}</Text>
+            <View style={styles.itemLabelRow}>
+              <Receipt size={13} color={colors.inkSoft} strokeWidth={2} />
+              <Text style={styles.itemName}>{item.name}</Text>
+            </View>
             {claims.map((claim) => {
               const mineToDrop = getClaimToken(receipt.id, claim.id) && !closed;
               return (
                 <View key={claim.id} style={styles.claimRow}>
-                  <Text style={[styles.muted, { flex: 1 }]}>
+                  <ClaimerAvatar name={claim.personName} size={26} />
+                  <Text style={[styles.muted, { flex: 1, marginTop: 0 }]}>
                     {claim.personName} · {claim.units}
                     {claim.personContact ? ` · ${claim.personContact}` : ""}
                   </Text>
@@ -334,6 +353,18 @@ const styles = StyleSheet.create({
   checkOn: { backgroundColor: colors.merlot, borderColor: colors.merlot },
   itemName: { fontSize: 15, fontWeight: "600", color: colors.ink },
   left: { fontSize: 12, fontWeight: "600", color: colors.inkSoft, fontVariant: ["tabular-nums"] },
-  section: { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 8 },
-  claimRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  section: { fontSize: 12, fontWeight: "600", color: colors.muted },
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  itemLabelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  claimRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
 });

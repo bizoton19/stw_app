@@ -31,6 +31,7 @@ type ClaimFlow = {
   claimQueued: () => Promise<boolean>;
   unclaim: (claimId: string) => Promise<void>;
   closeOut: () => Promise<boolean>;
+  reopen: () => Promise<boolean>;
 };
 
 const Ctx = createContext<ClaimFlow | null>(null);
@@ -163,6 +164,21 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     }
   }, [id, refresh]);
 
+  const reopen = useCallback(async () => {
+    const token = getHostToken(id);
+    setBusy(true);
+    try {
+      await api(`/api/receipts/${id}/reopen`, { method: "POST", hostToken: token });
+      await refresh();
+      return true;
+    } catch {
+      setMessage("Only the host can reopen claiming.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, [id, refresh]);
+
   const value = useMemo(
     () => ({
       id,
@@ -183,6 +199,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       claimQueued,
       unclaim,
       closeOut,
+      reopen,
     }),
     [
       busy,
@@ -198,6 +215,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       queued,
       receipt,
       refresh,
+      reopen,
       toggle,
       unclaim,
       units,

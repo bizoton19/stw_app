@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import { Banknote } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
@@ -56,17 +58,32 @@ export default function SettleScreen() {
         title="Who owes what"
         onBack={() => router.back()}
         footer={
-          <PrimaryButton
-            onPress={() => router.replace({ pathname: "/r/[id]", params: { id: receipt.id } })}
-          >
-            Back to the claim board
-          </PrimaryButton>
+          <View>
+            <PrimaryButton
+              onPress={() => router.replace({ pathname: "/r/[id]", params: { id: receipt.id } })}
+            >
+              Back to the claim board
+            </PrimaryButton>
+            {flow.isHost && receipt.status === "finalized" ? (
+              <QuietButton
+                disabled={flow.busy}
+                onPress={() =>
+                  void flow.reopen().then((ok) => {
+                    if (ok) router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
+                  })
+                }
+              >
+                Reopen claiming
+              </QuietButton>
+            ) : null}
+          </View>
         }
       >
         <Text style={styles.lead}>
           Drinks plus a share of tax and tip. Pay opens the host's app when possible — nothing is
           charged from Split the Wine.
         </Text>
+        {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         {leftover ? (
           <Text style={styles.muted}>
             {centsToLabel(totals.unclaimedItemCents)} still unclaimed. The host can close claiming
@@ -74,6 +91,10 @@ export default function SettleScreen() {
           </Text>
         ) : null}
         <View style={styles.totals}>
+          <View style={styles.totalsHead}>
+            <Banknote size={14} color={colors.muted} strokeWidth={2} />
+            <Text style={styles.totalsLabel}>The tab</Text>
+          </View>
           <Row label="Items" value={centsToLabel(totals.itemSubtotalCents)} />
           <Row label="Fees" value={centsToLabel(totals.feeTotalCents)} />
           <Row label="Grand" value={centsToLabel(totals.grandTotalCents)} strong />
@@ -136,6 +157,10 @@ export default function SettleScreen() {
           </View>
         ) : null}
 
+        <View style={styles.peopleHead}>
+          <Banknote size={14} color={colors.muted} strokeWidth={2} />
+          <Text style={styles.peopleTitle}>Everyone’s share</Text>
+        </View>
         {totals.people.length === 0 ? (
           <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
             Nobody has claimed yet.
@@ -151,12 +176,15 @@ export default function SettleScreen() {
                 style={styles.person}
               >
                 <View style={styles.personHead}>
-                  <View>
-                    <Text style={styles.name}>
-                      {person.personName}
-                      {isYou ? " (you)" : ""}
-                    </Text>
-                    <Text style={styles.muted}>{person.personContact || "no contact"}</Text>
+                  <View style={styles.personId}>
+                    <ClaimerAvatar name={person.personName} size={32} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.name}>
+                        {person.personName}
+                        {isYou ? " (you)" : ""}
+                      </Text>
+                      <Text style={styles.muted}>{person.personContact || "no contact"}</Text>
+                    </View>
                   </View>
                   <Text style={styles.amount}>{amount}</Text>
                 </View>
@@ -222,6 +250,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 const styles = StyleSheet.create({
   lead: { fontSize: 14, lineHeight: 20, color: colors.muted, marginBottom: 12 },
   muted: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   totals: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -230,6 +259,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 4,
   },
+  totalsHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  totalsLabel: { fontSize: 12, fontWeight: "600", color: colors.muted },
   row: { flexDirection: "row", justifyContent: "space-between" },
   value: { fontVariant: ["tabular-nums"], fontSize: 14, color: colors.ink },
   youCard: {
@@ -269,8 +305,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   payBtnText: { color: colors.merlotFg, fontSize: 15, fontWeight: "700" },
+  peopleHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  peopleTitle: { fontSize: 12, fontWeight: "600", color: colors.muted },
   person: { marginBottom: 28 },
-  personHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  personHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
+  personId: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   name: { fontSize: 15, fontWeight: "600", color: colors.ink },
   amount: { fontSize: 22, fontWeight: "700", fontVariant: ["tabular-nums"] },
   actions: { flexDirection: "row", gap: 4, marginTop: 12 },

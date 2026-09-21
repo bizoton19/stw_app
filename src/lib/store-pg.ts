@@ -16,7 +16,7 @@ import type {
 } from "./types";
 import { parseReceiptImage, type ParseMeta, type ReceiptImage } from "./parse-receipt";
 
-type InternalClaim = Claim & { ownerToken: string };
+type InternalClaim = Claim & { ownerToken: string; autoLeftover?: boolean };
 
 type InternalReceipt = Omit<Receipt, "claims"> & {
   hostToken: string;
@@ -71,8 +71,9 @@ function feesFromParse(parsed: ParseResult): Fee[] {
 }
 
 function toPublic(receipt: InternalReceipt): PublicReceipt {
-  const claims: Claim[] = receipt.claims.map(({ ownerToken, ...claim }) => {
+  const claims: Claim[] = receipt.claims.map(({ ownerToken, autoLeftover, ...claim }) => {
     void ownerToken;
+    void autoLeftover;
     return claim;
   });
   const publicReceipt: Receipt = {
@@ -450,8 +451,9 @@ export async function addClaims(
     emit(receipt, "claim");
     const publicReceipt = toPublic(receipt);
     return {
-      claims: created.map(({ ownerToken, ...claim }) => {
+      claims: created.map(({ ownerToken, autoLeftover, ...claim }) => {
         void ownerToken;
+        void autoLeftover;
         return claim;
       }),
       tokens: Object.fromEntries(created.map((claim) => [claim.id, claim.ownerToken])),
@@ -512,12 +514,28 @@ export async function finalizeReceipt(id: string, hostToken: string | null) {
         units: leftover.units,
         createdAt: now(),
         ownerToken: randomUUID(),
+        autoLeftover: true,
       };
       receipt.claims.push(claim);
     }
     receipt.status = "finalized";
     await upsertReceipt(client, receipt);
     emit(receipt, "finalized");
+    return { receipt: toPublic(receipt), totals: computeTotals(toPublic(receipt)) };
+  });
+}
+
+export async function reopenReceipt(id: string, hostToken: string | null) {
+  await ensureSchema();
+  return withTransaction(async (client) => {
+    const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
+    if (receipt.status !== "finalized") {
+      throw Object.assign(new Error("not_finalized"), { code: "conflict" });
+    }
+    receipt.claims = receipt.claims.filter((claim) => !claim.autoLeftover);
+    receipt.status = "open";
+    await upsertReceipt(client, receipt);
+    emit(receipt, "reopened");
     return { receipt: toPublic(receipt), totals: computeTotals(toPublic(receipt)) };
   });
 }

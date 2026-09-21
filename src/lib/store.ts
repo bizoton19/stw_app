@@ -81,6 +81,10 @@ export async function finalizeReceipt(id: string, hostToken: string | null) {
   return usingDatabase() ? pg.finalizeReceipt(id, hostToken) : memory.finalizeReceipt(id, hostToken);
 }
 
+export async function reopenReceipt(id: string, hostToken: string | null) {
+  return usingDatabase() ? pg.reopenReceipt(id, hostToken) : memory.reopenReceipt(id, hostToken);
+}
+
 export async function getTotals(id: string) {
   return usingDatabase() ? pg.getTotals(id) : memory.getTotals(id);
 }

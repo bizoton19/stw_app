@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { Check, Receipt, Users } from "lucide-react";
 import { motion } from "motion/react";
+import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { centsToLabel } from "@/lib/money";
@@ -171,6 +172,22 @@ export function ClaimBoard({
     }
   }
 
+  async function reopen() {
+    const token = getHostToken(receipt.id);
+    setBusy(true);
+    try {
+      await api(`/api/receipts/${receipt.id}/reopen`, {
+        method: "POST",
+        hostToken: token,
+      });
+      await onChange();
+    } catch {
+      setMessage("Only the host can reopen claiming.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (closed) {
     return (
       <div className="flex min-h-0 flex-1 flex-col px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -181,6 +198,7 @@ export function ClaimBoard({
           guest={guest}
           isHost={isHost}
         />
+        {message ? <p className="mb-3 text-[14px] text-destructive">{message}</p> : null}
         <History
           receipt={receipt}
           goneItems={goneItems}
@@ -188,12 +206,19 @@ export function ClaimBoard({
           closed
           onUnclaim={unclaim}
         />
-        <Link
-          href={`/r/${receipt.id}/settle`}
-          className="pressable mt-auto inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
-        >
-          See who owes what
-        </Link>
+        <div className="mt-auto space-y-1">
+          <Link
+            href={`/r/${receipt.id}/settle`}
+            className="pressable inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
+          >
+            See who owes what
+          </Link>
+          {isHost ? (
+            <QuietButton disabled={busy || !getHostToken(receipt.id)} onClick={() => void reopen()}>
+              Reopen claiming
+            </QuietButton>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -469,14 +494,20 @@ function History({
 
       {hasClaims ? (
         <section className="mt-8">
-          <p className="mb-2 text-[12px] font-medium text-muted-foreground">Who claimed what</p>
+          <p className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+            <Users className="size-3.5" strokeWidth={2} aria-hidden />
+            Who claimed what
+          </p>
           {receipt.items.map((item) => {
             const claims = receipt.claims.filter((c) => c.itemId === item.id);
             if (claims.length === 0) return null;
             return (
               <div key={item.id} className="mb-4">
-                <p className="text-[14px] font-medium">{item.name}</p>
-                <ul className="mt-1 space-y-1">
+                <p className="flex items-center gap-1.5 text-[14px] font-medium">
+                  <Receipt className="size-3.5 text-muted-foreground" strokeWidth={2} aria-hidden />
+                  {item.name}
+                </p>
+                <ul className="mt-1 space-y-2">
                   {claims.map((claim) => {
                     const mineToDrop = getClaimToken(receipt.id, claim.id) && !closed;
                     return (
@@ -484,14 +515,17 @@ function History({
                         key={claim.id}
                         className="flex items-center justify-between gap-2 text-[13px] text-muted-foreground"
                       >
-                        <span>
-                          {claim.personName} · {claim.units}
-                          {claim.personContact ? ` · ${claim.personContact}` : ""}
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          <ClaimerAvatar name={claim.personName} size={26} />
+                          <span className="truncate">
+                            {claim.personName} · {claim.units}
+                            {claim.personContact ? ` · ${claim.personContact}` : ""}
+                          </span>
                         </span>
                         {mineToDrop ? (
                           <button
                             type="button"
-                            className="pressable h-9 px-2 text-[12px] font-medium text-foreground"
+                            className="pressable h-9 shrink-0 px-2 text-[12px] font-medium text-foreground"
                             disabled={busy}
                             onClick={() => onUnclaim(claim.id)}
                           >

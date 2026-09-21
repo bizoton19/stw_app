@@ -5,7 +5,7 @@ import { SettleView } from "@/components/settle-view";
 import { useReceipt } from "@/hooks/use-receipt";
 
 export function SettlePage({ receiptId }: { receiptId: string }) {
-  const { receipt, error } = useReceipt(receiptId);
+  const { receipt, error, refresh } = useReceipt(receiptId);
 
   if (error && !receipt) {
     return (
@@ -25,7 +25,7 @@ export function SettlePage({ receiptId }: { receiptId: string }) {
 
   return (
     <PhoneShell meta="Settle">
-      <SettleView receipt={receipt} />
+      <SettleView receipt={receipt} onChange={refresh} />
     </PhoneShell>
   );
 }

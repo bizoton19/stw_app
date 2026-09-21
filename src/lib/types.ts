@@ -79,7 +79,7 @@ export type ParseResult = {
 };
 
 export type LiveEvent = {
-  type: "snapshot" | "claim" | "unclaim" | "finalized" | "updated";
+  type: "snapshot" | "claim" | "unclaim" | "finalized" | "reopened" | "updated";
   receipt: PublicReceipt;
 };
 
