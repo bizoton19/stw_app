@@ -68,11 +68,33 @@
         "expo-localization",
         {
           "supportedLocales": {
-            "ios": ["en", "es", "fr", "de", "pt", "it", "ja", "zh-Hans", "zh-Hant", "ko"],
-            "android": ["en", "es", "fr", "de", "pt", "it", "ja", "zh", "ko"]
+            "ios": [
+              "en",
+              "es",
+              "fr",
+              "de",
+              "pt",
+              "it",
+              "ja",
+              "zh-Hans",
+              "zh-Hant",
+              "ko"
+            ],
+            "android": [
+              "en",
+              "es",
+              "fr",
+              "de",
+              "pt",
+              "it",
+              "ja",
+              "zh",
+              "ko"
+            ]
           }
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
