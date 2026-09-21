@@ -71,6 +71,10 @@ function toDraftFees(fees: Fee[]): DraftFee[] {
 }
 
 const fieldClass = "h-12 rounded-xl border-border bg-transparent text-base";
+const denseFieldClass =
+  "h-8 rounded-md border-border bg-transparent px-1.5 text-[13px] font-semibold";
+const denseLabelClass =
+  "mb-0.5 block text-left text-[10px] font-semibold tracking-wide text-muted-foreground";
 
 function Choice({
   selected,
@@ -356,11 +360,9 @@ export function HostInterview() {
         </p>
         <ul className="divide-y divide-border border-y border-border">
           {items.map((item) => (
-            <li key={item.id} className="flex items-end gap-2 py-3">
+            <li key={item.id} className="flex items-end gap-1.5 py-1.5">
               <label className="min-w-0 flex-1">
-                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
-                  item
-                </span>
+                <span className={denseLabelClass}>item</span>
                 <Input
                   id={`item-name-${item.id}`}
                   value={item.name}
@@ -371,14 +373,12 @@ export function HostInterview() {
                       ),
                     )
                   }
-                  className={fieldClass}
+                  className={denseFieldClass}
                   placeholder="Item name"
                 />
               </label>
-              <label className="w-14 shrink-0">
-                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
-                  qty
-                </span>
+              <label className="w-10 shrink-0">
+                <span className={denseLabelClass}>qty</span>
                 <Input
                   id={`item-qty-${item.id}`}
                   inputMode="numeric"
@@ -388,13 +388,11 @@ export function HostInterview() {
                     const qty = Math.max(1, Math.floor(Number(e.target.value) || 0));
                     setItems(items.map((row) => (row.id === item.id ? { ...row, qty } : row)));
                   }}
-                  className={`${fieldClass} text-center tabular-nums`}
+                  className={`${denseFieldClass} text-left tabular-nums`}
                 />
               </label>
-              <label className="w-20 shrink-0">
-                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
-                  amt
-                </span>
+              <label className="w-[3.6rem] shrink-0">
+                <span className={denseLabelClass}>amt</span>
                 <Input
                   id={`item-total-${item.id}`}
                   inputMode="decimal"
@@ -409,16 +407,16 @@ export function HostInterview() {
                       ),
                     );
                   }}
-                  className={`${fieldClass} text-center tabular-nums`}
+                  className={`${denseFieldClass} text-left tabular-nums`}
                 />
               </label>
               <button
                 type="button"
-                className="pressable flex h-10 w-9 shrink-0 items-center justify-center"
+                className="pressable flex h-8 w-7 shrink-0 items-center justify-center"
                 aria-label={`Remove ${item.name || "line"}`}
                 onClick={() => setItems(items.filter((row) => row.id !== item.id))}
               >
-                <Trash2 className="size-4" />
+                <Trash2 className="size-3.5" />
               </button>
             </li>
           ))}
@@ -463,11 +461,9 @@ export function HostInterview() {
         </p>
         <ul className="divide-y divide-border border-y border-border">
           {fees.map((fee) => (
-            <li key={fee.id} className="flex items-end gap-2 py-3">
+            <li key={fee.id} className="flex items-end gap-1.5 py-1.5">
               <label className="min-w-0 flex-1">
-                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
-                  fee
-                </span>
+                <span className={denseLabelClass}>fee</span>
                 <Input
                   value={fee.name}
                   onChange={(e) =>
@@ -477,16 +473,14 @@ export function HostInterview() {
                       ),
                     )
                   }
-                  className={fieldClass}
+                  className={denseFieldClass}
                   placeholder="Fee name"
                 />
               </label>
-              <label className="w-20 shrink-0">
-                <span className="mb-1 block text-[11px] font-semibold tracking-wide text-muted-foreground">
-                  amt
-                </span>
+              <label className="w-16 shrink-0">
+                <span className={denseLabelClass}>amt</span>
                 <Input
-                  className={`${fieldClass} text-center tabular-nums`}
+                  className={`${denseFieldClass} text-left tabular-nums`}
                   inputMode="decimal"
                   aria-label="Amount"
                   value={fee.amountInput}
@@ -503,11 +497,11 @@ export function HostInterview() {
               </label>
               <button
                 type="button"
-                className="pressable flex h-10 w-9 shrink-0 items-center justify-center"
+                className="pressable flex h-8 w-7 shrink-0 items-center justify-center"
                 aria-label={`Remove ${fee.name || "fee"}`}
                 onClick={() => setFees(fees.filter((row) => row.id !== fee.id))}
               >
-                <Trash2 className="size-4" />
+                <Trash2 className="size-3.5" />
               </button>
             </li>
           ))}

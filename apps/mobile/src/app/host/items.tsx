@@ -96,7 +96,7 @@ export default function HostItems() {
               onPress={() => draft.setItems(draft.items.filter((row) => row.id !== item.id))}
               style={styles.trash}
             >
-              <Trash2 size={15} color={colors.inkSoft} />
+                <Trash2 size={13} color={colors.inkSoft} />
             </PressScale>
           </View>
         ))}
@@ -121,59 +121,64 @@ export default function HostItems() {
   );
 }
 
-const INPUT_H = 36;
+const INPUT_H = 30;
 
 const styles = StyleSheet.create({
-  lead: { fontSize: 13, color: colors.muted, marginBottom: 8 },
+  lead: { fontSize: 12, color: colors.muted, marginBottom: 6 },
   row: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
-    paddingVertical: 8,
+    gap: 6,
+    paddingVertical: 6,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   nameCol: { flex: 1, minWidth: 0 },
-  qtyCol: { width: 52 },
-  amtCol: { width: 72 },
+  qtyCol: { width: 40 },
+  amtCol: { width: 58 },
   colLabel: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 10,
+    fontWeight: "600",
     color: colors.inkSoft,
-    letterSpacing: 0.2,
-    marginBottom: 4,
+    letterSpacing: 0.15,
+    marginBottom: 2,
+    textAlign: "left",
   },
   nameInput: {
     height: INPUT_H,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 0,
+    borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
     color: colors.ink,
+    textAlign: "left",
   },
   numInput: {
     height: INPUT_H,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 0,
+    borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: colors.ink,
     fontVariant: ["tabular-nums"],
-    textAlign: "center",
+    textAlign: "left",
   },
   trash: {
-    width: 36,
+    width: 28,
     height: INPUT_H,
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: -2,
   },
   footNote: {
     textAlign: "center",
-    fontSize: 13,
+    fontSize: 12,
     color: colors.muted,
     marginBottom: 8,
     fontVariant: ["tabular-nums"],
