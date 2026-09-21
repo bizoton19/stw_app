@@ -67,7 +67,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       const nextMethod =
         method && !used.has(method)
           ? method
-          : (["venmo", "zelle", "cashapp", "other"] as PayMethod[]).find((m) => !used.has(m));
+          : (["venmo", "paypal", "zelle", "cashapp", "other"] as PayMethod[]).find((m) => !used.has(m));
       if (!nextMethod) return prev;
       return [...prev, { method: nextMethod, handle: "" }];
     });
@@ -128,10 +128,9 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const publish = useCallback(async () => {
     if (!receiptId) throw new Error("no_receipt");
-    const cleaned = payments
-      .map((p) => ({ method: p.method, handle: p.handle.trim() }))
-      .filter((p) => p.handle);
-    if (cleaned.length === 0) throw new Error("no_payments");
+    const { validateHostPayments } = await import("@/lib/host-pay");
+    const checked = validateHostPayments(payments);
+    if (!checked.ok) throw new Error(checked.message);
     const { getHostToken } = await import("@/lib/session");
     await api(`/api/receipts/${receiptId}`, {
       method: "PUT",
@@ -140,7 +139,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         restaurant,
         items: items.map(({ id, name, qty, totalCents }) => ({ id, name, qty, totalCents })),
         fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
-        hostInfo: { payments: cleaned },
+        hostInfo: { payments: checked.payments },
         publish: true,
       }),
     });

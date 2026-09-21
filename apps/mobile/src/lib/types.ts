@@ -1,5 +1,5 @@
 export type ReceiptStatus = "draft" | "open" | "finalized";
-export type PayMethod = "venmo" | "zelle" | "cashapp" | "other";
+export type PayMethod = "venmo" | "paypal" | "zelle" | "cashapp" | "other";
 
 export type Item = {
   id: string;

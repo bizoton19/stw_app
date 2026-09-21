@@ -11,6 +11,7 @@ import type { HostPayment, PublicReceipt } from "@/lib/types";
 
 const METHOD_LABEL = {
   venmo: "Venmo",
+  paypal: "PayPal",
   zelle: "Zelle",
   cashapp: "Cash App",
   other: "their preferred app",

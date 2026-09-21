@@ -7,6 +7,7 @@ import { ContinueButton, InterviewChrome, QuietButton } from "@/components/inter
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { centsToLabel } from "@/lib/money";
+import { validateHostPayments } from "@/lib/host-pay";
 import { api, saveHostToken } from "@/lib/session";
 import type { Fee, HostInfo, Item, PayMethod, PublicReceipt } from "@/lib/types";
 
@@ -44,6 +45,7 @@ const COPY: Record<Step, { kicker: string; title: string }> = {
 
 const PAY_OPTIONS: { method: PayMethod; label: string; hint: string }[] = [
   { method: "venmo", label: "Venmo", hint: "@handle" },
+  { method: "paypal", label: "PayPal", hint: "email, @user, or paypal.me/name" },
   { method: "zelle", label: "Zelle", hint: "email or phone" },
   { method: "cashapp", label: "Cash App", hint: "$cashtag" },
   { method: "other", label: "Other", hint: "how to pay you" },
@@ -123,6 +125,7 @@ export function HostInterview() {
   ]);
   const [claimUrl, setClaimUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [payConfirming, setPayConfirming] = useState(false);
 
   const hostInfo: HostInfo = {
     payments: payments
@@ -517,80 +520,128 @@ export function HostInterview() {
   } else if (step === "pay") {
     const used = new Set(payments.map((p) => p.method));
     const unused = PAY_OPTIONS.filter((o) => !used.has(o.method));
-    body = (
-      <>
-        {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
-        <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
-          Add every app you accept. Claimers pick one and Pay opens it with their share filled in.
-        </p>
-        {payments.map((payment, index) => (
-          <div key={`${payment.method}-${index}`} className="mb-4 rounded-xl border border-border p-3">
-            <div className="mb-3 flex flex-wrap gap-2">
-              {PAY_OPTIONS.map((option) => {
-                const taken = payments.some((p, i) => i !== index && p.method === option.method);
-                if (taken) return null;
-                const on = payment.method === option.method;
-                return (
-                  <button
-                    key={option.method}
-                    type="button"
-                    onClick={() =>
-                      setPayments((prev) =>
-                        prev.map((row, i) =>
-                          i === index ? { ...row, method: option.method } : row,
-                        ),
-                      )
-                    }
-                    className={`pressable rounded-lg border px-2.5 py-1.5 text-[13px] font-medium ${
-                      on ? "border-primary text-foreground" : "border-border text-muted-foreground"
-                    }`}
+    if (payConfirming) {
+      const checked = validateHostPayments(payments);
+      const rows = checked.ok ? checked.payments : hostInfo.payments;
+      body = (
+        <>
+          {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
+          <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
+            Claimers will see these options. A typo here means money goes to the wrong place.
+          </p>
+          <ul className="space-y-3">
+            {rows.map((payment) => (
+              <li
+                key={payment.method}
+                className="flex items-center gap-3 rounded-xl border border-border px-3 py-3"
+              >
+                <span className="text-[13px] font-semibold text-ink-soft">
+                  {PAY_OPTIONS.find((o) => o.method === payment.method)?.label}
+                </span>
+                <span className="text-[17px] font-semibold tracking-tight">{payment.handle}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      );
+      footer = (
+        <div>
+          <ContinueButton disabled={busy} onClick={() => void publish()}>
+            {busy ? "Publishing…" : "Looks good — create link"}
+          </ContinueButton>
+          <QuietButton onClick={() => setPayConfirming(false)}>Edit</QuietButton>
+        </div>
+      );
+    } else {
+      body = (
+        <>
+          {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
+          <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
+            Add every app you accept. We check the format for typos, then you confirm before
+            publishing.
+          </p>
+          {payments.map((payment, index) => (
+            <div
+              key={`${payment.method}-${index}`}
+              className="mb-4 rounded-xl border border-border p-3"
+            >
+              <div className="mb-3 flex flex-wrap gap-2">
+                {PAY_OPTIONS.map((option) => {
+                  const taken = payments.some((p, i) => i !== index && p.method === option.method);
+                  if (taken) return null;
+                  const on = payment.method === option.method;
+                  return (
+                    <button
+                      key={option.method}
+                      type="button"
+                      onClick={() =>
+                        setPayments((prev) =>
+                          prev.map((row, i) =>
+                            i === index ? { ...row, method: option.method } : row,
+                          ),
+                        )
+                      }
+                      className={`pressable rounded-lg border px-2.5 py-1.5 text-[13px] font-medium ${
+                        on
+                          ? "border-primary text-foreground"
+                          : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+                {payments.length > 1 ? (
+                  <QuietButton
+                    onClick={() => setPayments((prev) => prev.filter((_, i) => i !== index))}
                   >
-                    {option.label}
-                  </button>
-                );
-              })}
-              {payments.length > 1 ? (
-                <QuietButton
-                  onClick={() => setPayments((prev) => prev.filter((_, i) => i !== index))}
-                >
-                  Remove
-                </QuietButton>
-              ) : null}
+                    Remove
+                  </QuietButton>
+                ) : null}
+              </div>
+              <Label className="mb-2 text-[13px] font-medium">
+                Your {PAY_OPTIONS.find((o) => o.method === payment.method)?.hint}
+              </Label>
+              <Input
+                value={payment.handle}
+                onChange={(e) => {
+                  setError(null);
+                  setPayments((prev) =>
+                    prev.map((row, i) => (i === index ? { ...row, handle: e.target.value } : row)),
+                  );
+                }}
+                placeholder="@alex"
+                className={fieldClass}
+              />
             </div>
-            <Label className="mb-2 text-[13px] font-medium">
-              Your {PAY_OPTIONS.find((o) => o.method === payment.method)?.hint}
-            </Label>
-            <Input
-              value={payment.handle}
-              onChange={(e) =>
-                setPayments((prev) =>
-                  prev.map((row, i) => (i === index ? { ...row, handle: e.target.value } : row)),
-                )
+          ))}
+          {unused.length > 0 ? (
+            <QuietButton
+              onClick={() =>
+                setPayments((prev) => [...prev, { method: unused[0].method, handle: "" }])
               }
-              placeholder="@alex"
-              className={fieldClass}
-            />
-          </div>
-        ))}
-        {unused.length > 0 ? (
-          <QuietButton
-            onClick={() =>
-              setPayments((prev) => [...prev, { method: unused[0].method, handle: "" }])
+            >
+              Add another way to pay
+            </QuietButton>
+          ) : null}
+        </>
+      );
+      footer = (
+        <ContinueButton
+          onClick={() => {
+            const result = validateHostPayments(payments);
+            if (!result.ok) {
+              setError(result.message);
+              return;
             }
-          >
-            Add another way to pay
-          </QuietButton>
-        ) : null}
-        <p className="mt-4 text-[12px] text-muted-foreground">
-          Nobody is charged from this app — we only hand off to the app they choose.
-        </p>
-      </>
-    );
-    footer = (
-      <ContinueButton disabled={hostInfo.payments.length === 0 || busy} onClick={() => void publish()}>
-        {busy ? "Publishing…" : "Create the claim link"}
-      </ContinueButton>
-    );
+            setError(null);
+            setPayConfirming(true);
+          }}
+        >
+          Review payment info
+        </ContinueButton>
+      );
+    }
   } else {
     body = (
       <>

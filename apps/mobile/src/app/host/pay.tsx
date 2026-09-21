@@ -6,23 +6,32 @@ import { Field } from "@/components/field";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
+import { PAY_METHODS, validateHostPayments } from "@/lib/host-pay";
 import { PAY_METHOD_META } from "@/lib/pay";
 import type { PayMethod } from "@/lib/types";
 import { colors } from "@/lib/theme";
-
-const ALL_METHODS: PayMethod[] = ["venmo", "zelle", "cashapp", "other"];
 
 export default function HostPay() {
   const router = useRouter();
   const draft = useHostDraft();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
-  const ready = draft.payments.some((p) => p.handle.trim());
   const unused = useMemo(() => {
     const used = new Set(draft.payments.map((p) => p.method));
-    return ALL_METHODS.filter((m) => !used.has(m));
+    return PAY_METHODS.filter((m) => !used.has(m));
   }, [draft.payments]);
+
+  function goConfirm() {
+    const result = validateHostPayments(draft.payments);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setError(null);
+    setConfirming(true);
+  }
 
   async function publish() {
     setBusy(true);
@@ -39,6 +48,46 @@ export default function HostPay() {
     }
   }
 
+  if (confirming) {
+    const cleaned = validateHostPayments(draft.payments);
+    const rows = cleaned.ok ? cleaned.payments : draft.payments;
+    return (
+      <AppShell>
+        <InterviewChrome
+          step={7}
+          total={8}
+          kicker="Getting paid"
+          title="Look right?"
+          onBack={() => setConfirming(false)}
+          footer={
+            <View>
+              <PrimaryButton busy={busy} onPress={() => void publish()}>
+                Looks good — create link
+              </PrimaryButton>
+              <QuietButton onPress={() => setConfirming(false)}>Edit</QuietButton>
+            </View>
+          }
+        >
+          {error ? (
+            <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
+          ) : null}
+          <Text style={styles.lead}>
+            Claimers will see these options. A typo here means money goes to the wrong place.
+          </Text>
+          {rows.map((payment) => (
+            <View key={payment.method} style={styles.confirmRow}>
+              <PayMethodIcon method={payment.method} size={56} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.confirmLabel}>{PAY_METHOD_META[payment.method].label}</Text>
+                <Text style={styles.confirmHandle}>{payment.handle}</Text>
+              </View>
+            </View>
+          ))}
+        </InterviewChrome>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <InterviewChrome
@@ -49,21 +98,20 @@ export default function HostPay() {
         onBack={() => router.back()}
         keyboard
         footer={
-          <PrimaryButton disabled={!ready} busy={busy} onPress={() => void publish()}>
-            Create the claim link
-          </PrimaryButton>
+          <PrimaryButton onPress={goConfirm}>Review payment info</PrimaryButton>
         }
       >
         {error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
         ) : null}
         <Text style={styles.lead}>
-          Add every app you accept. Claimers pick one and Pay opens it with their share filled in.
+          Add every app you accept. We check the format for typos, then you confirm before
+          publishing.
         </Text>
         {draft.payments.map((payment, index) => (
           <View key={`${payment.method}-${index}`} style={styles.card}>
             <View style={styles.methodRow}>
-              {ALL_METHODS.map((method) => {
+              {PAY_METHODS.map((method) => {
                 const taken = draft.payments.some(
                   (p, i) => i !== index && p.method === method,
                 );
@@ -75,38 +123,50 @@ export default function HostPay() {
                     onPress={() => draft.setPayment(index, { method })}
                     style={[styles.methodChip, on && styles.methodChipOn]}
                   >
-                    <PayMethodIcon method={method} size={22} />
+                    <PayMethodIcon method={method} size={44} />
                   </PressScale>
                 );
               })}
-              {draft.payments.length > 1 ? (
-                <QuietButton onPress={() => draft.removePayment(index)}>Remove</QuietButton>
-              ) : null}
             </View>
             <Field
               label={`Your ${PAY_METHOD_META[payment.method].hint}`}
               value={payment.handle}
-              onChangeText={(handle) => draft.setPayment(index, { handle })}
-              placeholder={
-                payment.method === "cashapp"
-                  ? "$alex"
-                  : payment.method === "venmo"
-                    ? "@alex"
-                    : "alex@email.com"
-              }
+              onChangeText={(handle) => {
+                setError(null);
+                draft.setPayment(index, { handle });
+              }}
+              placeholder={placeholderFor(payment.method)}
               autoCapitalize="none"
+              keyboardType={
+                payment.method === "zelle" || payment.method === "paypal" ? "email-address" : "default"
+              }
             />
+            {draft.payments.length > 1 ? (
+              <QuietButton onPress={() => draft.removePayment(index)}>Remove</QuietButton>
+            ) : null}
           </View>
         ))}
         {unused.length > 0 ? (
           <QuietButton onPress={() => draft.addPayment(unused[0])}>Add another way to pay</QuietButton>
         ) : null}
-        <Text style={styles.note}>
-          Nobody is charged from Split the Wine — we only hand off to the app they choose.
-        </Text>
       </InterviewChrome>
     </AppShell>
   );
+}
+
+function placeholderFor(method: PayMethod): string {
+  switch (method) {
+    case "cashapp":
+      return "$alex";
+    case "venmo":
+      return "@alex";
+    case "paypal":
+      return "paypal.me/alex";
+    case "zelle":
+      return "alex@email.com";
+    default:
+      return "how to pay you";
+  }
 }
 
 const styles = StyleSheet.create({
@@ -117,15 +177,24 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 12,
-    gap: 8,
+    gap: 10,
   },
-  methodRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  methodRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10 },
   methodChip: {
     padding: 6,
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   methodChipOn: { borderColor: colors.merlot, backgroundColor: "#FBFAF8" },
-  note: { marginTop: 8, fontSize: 12, lineHeight: 18, color: colors.muted },
+  confirmRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  confirmLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
+  confirmHandle: { marginTop: 2, fontSize: 18, fontWeight: "700", color: colors.ink },
 });

@@ -7,6 +7,7 @@ export const PAY_METHOD_META: Record<
   { label: string; hint: string; brand: string; mark: string }
 > = {
   venmo: { label: "Venmo", hint: "@handle", brand: "#008CFF", mark: "V" },
+  paypal: { label: "PayPal", hint: "email, @user, or paypal.me/name", brand: "#003087", mark: "P" },
   zelle: { label: "Zelle", hint: "email or phone", brand: "#6D1ED4", mark: "Z" },
   cashapp: { label: "Cash App", hint: "$cashtag", brand: "#00D632", mark: "$" },
   other: { label: "Other", hint: "how to pay you", brand: "#2A241C", mark: "·" },
@@ -16,7 +17,20 @@ function stripHandle(handle: string, method: PayMethod): string {
   const raw = handle.trim();
   if (method === "venmo") return raw.replace(/^@+/, "");
   if (method === "cashapp") return raw.replace(/^\$+/, "");
+  if (method === "paypal") {
+    const me = raw.match(/paypal\.me\/([A-Za-z0-9_-]+)/i);
+    if (me) return me[1];
+    return raw.replace(/^@+/, "");
+  }
   return raw;
+}
+
+function paypalUsername(handle: string): string {
+  const raw = handle.trim();
+  const me = raw.match(/paypal\.me\/([A-Za-z0-9_-]+)/i);
+  if (me) return me[1];
+  if (raw.includes("@") && raw.includes(".")) return ""; // email — use copy/web
+  return raw.replace(/^@+/, "");
 }
 
 function dollars(amountCents: number): string {
@@ -57,8 +71,21 @@ export function payUrls(opts: {
     };
   }
 
+  if (opts.method === "paypal") {
+    const user = paypalUsername(opts.handle);
+    if (user) {
+      return {
+        primary: `https://paypal.me/${encodeURIComponent(user)}/${amount}`,
+        copyText: `paypal.me/${user} · $${amount} · ${note}`,
+      };
+    }
+    return {
+      primary: "",
+      copyText: `PayPal ${opts.handle.trim()} · $${amount} · ${note}`,
+    };
+  }
+
   if (opts.method === "zelle" && handle) {
-    // No reliable public Zelle deep link across banks — copy + user opens their bank app.
     return {
       primary: "",
       copyText: `Zelle ${handle} · $${amount} · ${note}`,
@@ -97,13 +124,21 @@ export async function openHostPay(opts: {
         /* fall through */
       }
     }
+    if (primary.startsWith("http")) {
+      try {
+        await Linking.openURL(primary);
+        return "opened";
+      } catch {
+        /* fall through */
+      }
+    }
   }
 
   await Clipboard.setStringAsync(copyText);
   Alert.alert(
     PAY_METHOD_META[opts.method].label,
-    opts.method === "zelle"
-      ? `Copied ${opts.handle} and the amount. Open your bank’s Zelle and paste.`
+    opts.method === "zelle" || (opts.method === "paypal" && !paypalUsername(opts.handle))
+      ? `Copied ${opts.handle} and the amount. Open ${PAY_METHOD_META[opts.method].label} and paste.`
       : `Couldn't open the app. Payment details were copied — paste them in ${PAY_METHOD_META[opts.method].label}.`,
   );
   return "copied";

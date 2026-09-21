@@ -4,13 +4,13 @@ import { PAY_METHOD_META } from "@/lib/pay";
 
 export function PayMethodIcon({
   method,
-  size = 28,
+  size = 56,
 }: {
   method: PayMethod;
   size?: number;
 }) {
   const meta = PAY_METHOD_META[method];
-  const radius = Math.max(6, Math.round(size * 0.28));
+  const radius = Math.max(10, Math.round(size * 0.28));
   return (
     <View
       accessibilityLabel={meta.label}

@@ -86,7 +86,7 @@ export default function SettleScreen() {
                 <Text style={styles.youLabel}>You owe</Text>
                 <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
               </View>
-              <PayMethodIcon method={fallbackPayment.method} size={40} />
+              <PayMethodIcon method={fallbackPayment.method} size={80} />
             </View>
             {payments.length > 1 ? (
               <View style={styles.chooser}>
@@ -100,7 +100,7 @@ export default function SettleScreen() {
                         onPress={() => setPayWith(payment.method)}
                         style={[styles.chooserChip, on && styles.chooserChipOn]}
                       >
-                        <PayMethodIcon method={payment.method} size={24} />
+                        <PayMethodIcon method={payment.method} size={48} />
                         <Text style={[styles.chooserLabel, on && { color: colors.ink }]}>
                           {PAY_METHOD_META[payment.method].label}
                         </Text>
@@ -126,7 +126,7 @@ export default function SettleScreen() {
               }}
               style={styles.payBtn}
             >
-              <PayMethodIcon method={fallbackPayment.method} size={22} />
+              <PayMethodIcon method={fallbackPayment.method} size={44} />
               <Text style={styles.payBtnText}>
                 {paying
                   ? "Opening…"
