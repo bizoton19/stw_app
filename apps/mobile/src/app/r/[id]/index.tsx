@@ -1,0 +1,333 @@
+import { StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Check } from "lucide-react-native";
+import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { Field } from "@/components/field";
+import { PressScale } from "@/components/press-scale";
+import { useClaimFlow } from "@/context/claim-flow";
+import { centsToLabel } from "@/lib/money";
+import { computeTotals } from "@/lib/totals";
+import { getClaimToken } from "@/lib/session";
+import { colors } from "@/lib/theme";
+import { useMemo, useState } from "react";
+
+export default function ClaimScreen() {
+  const router = useRouter();
+  const flow = useClaimFlow();
+  const meta =
+    flow.live === "live" ? "Live" : flow.live === "offline" ? "Offline" : "Reconnecting";
+
+  if (flow.error && !flow.receipt) {
+    return (
+      <AppShell meta="Missing">
+        <View style={{ padding: 20, paddingTop: 40 }}>
+          <Text style={styles.title}>That tab is gone</Text>
+          <Text style={styles.muted}>
+            Links live in this server's memory. Start a new receipt or open the sample tab.
+          </Text>
+          <View style={{ marginTop: 24 }}>
+            <PrimaryButton onPress={() => router.replace("/")}>Back home</PrimaryButton>
+          </View>
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (!flow.receipt) {
+    return (
+      <AppShell meta="Loading">
+        <Text style={[styles.muted, { textAlign: "center", marginTop: 80 }]}>
+          Opening the check…
+        </Text>
+      </AppShell>
+    );
+  }
+
+  if (!flow.guest && !flow.isHost) {
+    return <JoinScreen />;
+  }
+
+  return (
+    <AppShell meta={meta}>
+      <PickBoard />
+    </AppShell>
+  );
+}
+
+function JoinScreen() {
+  const router = useRouter();
+  const flow = useClaimFlow();
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  return (
+    <AppShell>
+      <InterviewChrome
+        step={1}
+        total={3}
+        kicker={flow.receipt?.restaurant || "At the table"}
+        title="What should we call you?"
+        onBack={() => router.replace("/")}
+        keyboard
+        footer={
+          <PrimaryButton
+            disabled={!name.trim()}
+            onPress={() => void flow.join({ name: name.trim(), contact: contact.trim() })}
+          >
+            See the check
+          </PrimaryButton>
+        }
+      >
+        <Text style={styles.lead}>
+          A name is enough. Add a handle so the host can reach you if something looks off.
+        </Text>
+        <Field label="Name" value={name} onChangeText={setName} placeholder="Alex" autoComplete="name" />
+        <Field
+          label="Contact"
+          hint="(optional)"
+          value={contact}
+          onChangeText={setContact}
+          placeholder="phone, Venmo, or email"
+          autoComplete="tel"
+          keyboardType="default"
+        />
+      </InterviewChrome>
+    </AppShell>
+  );
+}
+
+function PickBoard() {
+  const router = useRouter();
+  const flow = useClaimFlow();
+  const receipt = flow.receipt!;
+  const remainingItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
+  const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
+  const totals = useMemo(() => computeTotals(receipt), [receipt]);
+  const mine = flow.guest
+    ? totals.people.find((p) => p.personName === flow.guest?.name)
+    : undefined;
+  const closed = receipt.status === "finalized";
+  const totalSteps = flow.isHost ? 2 : 3;
+  const pickStep = flow.isHost ? 1 : 2;
+  const activeQueued = flow.queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
+
+  if (closed) {
+    return (
+      <InterviewChrome
+        step={pickStep}
+        total={totalSteps}
+        kicker={receipt.restaurant || "The check"}
+        title="Claiming is closed"
+        onBack={() => router.replace("/")}
+        footer={
+          <PrimaryButton
+            onPress={() =>
+              router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })
+            }
+          >
+            See who owes what
+          </PrimaryButton>
+        }
+      >
+        {mine ? (
+          <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text>
+        ) : null}
+        <History />
+      </InterviewChrome>
+    );
+  }
+
+  const footer =
+    remainingItems.length === 0 ? (
+      <View>
+        <PrimaryButton
+          onPress={() => router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })}
+        >
+          See who owes what
+        </PrimaryButton>
+        {flow.isHost ? (
+          <QuietButton
+            disabled={flow.busy}
+            onPress={() =>
+              void flow.closeOut().then((ok) => {
+                if (ok)
+                  router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } });
+              })
+            }
+          >
+            Close claiming
+          </QuietButton>
+        ) : null}
+      </View>
+    ) : (
+      <View>
+        <PrimaryButton
+          disabled={flow.busy || !flow.guest || activeQueued.length === 0}
+          onPress={() => router.push({ pathname: "/r/[id]/qty", params: { id: receipt.id } })}
+        >
+          {activeQueued.length === 0
+            ? "Pick what you had"
+            : activeQueued.length === 1
+              ? "Claim 1 item"
+              : `Claim ${activeQueued.length} items`}
+        </PrimaryButton>
+        {flow.isHost ? (
+          <QuietButton
+            disabled={flow.busy}
+            onPress={() =>
+              void flow.closeOut().then((ok) => {
+                if (ok)
+                  router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } });
+              })
+            }
+          >
+            Close — leftovers on the host
+          </QuietButton>
+        ) : (
+          <QuietButton
+            onPress={() =>
+              router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })
+            }
+          >
+            Running totals
+          </QuietButton>
+        )}
+      </View>
+    );
+
+  return (
+    <InterviewChrome
+      step={pickStep}
+      total={totalSteps}
+      kicker={receipt.restaurant || "The check"}
+      title="What did you have?"
+      onBack={() => router.replace("/")}
+      footer={footer}
+    >
+      {mine ? <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text> : null}
+      {flow.guest ? (
+        <Text style={styles.as}>
+          Claiming as {flow.guest.name}
+          {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
+        </Text>
+      ) : (
+        <Text style={styles.as}>Add your name on the join screen to claim.</Text>
+      )}
+      {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
+      {remainingItems.length === 0 ? (
+        <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
+          Everything on this check is claimed.
+        </Text>
+      ) : (
+        remainingItems.map((item) => {
+          const left = receipt.remaining[item.id] ?? 0;
+          const selected = activeQueued.includes(item.id);
+          return (
+            <PressScale
+              key={item.id}
+              accessibilityState={{ selected }}
+              onPress={() => flow.toggle(item.id)}
+              style={styles.item}
+            >
+              <View style={[styles.check, selected && styles.checkOn]}>
+                {selected ? <Check size={12} color={colors.merlotFg} strokeWidth={3} /> : null}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.muted}>
+                  {centsToLabel(item.totalCents)} for {item.qty}
+                </Text>
+              </View>
+              <Text style={[styles.left, selected && { color: colors.merlot }]}>{left} left</Text>
+            </PressScale>
+          );
+        })
+      )}
+      {goneItems.length > 0 ? (
+        <View style={{ marginTop: 32 }}>
+          <Text style={styles.section}>Claimed out</Text>
+          {goneItems.map((item) => (
+            <Text key={item.id} style={styles.muted}>
+              {item.name}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+      <History />
+    </InterviewChrome>
+  );
+}
+
+function History() {
+  const flow = useClaimFlow();
+  const receipt = flow.receipt!;
+  if (receipt.claims.length === 0) return null;
+  const closed = receipt.status === "finalized";
+  return (
+    <View style={{ marginTop: 32 }}>
+      <Text style={styles.section}>Who claimed what</Text>
+      {receipt.items.map((item) => {
+        const claims = receipt.claims.filter((c) => c.itemId === item.id);
+        if (claims.length === 0) return null;
+        return (
+          <View key={item.id} style={{ marginBottom: 16 }}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            {claims.map((claim) => {
+              const mineToDrop = getClaimToken(receipt.id, claim.id) && !closed;
+              return (
+                <View key={claim.id} style={styles.claimRow}>
+                  <Text style={[styles.muted, { flex: 1 }]}>
+                    {claim.personName} · {claim.units}
+                    {claim.personContact ? ` · ${claim.personContact}` : ""}
+                  </Text>
+                  {mineToDrop ? (
+                    <PressScale
+                      disabled={flow.busy}
+                      onPress={() => void flow.unclaim(claim.id)}
+                      style={{ height: 36, justifyContent: "center" }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: "600", color: colors.ink }}>
+                        Unclaim
+                      </Text>
+                    </PressScale>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  title: { fontSize: 24, fontWeight: "700", color: colors.ink },
+  muted: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 20 },
+  mine: { fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], marginBottom: 8 },
+  as: { fontSize: 13, color: colors.muted, marginBottom: 16 },
+  err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
+  item: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  check: {
+    marginTop: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkOn: { backgroundColor: colors.merlot, borderColor: colors.merlot },
+  itemName: { fontSize: 15, fontWeight: "600", color: colors.ink },
+  left: { fontSize: 12, fontWeight: "600", color: colors.inkSoft, fontVariant: ["tabular-nums"] },
+  section: { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 8 },
+  claimRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+});

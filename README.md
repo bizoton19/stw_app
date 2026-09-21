@@ -23,6 +23,12 @@ Copy `.env.example` to `.env.local` and set `OPENROUTER_API_KEY` for live receip
 
 Data lives in memory and resets when the server restarts.
 
+## Native app (Expo)
+
+A real React Native client lives in [`apps/mobile`](apps/mobile). It uses the same parse/claims API. The OpenRouter key stays on the server.
+
+Copy-paste steps for **Expo Go** (scan a QR on a phone) and **Xcode** (`npx expo run:ios`) are in [`apps/mobile/README.md`](apps/mobile/README.md). A physical phone cannot use `localhost` for the API — set `EXPO_PUBLIC_API_URL` to your Mac's LAN IP.
+
 ## Stack
 
-Next.js · TypeScript · Tailwind · Motion · in-memory Route Handlers
+Next.js · TypeScript · Tailwind · Motion · in-memory Route Handlers · Expo / React Native
