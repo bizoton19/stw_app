@@ -3,21 +3,17 @@ import { Linking, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { PayMethodIcon } from "@/components/pay-method-icon";
+import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
 import { centsToLabel } from "@/lib/money";
+import { openHostPay, PAY_METHOD_META } from "@/lib/pay";
 import { computeTotals } from "@/lib/totals";
 import type { PayMethod } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
-const METHOD_LABEL: Record<PayMethod, string> = {
-  venmo: "Venmo",
-  zelle: "Zelle",
-  cashapp: "Cash App",
-  other: "their preferred app",
-};
-
 function messageFor(name: string, amount: string, handle: string, method: PayMethod) {
-  return `Hey ${name}, your share is ${amount}. Send it to ${handle} via ${METHOD_LABEL[method]}.`;
+  return `Hey ${name}, your share is ${amount}. Send it to ${handle} via ${PAY_METHOD_META[method].label}.`;
 }
 
 export default function SettleScreen() {
@@ -26,6 +22,7 @@ export default function SettleScreen() {
   const receipt = flow.receipt;
   const totals = useMemo(() => (receipt ? computeTotals(receipt) : null), [receipt]);
   const [copied, setCopied] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
 
   if (!receipt || !totals) {
     return (
@@ -40,6 +37,10 @@ export default function SettleScreen() {
   const handle = receipt.hostInfo?.handle ?? "the host";
   const method = receipt.hostInfo?.method ?? "other";
   const leftover = totals.unclaimedItemCents > 0 && receipt.status !== "finalized";
+  const mine = flow.guest
+    ? totals.people.find((p) => p.personName === flow.guest?.name)
+    : undefined;
+  const restaurant = receipt.restaurant || "the check";
 
   return (
     <AppShell>
@@ -58,7 +59,8 @@ export default function SettleScreen() {
         }
       >
         <Text style={styles.lead}>
-          Drinks plus a share of tax and tip. These messages are requests — nothing is auto-sent.
+          Drinks plus a share of tax and tip. Pay opens the host's app when possible — nothing
+          is charged from Split the Wine.
         </Text>
         {leftover ? (
           <Text style={styles.muted}>
@@ -71,6 +73,40 @@ export default function SettleScreen() {
           <Row label="Fees" value={centsToLabel(totals.feeTotalCents)} />
           <Row label="Grand" value={centsToLabel(totals.grandTotalCents)} strong />
         </View>
+
+        {mine && mine.totalCents > 0 ? (
+          <View style={styles.youCard}>
+            <View style={styles.youHead}>
+              <View>
+                <Text style={styles.youLabel}>You owe</Text>
+                <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
+              </View>
+              <PayMethodIcon method={method} size={40} />
+            </View>
+            <Text style={styles.muted}>
+              To {handle} on {PAY_METHOD_META[method].label}
+            </Text>
+            <PressScale
+              disabled={paying}
+              onPress={() => {
+                setPaying(true);
+                void openHostPay({
+                  method,
+                  handle,
+                  amountCents: mine.totalCents,
+                  note: `${flow.guest?.name ?? "Guest"} · ${restaurant}`,
+                }).finally(() => setPaying(false));
+              }}
+              style={styles.payBtn}
+            >
+              <PayMethodIcon method={method} size={22} />
+              <Text style={styles.payBtnText}>
+                {paying ? "Opening…" : `Pay with ${PAY_METHOD_META[method].label}`}
+              </Text>
+            </PressScale>
+          </View>
+        ) : null}
+
         {totals.people.length === 0 ? (
           <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
             Nobody has claimed yet.
@@ -79,6 +115,7 @@ export default function SettleScreen() {
           totals.people.map((person) => {
             const amount = centsToLabel(person.totalCents);
             const text = messageFor(person.personName, amount, handle, method);
+            const isYou = flow.guest?.name === person.personName;
             return (
               <View
                 key={`${person.personName}\0${person.personContact ?? ""}`}
@@ -86,7 +123,10 @@ export default function SettleScreen() {
               >
                 <View style={styles.personHead}>
                   <View>
-                    <Text style={styles.name}>{person.personName}</Text>
+                    <Text style={styles.name}>
+                      {person.personName}
+                      {isYou ? " (you)" : ""}
+                    </Text>
                     <Text style={styles.muted}>{person.personContact || "no contact"}</Text>
                   </View>
                   <Text style={styles.amount}>{amount}</Text>
@@ -97,37 +137,41 @@ export default function SettleScreen() {
                   </Text>
                 ))}
                 <Text style={styles.muted}>Share of tax & tip · {centsToLabel(person.feeCents)}</Text>
-                <Text style={[styles.muted, { marginTop: 8 }]}>{text}</Text>
-                <View style={styles.actions}>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      onPress={() =>
-                        void Linking.openURL(`sms:?&body=${encodeURIComponent(text)}`)
-                      }
-                    >
-                      Texts
-                    </PrimaryButton>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <QuietButton
-                      onPress={() =>
-                        void Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`)
-                      }
-                    >
-                      WhatsApp
-                    </QuietButton>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <QuietButton
-                      onPress={async () => {
-                        await Clipboard.setStringAsync(text);
-                        setCopied(person.personName);
-                      }}
-                    >
-                      {copied === person.personName ? "Copied" : "Copy"}
-                    </QuietButton>
-                  </View>
-                </View>
+                {!isYou ? (
+                  <>
+                    <Text style={[styles.muted, { marginTop: 8 }]}>{text}</Text>
+                    <View style={styles.actions}>
+                      <View style={{ flex: 1 }}>
+                        <PrimaryButton
+                          onPress={() =>
+                            void Linking.openURL(`sms:?&body=${encodeURIComponent(text)}`)
+                          }
+                        >
+                          Texts
+                        </PrimaryButton>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <QuietButton
+                          onPress={() =>
+                            void Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`)
+                          }
+                        >
+                          WhatsApp
+                        </QuietButton>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <QuietButton
+                          onPress={async () => {
+                            await Clipboard.setStringAsync(text);
+                            setCopied(person.personName);
+                          }}
+                        >
+                          {copied === person.personName ? "Copied" : "Copy"}
+                        </QuietButton>
+                      </View>
+                    </View>
+                  </>
+                ) : null}
               </View>
             );
           })
@@ -159,6 +203,29 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: "row", justifyContent: "space-between" },
   value: { fontVariant: ["tabular-nums"], fontSize: 14, color: colors.ink },
+  youCard: {
+    marginBottom: 24,
+    padding: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: "#FBFAF8",
+    gap: 8,
+  },
+  youHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  youLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
+  youAmount: { marginTop: 2, fontSize: 28, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  payBtn: {
+    marginTop: 6,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.merlot,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  payBtnText: { color: colors.merlotFg, fontSize: 15, fontWeight: "700" },
   person: { marginBottom: 28 },
   personHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   name: { fontSize: 15, fontWeight: "600", color: colors.ink },

@@ -1,0 +1,110 @@
+import { Alert, Linking, Platform } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import type { PayMethod } from "./types";
+
+export const PAY_METHOD_META: Record<
+  PayMethod,
+  { label: string; hint: string; brand: string; mark: string }
+> = {
+  venmo: { label: "Venmo", hint: "@handle", brand: "#008CFF", mark: "V" },
+  zelle: { label: "Zelle", hint: "email or phone", brand: "#6D1ED4", mark: "Z" },
+  cashapp: { label: "Cash App", hint: "$cashtag", brand: "#00D632", mark: "$" },
+  other: { label: "Other", hint: "how to pay you", brand: "#2A241C", mark: "·" },
+};
+
+function stripHandle(handle: string, method: PayMethod): string {
+  const raw = handle.trim();
+  if (method === "venmo") return raw.replace(/^@+/, "");
+  if (method === "cashapp") return raw.replace(/^\$+/, "");
+  return raw;
+}
+
+function dollars(amountCents: number): string {
+  return (Math.max(0, amountCents) / 100).toFixed(2);
+}
+
+/** Prefer native schemes; fall back to https where the app may still intercept. */
+export function payUrls(opts: {
+  method: PayMethod;
+  handle: string;
+  amountCents: number;
+  note: string;
+}): { primary: string; web?: string; copyText: string } {
+  const handle = stripHandle(opts.handle, opts.method);
+  const amount = dollars(opts.amountCents);
+  const note = opts.note.trim() || "Split the Wine";
+  const labeled = PAY_METHOD_META[opts.method].label;
+
+  if (opts.method === "venmo" && handle) {
+    const q = new URLSearchParams({
+      txn: "pay",
+      recipients: handle,
+      amount,
+      note,
+    });
+    return {
+      primary: `venmo://paycharge?${q.toString()}`,
+      web: `https://venmo.com/${encodeURIComponent(handle)}?txn=pay&amount=${amount}&note=${encodeURIComponent(note)}`,
+      copyText: `${handle} · $${amount} on Venmo · ${note}`,
+    };
+  }
+
+  if (opts.method === "cashapp" && handle) {
+    const tag = handle.startsWith("$") ? handle : `$${handle}`;
+    return {
+      primary: `https://cash.app/${encodeURIComponent(tag)}/${amount}`,
+      copyText: `${tag} · $${amount} on Cash App · ${note}`,
+    };
+  }
+
+  if (opts.method === "zelle" && handle) {
+    // No reliable public Zelle deep link across banks — copy + user opens their bank app.
+    return {
+      primary: "",
+      copyText: `Zelle ${handle} · $${amount} · ${note}`,
+    };
+  }
+
+  return {
+    primary: "",
+    copyText: `Pay ${opts.handle || "the host"} $${amount} via ${labeled} · ${note}`,
+  };
+}
+
+export async function openHostPay(opts: {
+  method: PayMethod;
+  handle: string;
+  amountCents: number;
+  note: string;
+}): Promise<"opened" | "copied" | "failed"> {
+  const { primary, web, copyText } = payUrls(opts);
+
+  if (primary) {
+    try {
+      const can = await Linking.canOpenURL(primary);
+      if (can || Platform.OS === "android") {
+        await Linking.openURL(primary);
+        return "opened";
+      }
+    } catch {
+      /* fall through */
+    }
+    if (web) {
+      try {
+        await Linking.openURL(web);
+        return "opened";
+      } catch {
+        /* fall through */
+      }
+    }
+  }
+
+  await Clipboard.setStringAsync(copyText);
+  Alert.alert(
+    PAY_METHOD_META[opts.method].label,
+    opts.method === "zelle"
+      ? `Copied ${opts.handle} and the amount. Open your bank’s Zelle and paste.`
+      : `Couldn't open the app. Payment details were copied — paste them in ${PAY_METHOD_META[opts.method].label}.`,
+  );
+  return "copied";
+}

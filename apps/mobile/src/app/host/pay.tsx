@@ -3,24 +3,21 @@ import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { Field } from "@/components/field";
+import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
+import { PAY_METHOD_META } from "@/lib/pay";
 import type { PayMethod } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
-const PAY_OPTIONS: { method: PayMethod; label: string; hint: string }[] = [
-  { method: "venmo", label: "Venmo", hint: "@handle" },
-  { method: "zelle", label: "Zelle", hint: "email or phone" },
-  { method: "cashapp", label: "Cash App", hint: "$cashtag" },
-  { method: "other", label: "Other", hint: "how to pay you" },
-];
+const PAY_OPTIONS: PayMethod[] = ["venmo", "zelle", "cashapp", "other"];
 
 export default function HostPay() {
   const router = useRouter();
   const draft = useHostDraft();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const hint = PAY_OPTIONS.find((o) => o.method === draft.method)?.hint;
+  const hint = PAY_METHOD_META[draft.method].hint;
 
   async function publish() {
     setBusy(true);
@@ -56,16 +53,17 @@ export default function HostPay() {
       >
         {error ? <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text> : null}
         <View style={styles.grid}>
-          {PAY_OPTIONS.map((option) => {
-            const on = draft.method === option.method;
+          {PAY_OPTIONS.map((method) => {
+            const on = draft.method === method;
+            const meta = PAY_METHOD_META[method];
             return (
               <PressScale
-                key={option.method}
-                onPress={() => draft.setMethod(option.method)}
-                style={styles.cell}
+                key={method}
+                onPress={() => draft.setMethod(method)}
+                style={[styles.cell, on && styles.cellOn]}
               >
-                <View style={[styles.dot, on && styles.dotOn]} />
-                <Text style={[styles.label, !on && { color: colors.muted }]}>{option.label}</Text>
+                <PayMethodIcon method={method} size={28} />
+                <Text style={[styles.label, !on && { color: colors.muted }]}>{meta.label}</Text>
               </PressScale>
             );
           })}
@@ -77,7 +75,10 @@ export default function HostPay() {
           placeholder="@alex"
           autoCapitalize="none"
         />
-        <Text style={styles.note}>A pre-filled message. Nobody is charged from this app.</Text>
+        <Text style={styles.note}>
+          Claimers get a Pay button that opens this app with the amount filled in when possible.
+          Nobody is charged from Split the Wine.
+        </Text>
       </InterviewChrome>
     </AppShell>
   );
@@ -87,23 +88,21 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    gap: 8,
     marginBottom: 16,
   },
   cell: {
-    width: "50%",
-    minHeight: 56,
+    width: "48%",
+    minHeight: 64,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 12,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+    borderRadius: 12,
   },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.border },
-  dotOn: { backgroundColor: colors.merlot },
+  cellOn: { borderColor: colors.merlot, backgroundColor: "#FBFAF8" },
   label: { fontSize: 14, fontWeight: "600", color: colors.ink },
-  note: { marginTop: 8, fontSize: 12, color: colors.muted },
+  note: { marginTop: 8, fontSize: 12, lineHeight: 18, color: colors.muted },
 });

@@ -15,6 +15,7 @@
         "NSCameraUsageDescription": "Split the Wine photographs the check so the server can read the lines. You still review every item.",
         "NSPhotoLibraryUsageDescription": "Split the Wine reads a receipt photo from your library so the server can extract the tab.",
         "NSPhotoLibraryAddUsageDescription": "Split the Wine only reads photos; it does not save to your library.",
+        "LSApplicationQueriesSchemes": ["venmo", "cashme", "cashapp", "paypal"],
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true,
           "NSAllowsArbitraryLoads": true
