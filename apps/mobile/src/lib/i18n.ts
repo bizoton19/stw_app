@@ -18,7 +18,6 @@ const translations = {
     "items.looksGood": "Looks good",
     "items.remove": "Remove %{name}",
     "items.line": "line",
-    "brand.name": "Split the Wine",
   },
   es: {
     "items.kicker": "Las bebidas",
@@ -32,7 +31,6 @@ const translations = {
     "items.looksGood": "Se ve bien",
     "items.remove": "Quitar %{name}",
     "items.line": "línea",
-    "brand.name": "Split the Wine",
   },
   fr: {
     "items.kicker": "Les boissons",
@@ -46,7 +44,6 @@ const translations = {
     "items.looksGood": "C’est bon",
     "items.remove": "Retirer %{name}",
     "items.line": "ligne",
-    "brand.name": "Split the Wine",
   },
   de: {
     "items.kicker": "Die Getränke",
@@ -60,7 +57,6 @@ const translations = {
     "items.looksGood": "Passt",
     "items.remove": "%{name} entfernen",
     "items.line": "Zeile",
-    "brand.name": "Split the Wine",
   },
   pt: {
     "items.kicker": "As bebidas",
@@ -74,7 +70,6 @@ const translations = {
     "items.looksGood": "Está bom",
     "items.remove": "Remover %{name}",
     "items.line": "linha",
-    "brand.name": "Split the Wine",
   },
   it: {
     "items.kicker": "Le bevande",
@@ -88,7 +83,6 @@ const translations = {
     "items.looksGood": "Va bene",
     "items.remove": "Rimuovi %{name}",
     "items.line": "riga",
-    "brand.name": "Split the Wine",
   },
   ja: {
     "items.kicker": "ドリンク",
@@ -102,7 +96,6 @@ const translations = {
     "items.looksGood": "これで進む",
     "items.remove": "%{name} を削除",
     "items.line": "行",
-    "brand.name": "Split the Wine",
   },
   zh: {
     "items.kicker": "酒水",
@@ -116,7 +109,6 @@ const translations = {
     "items.looksGood": "看起来没问题",
     "items.remove": "删除 %{name}",
     "items.line": "行",
-    "brand.name": "Split the Wine",
   },
   ko: {
     "items.kicker": "음료",
@@ -130,7 +122,20 @@ const translations = {
     "items.looksGood": "좋아요",
     "items.remove": "%{name} 삭제",
     "items.line": "줄",
-    "brand.name": "Split the Wine",
+  },
+  /** Haitian Creole — keep UI keys; brand stays hard-coded elsewhere. */
+  ht: {
+    "items.kicker": "Bwason yo",
+    "items.title": "Èske sa kòrèk?",
+    "items.empty": "Pa gen anyen. Ajoute sa ki te sou chèk la.",
+    "items.itemName": "Non atik",
+    "items.qty": "kant.",
+    "items.amt": "mont.",
+    "items.addLine": "Ajoute yon liy",
+    "items.subtotal": "Atik %{amount}",
+    "items.looksGood": "Sa bon",
+    "items.remove": "Retire %{name}",
+    "items.line": "liy",
   },
 } as const;
 
@@ -139,6 +144,7 @@ export type TranslationKey = keyof (typeof translations)["en"];
 const i18n = new I18n(translations);
 i18n.enableFallback = true;
 i18n.defaultLocale = "en";
+i18n.missingBehavior = "guess";
 
 function deviceLanguageCode(): string {
   const code = getLocales()[0]?.languageCode?.toLowerCase();
@@ -146,6 +152,8 @@ function deviceLanguageCode(): string {
   if (code in translations) return code;
   // zh-Hans / zh-Hant → zh
   if (code.startsWith("zh")) return "zh";
+  // Haitian Creole sometimes reports as "ht" or "cpf"
+  if (code === "cpf" || code === "hat") return "ht";
   return "en";
 }
 

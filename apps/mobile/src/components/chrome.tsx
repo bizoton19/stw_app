@@ -12,7 +12,9 @@ import { ChevronLeft } from "lucide-react-native";
 import { colors, type } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 import { WineMark } from "./wine-mark";
-import { t } from "@/lib/i18n";
+
+/** Product name stays English — brands aren't translated. */
+const BRAND = "Split the Wine";
 
 export function AppShell({
   children,
@@ -26,7 +28,7 @@ export function AppShell({
       <SafeAreaView edges={["top"]} style={styles.headerSafe}>
         <View style={styles.header}>
           <WineMark size={26} />
-          <Text style={styles.brand}>{t("brand.name")}</Text>
+          <Text style={styles.brand}>{BRAND}</Text>
           {meta ? (
             <Text style={[styles.meta, meta === "Live" && { color: colors.merlot }]}>{meta}</Text>
           ) : null}
