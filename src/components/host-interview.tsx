@@ -118,12 +118,17 @@ export function HostInterview() {
   const [restaurant, setRestaurant] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
-  const [method, setMethod] = useState<PayMethod>("venmo");
-  const [handle, setHandle] = useState("");
+  const [payments, setPayments] = useState<{ method: PayMethod; handle: string }[]>([
+    { method: "venmo", handle: "" },
+  ]);
   const [claimUrl, setClaimUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const hostInfo: HostInfo = { method, handle: handle.trim() };
+  const hostInfo: HostInfo = {
+    payments: payments
+      .map((p) => ({ method: p.method, handle: p.handle.trim() }))
+      .filter((p) => p.handle),
+  };
   const itemSubtotal = items.reduce((s, i) => s + i.totalCents, 0);
   const feeTotal = fees.reduce((s, f) => s + f.amountCents, 0);
   const stepIndex = ORDER.indexOf(step) + 1;
@@ -510,45 +515,79 @@ export function HostInterview() {
       </div>
     );
   } else if (step === "pay") {
+    const used = new Set(payments.map((p) => p.method));
+    const unused = PAY_OPTIONS.filter((o) => !used.has(o.method));
     body = (
       <>
         {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
-        <div className="grid grid-cols-2 gap-px bg-border">
-          {PAY_OPTIONS.map((option) => (
-            <button
-              key={option.method}
-              type="button"
-              onClick={() => setMethod(option.method)}
-              className={`pressable min-h-14 bg-background px-3 py-3 text-left text-[14px] font-medium ${
-                method === option.method ? "text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              <span
-                className={`mr-2 inline-block size-2 rounded-full ${
-                  method === option.method ? "bg-primary" : "bg-border"
-                }`}
-              />
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <Label htmlFor="handle" className="mt-5 mb-2 text-[13px] font-medium">
-          Your {PAY_OPTIONS.find((o) => o.method === method)?.hint}
-        </Label>
-        <Input
-          id="handle"
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          placeholder="@alex"
-          className={fieldClass}
-        />
+        <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
+          Add every app you accept. Claimers pick one and Pay opens it with their share filled in.
+        </p>
+        {payments.map((payment, index) => (
+          <div key={`${payment.method}-${index}`} className="mb-4 rounded-xl border border-border p-3">
+            <div className="mb-3 flex flex-wrap gap-2">
+              {PAY_OPTIONS.map((option) => {
+                const taken = payments.some((p, i) => i !== index && p.method === option.method);
+                if (taken) return null;
+                const on = payment.method === option.method;
+                return (
+                  <button
+                    key={option.method}
+                    type="button"
+                    onClick={() =>
+                      setPayments((prev) =>
+                        prev.map((row, i) =>
+                          i === index ? { ...row, method: option.method } : row,
+                        ),
+                      )
+                    }
+                    className={`pressable rounded-lg border px-2.5 py-1.5 text-[13px] font-medium ${
+                      on ? "border-primary text-foreground" : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+              {payments.length > 1 ? (
+                <QuietButton
+                  onClick={() => setPayments((prev) => prev.filter((_, i) => i !== index))}
+                >
+                  Remove
+                </QuietButton>
+              ) : null}
+            </div>
+            <Label className="mb-2 text-[13px] font-medium">
+              Your {PAY_OPTIONS.find((o) => o.method === payment.method)?.hint}
+            </Label>
+            <Input
+              value={payment.handle}
+              onChange={(e) =>
+                setPayments((prev) =>
+                  prev.map((row, i) => (i === index ? { ...row, handle: e.target.value } : row)),
+                )
+              }
+              placeholder="@alex"
+              className={fieldClass}
+            />
+          </div>
+        ))}
+        {unused.length > 0 ? (
+          <QuietButton
+            onClick={() =>
+              setPayments((prev) => [...prev, { method: unused[0].method, handle: "" }])
+            }
+          >
+            Add another way to pay
+          </QuietButton>
+        ) : null}
         <p className="mt-4 text-[12px] text-muted-foreground">
-          A pre-filled message. Nobody is charged from this app.
+          Nobody is charged from this app — we only hand off to the app they choose.
         </p>
       </>
     );
     footer = (
-      <ContinueButton disabled={!handle.trim() || busy} onClick={() => void publish()}>
+      <ContinueButton disabled={hostInfo.payments.length === 0 || busy} onClick={() => void publish()}>
         {busy ? "Publishing…" : "Create the claim link"}
       </ContinueButton>
     );

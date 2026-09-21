@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { useMemo, useState } from "react";
+import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { Field } from "@/components/field";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
@@ -10,14 +10,19 @@ import { PAY_METHOD_META } from "@/lib/pay";
 import type { PayMethod } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
-const PAY_OPTIONS: PayMethod[] = ["venmo", "zelle", "cashapp", "other"];
+const ALL_METHODS: PayMethod[] = ["venmo", "zelle", "cashapp", "other"];
 
 export default function HostPay() {
   const router = useRouter();
   const draft = useHostDraft();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const hint = PAY_METHOD_META[draft.method].hint;
+
+  const ready = draft.payments.some((p) => p.handle.trim());
+  const unused = useMemo(() => {
+    const used = new Set(draft.payments.map((p) => p.method));
+    return ALL_METHODS.filter((m) => !used.has(m));
+  }, [draft.payments]);
 
   async function publish() {
     setBusy(true);
@@ -26,7 +31,9 @@ export default function HostPay() {
       await draft.publish();
       router.push("/host/share");
     } catch {
-      setError("Couldn't publish. Check the API URL on the home screen — localhost won't work from a phone.");
+      setError(
+        "Couldn't publish. Check the API URL on the home screen — localhost won't work from a phone.",
+      );
     } finally {
       setBusy(false);
     }
@@ -42,42 +49,60 @@ export default function HostPay() {
         onBack={() => router.back()}
         keyboard
         footer={
-          <PrimaryButton
-            disabled={!draft.handle.trim()}
-            busy={busy}
-            onPress={() => void publish()}
-          >
+          <PrimaryButton disabled={!ready} busy={busy} onPress={() => void publish()}>
             Create the claim link
           </PrimaryButton>
         }
       >
-        {error ? <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text> : null}
-        <View style={styles.grid}>
-          {PAY_OPTIONS.map((method) => {
-            const on = draft.method === method;
-            const meta = PAY_METHOD_META[method];
-            return (
-              <PressScale
-                key={method}
-                onPress={() => draft.setMethod(method)}
-                style={[styles.cell, on && styles.cellOn]}
-              >
-                <PayMethodIcon method={method} size={28} />
-                <Text style={[styles.label, !on && { color: colors.muted }]}>{meta.label}</Text>
-              </PressScale>
-            );
-          })}
-        </View>
-        <Field
-          label={`Your ${hint}`}
-          value={draft.handle}
-          onChangeText={draft.setHandle}
-          placeholder="@alex"
-          autoCapitalize="none"
-        />
+        {error ? (
+          <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
+        ) : null}
+        <Text style={styles.lead}>
+          Add every app you accept. Claimers pick one and Pay opens it with their share filled in.
+        </Text>
+        {draft.payments.map((payment, index) => (
+          <View key={`${payment.method}-${index}`} style={styles.card}>
+            <View style={styles.methodRow}>
+              {ALL_METHODS.map((method) => {
+                const taken = draft.payments.some(
+                  (p, i) => i !== index && p.method === method,
+                );
+                const on = payment.method === method;
+                if (taken) return null;
+                return (
+                  <PressScale
+                    key={method}
+                    onPress={() => draft.setPayment(index, { method })}
+                    style={[styles.methodChip, on && styles.methodChipOn]}
+                  >
+                    <PayMethodIcon method={method} size={22} />
+                  </PressScale>
+                );
+              })}
+              {draft.payments.length > 1 ? (
+                <QuietButton onPress={() => draft.removePayment(index)}>Remove</QuietButton>
+              ) : null}
+            </View>
+            <Field
+              label={`Your ${PAY_METHOD_META[payment.method].hint}`}
+              value={payment.handle}
+              onChangeText={(handle) => draft.setPayment(index, { handle })}
+              placeholder={
+                payment.method === "cashapp"
+                  ? "$alex"
+                  : payment.method === "venmo"
+                    ? "@alex"
+                    : "alex@email.com"
+              }
+              autoCapitalize="none"
+            />
+          </View>
+        ))}
+        {unused.length > 0 ? (
+          <QuietButton onPress={() => draft.addPayment(unused[0])}>Add another way to pay</QuietButton>
+        ) : null}
         <Text style={styles.note}>
-          Claimers get a Pay button that opens this app with the amount filled in when possible.
-          Nobody is charged from Split the Wine.
+          Nobody is charged from Split the Wine — we only hand off to the app they choose.
         </Text>
       </InterviewChrome>
     </AppShell>
@@ -85,24 +110,22 @@ export default function HostPay() {
 }
 
 const styles = StyleSheet.create({
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 16,
-  },
-  cell: {
-    width: "48%",
-    minHeight: 64,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 12,
+  lead: { fontSize: 14, lineHeight: 20, color: colors.muted, marginBottom: 14 },
+  card: {
+    marginBottom: 14,
+    padding: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 12,
+    gap: 8,
   },
-  cellOn: { borderColor: colors.merlot, backgroundColor: "#FBFAF8" },
-  label: { fontSize: 14, fontWeight: "600", color: colors.ink },
+  methodRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  methodChip: {
+    padding: 6,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  methodChipOn: { borderColor: colors.merlot, backgroundColor: "#FBFAF8" },
   note: { marginTop: 8, fontSize: 12, lineHeight: 18, color: colors.muted },
 });

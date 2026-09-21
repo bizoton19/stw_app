@@ -4,31 +4,29 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { QuietButton } from "@/components/interview-chrome";
+import { primaryHostPayment } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { computeTotals } from "@/lib/totals";
-import type { PayMethod, PublicReceipt } from "@/lib/types";
+import type { HostPayment, PublicReceipt } from "@/lib/types";
 
-const METHOD_LABEL: Record<PayMethod, string> = {
+const METHOD_LABEL = {
   venmo: "Venmo",
   zelle: "Zelle",
   cashapp: "Cash App",
   other: "their preferred app",
-};
+} as const;
 
-function messageFor(
-  name: string,
-  amount: string,
-  handle: string,
-  method: PayMethod,
-) {
-  return `Hey ${name}, your share is ${amount}. Send it to ${handle} via ${METHOD_LABEL[method]}.`;
+function messageFor(name: string, amount: string, payment: HostPayment) {
+  return `Hey ${name}, your share is ${amount}. Send it to ${payment.handle} via ${METHOD_LABEL[payment.method]}.`;
 }
 
 export function SettleView({ receipt }: { receipt: PublicReceipt }) {
   const totals = useMemo(() => computeTotals(receipt), [receipt]);
   const [copied, setCopied] = useState<string | null>(null);
-  const handle = receipt.hostInfo?.handle ?? "the host";
-  const method = receipt.hostInfo?.method ?? "other";
+  const payment = primaryHostPayment(receipt.hostInfo) ?? {
+    method: "other" as const,
+    handle: "the host",
+  };
   const leftover = totals.unclaimedItemCents > 0 && receipt.status !== "finalized";
 
   return (
@@ -80,7 +78,7 @@ export function SettleView({ receipt }: { receipt: PublicReceipt }) {
         ) : (
           totals.people.map((person) => {
             const amount = centsToLabel(person.totalCents);
-            const text = messageFor(person.personName, amount, handle, method);
+            const text = messageFor(person.personName, amount, payment);
             const sms = `sms:?&body=${encodeURIComponent(text)}`;
             const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
             return (

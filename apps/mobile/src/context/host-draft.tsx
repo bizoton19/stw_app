@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { api, createDraftReceipt, parseReceiptWithImage } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
 import { saveHostToken } from "@/lib/session";
-import type { Fee, Item, PayMethod, PickedImage, PublicReceipt } from "@/lib/types";
+import type { Fee, HostPayment, Item, PayMethod, PickedImage, PublicReceipt } from "@/lib/types";
 
 export type DraftItem = Item & { totalInput: string };
 export type DraftFee = Fee & { amountInput: string };
@@ -22,16 +22,16 @@ type HostDraft = {
   restaurant: string;
   items: DraftItem[];
   fees: DraftFee[];
-  method: PayMethod;
-  handle: string;
+  payments: HostPayment[];
   claimUrl: string;
   error: string | null;
   setPick: (mode: PickMode, image?: PickedImage | null) => void;
   setRestaurant: (v: string) => void;
   setItems: (v: DraftItem[] | ((prev: DraftItem[]) => DraftItem[])) => void;
   setFees: (v: DraftFee[] | ((prev: DraftFee[]) => DraftFee[])) => void;
-  setMethod: (v: PayMethod) => void;
-  setHandle: (v: string) => void;
+  setPayment: (index: number, patch: Partial<HostPayment>) => void;
+  addPayment: (method?: PayMethod) => void;
+  removePayment: (index: number) => void;
   runParse: () => Promise<void>;
   publish: () => Promise<void>;
 };
@@ -45,8 +45,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [restaurant, setRestaurant] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
-  const [method, setMethod] = useState<PayMethod>("venmo");
-  const [handle, setHandle] = useState("");
+  const [payments, setPayments] = useState<HostPayment[]>([{ method: "venmo", handle: "" }]);
   const [claimUrl, setClaimUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +53,28 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     setPickMode(mode);
     setImage(next ?? null);
     setError(null);
+  }, []);
+
+  const setPayment = useCallback((index: number, patch: Partial<HostPayment>) => {
+    setPayments((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  }, []);
+
+  const addPayment = useCallback((method: PayMethod = "cashapp") => {
+    setPayments((prev) => {
+      const used = new Set(prev.map((p) => p.method));
+      const nextMethod =
+        method && !used.has(method)
+          ? method
+          : (["venmo", "zelle", "cashapp", "other"] as PayMethod[]).find((m) => !used.has(m));
+      if (!nextMethod) return prev;
+      return [...prev, { method: nextMethod, handle: "" }];
+    });
+  }, []);
+
+  const removePayment = useCallback((index: number) => {
+    setPayments((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
   }, []);
 
   const applyReceipt = useCallback((receipt: PublicReceipt) => {
@@ -64,7 +85,6 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const ensureDraft = useCallback(async () => {
     if (receiptId) return receiptId;
-    // Create without multipart — RN FormData file uploads often fail on device.
     const created = await createDraftReceipt();
     await saveHostToken(created.receiptId, created.hostToken);
     setReceiptId(created.receiptId);
@@ -93,8 +113,9 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         setError(null);
       }
     } catch (err) {
-      const code = (err as { code?: string; message?: string }).code
-        ?? (err as { message?: string }).message;
+      const code =
+        (err as { code?: string; message?: string }).code ??
+        (err as { message?: string }).message;
       if (code && code !== "Network request failed" && code !== "request_failed") {
         setError(`Server said ${code}. You can still enter the lines yourself.`);
       } else {
@@ -107,6 +128,10 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const publish = useCallback(async () => {
     if (!receiptId) throw new Error("no_receipt");
+    const cleaned = payments
+      .map((p) => ({ method: p.method, handle: p.handle.trim() }))
+      .filter((p) => p.handle);
+    if (cleaned.length === 0) throw new Error("no_payments");
     const { getHostToken } = await import("@/lib/session");
     await api(`/api/receipts/${receiptId}`, {
       method: "PUT",
@@ -115,12 +140,12 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         restaurant,
         items: items.map(({ id, name, qty, totalCents }) => ({ id, name, qty, totalCents })),
         fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
-        hostInfo: { method, handle: handle.trim() },
+        hostInfo: { payments: cleaned },
         publish: true,
       }),
     });
     setClaimUrl(publicClaimUrl(receiptId));
-  }, [fees, handle, items, method, receiptId, restaurant]);
+  }, [fees, items, payments, receiptId, restaurant]);
 
   const value = useMemo(
     () => ({
@@ -130,32 +155,34 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       restaurant,
       items,
       fees,
-      method,
-      handle,
+      payments,
       claimUrl,
       error,
       setPick,
       setRestaurant,
       setItems,
       setFees,
-      setMethod,
-      setHandle,
+      setPayment,
+      addPayment,
+      removePayment,
       runParse,
       publish,
     }),
     [
+      addPayment,
       claimUrl,
       error,
       fees,
-      handle,
       image,
       items,
-      method,
+      payments,
       pickMode,
       publish,
       receiptId,
+      removePayment,
       restaurant,
       runParse,
+      setPayment,
       setPick,
     ],
   );

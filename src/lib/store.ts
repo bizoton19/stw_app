@@ -81,7 +81,7 @@ function seedDemo(s: StoreState) {
     items: itemsFromParse(parsed),
     fees: feesFromParse(parsed),
     claims: [],
-    hostInfo: { method: "venmo", handle: "@host" },
+    hostInfo: { payments: [{ method: "venmo", handle: "@host" }] },
     createdAt: now(),
     imageName: "sample-tab.jpg",
     hostToken: "demo-host",
@@ -431,8 +431,8 @@ export async function finalizeReceipt(id: string, hostToken: string | null) {
     if (receipt.status !== "open") {
       throw Object.assign(new Error("not_open"), { code: "conflict" });
     }
-    const hostName = receipt.hostInfo?.handle
-      ? `Host (${receipt.hostInfo.handle})`
+    const hostName = receipt.hostInfo?.payments[0]?.handle
+      ? `Host (${receipt.hostInfo.payments[0].handle})`
       : "Host";
     const leftovers = leftoverAssignments(toPublic(receipt));
     for (const leftover of leftovers) {

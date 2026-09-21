@@ -1,4 +1,5 @@
 import { hostTokenOf, jsonError } from "@/lib/http";
+import { normalizeHostInfo } from "@/lib/host-pay";
 import { getPublicReceipt, saveReceipt } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +26,20 @@ export async function PUT(
       restaurant?: string;
       items?: { id?: string; name: string; qty: number; totalCents: number }[];
       fees?: { id?: string; name: string; amountCents: number }[];
-      hostInfo?: { method: "venmo" | "zelle" | "cashapp" | "other"; handle: string };
+      hostInfo?: unknown;
       publish?: boolean;
     };
-    const receipt = await saveReceipt(id, hostTokenOf(req), body);
+    const hostInfo = body.hostInfo !== undefined ? normalizeHostInfo(body.hostInfo) : undefined;
+    if (body.hostInfo !== undefined && !hostInfo) {
+      return Response.json({ error: "invalid" }, { status: 400 });
+    }
+    const receipt = await saveReceipt(id, hostTokenOf(req), {
+      restaurant: body.restaurant,
+      items: body.items,
+      fees: body.fees,
+      hostInfo: hostInfo ?? undefined,
+      publish: body.publish,
+    });
     return Response.json({
       receipt,
       claimUrl: `/r/${receipt.id}`,

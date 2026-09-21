@@ -23,9 +23,14 @@ export type Claim = {
   createdAt: string;
 };
 
-export type HostInfo = {
+export type HostPayment = {
   method: PayMethod;
   handle: string;
+};
+
+export type HostInfo = {
+  /** One or more ways people can pay the host. */
+  payments: HostPayment[];
 };
 
 export type Receipt = {

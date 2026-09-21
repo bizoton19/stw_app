@@ -58,7 +58,10 @@ function JoinScreen() {
   const router = useRouter();
   const flow = useClaimFlow();
   const [name, setName] = useState(
-    () => flow.guest?.name || flow.receipt?.hostInfo?.handle?.replace(/^@/, "") || "",
+    () =>
+      flow.guest?.name ||
+      flow.receipt?.hostInfo?.payments[0]?.handle?.replace(/^[@$]/, "") ||
+      "",
   );
   const [contact, setContact] = useState(() => flow.guest?.contact || "");
   return (

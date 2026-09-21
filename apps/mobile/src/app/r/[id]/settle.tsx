@@ -6,14 +6,15 @@ import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/compone
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
+import { hostPayments, primaryHostPayment } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { openHostPay, PAY_METHOD_META } from "@/lib/pay";
 import { computeTotals } from "@/lib/totals";
-import type { PayMethod } from "@/lib/types";
+import type { HostPayment, PayMethod } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
-function messageFor(name: string, amount: string, handle: string, method: PayMethod) {
-  return `Hey ${name}, your share is ${amount}. Send it to ${handle} via ${PAY_METHOD_META[method].label}.`;
+function messageFor(name: string, amount: string, payment: HostPayment) {
+  return `Hey ${name}, your share is ${amount}. Send it to ${payment.handle} via ${PAY_METHOD_META[payment.method].label}.`;
 }
 
 export default function SettleScreen() {
@@ -21,8 +22,13 @@ export default function SettleScreen() {
   const flow = useClaimFlow();
   const receipt = flow.receipt;
   const totals = useMemo(() => (receipt ? computeTotals(receipt) : null), [receipt]);
+  const payments = hostPayments(receipt?.hostInfo);
+  const [payWith, setPayWith] = useState<PayMethod | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+
+  const selected =
+    payments.find((p) => p.method === payWith) ?? primaryHostPayment(receipt?.hostInfo);
 
   if (!receipt || !totals) {
     return (
@@ -34,13 +40,12 @@ export default function SettleScreen() {
     );
   }
 
-  const handle = receipt.hostInfo?.handle ?? "the host";
-  const method = receipt.hostInfo?.method ?? "other";
   const leftover = totals.unclaimedItemCents > 0 && receipt.status !== "finalized";
   const mine = flow.guest
     ? totals.people.find((p) => p.personName === flow.guest?.name)
     : undefined;
   const restaurant = receipt.restaurant || "the check";
+  const fallbackPayment: HostPayment = selected ?? { method: "other", handle: "the host" };
 
   return (
     <AppShell>
@@ -59,8 +64,8 @@ export default function SettleScreen() {
         }
       >
         <Text style={styles.lead}>
-          Drinks plus a share of tax and tip. Pay opens the host's app when possible — nothing
-          is charged from Split the Wine.
+          Drinks plus a share of tax and tip. Pay opens the host's app when possible — nothing is
+          charged from Split the Wine.
         </Text>
         {leftover ? (
           <Text style={styles.muted}>
@@ -81,27 +86,51 @@ export default function SettleScreen() {
                 <Text style={styles.youLabel}>You owe</Text>
                 <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
               </View>
-              <PayMethodIcon method={method} size={40} />
+              <PayMethodIcon method={fallbackPayment.method} size={40} />
             </View>
+            {payments.length > 1 ? (
+              <View style={styles.chooser}>
+                <Text style={styles.muted}>Pay with</Text>
+                <View style={styles.chooserRow}>
+                  {payments.map((payment) => {
+                    const on = payment.method === fallbackPayment.method;
+                    return (
+                      <PressScale
+                        key={payment.method}
+                        onPress={() => setPayWith(payment.method)}
+                        style={[styles.chooserChip, on && styles.chooserChipOn]}
+                      >
+                        <PayMethodIcon method={payment.method} size={24} />
+                        <Text style={[styles.chooserLabel, on && { color: colors.ink }]}>
+                          {PAY_METHOD_META[payment.method].label}
+                        </Text>
+                      </PressScale>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
             <Text style={styles.muted}>
-              To {handle} on {PAY_METHOD_META[method].label}
+              To {fallbackPayment.handle} on {PAY_METHOD_META[fallbackPayment.method].label}
             </Text>
             <PressScale
               disabled={paying}
               onPress={() => {
                 setPaying(true);
                 void openHostPay({
-                  method,
-                  handle,
+                  method: fallbackPayment.method,
+                  handle: fallbackPayment.handle,
                   amountCents: mine.totalCents,
                   note: `${flow.guest?.name ?? "Guest"} · ${restaurant}`,
                 }).finally(() => setPaying(false));
               }}
               style={styles.payBtn}
             >
-              <PayMethodIcon method={method} size={22} />
+              <PayMethodIcon method={fallbackPayment.method} size={22} />
               <Text style={styles.payBtnText}>
-                {paying ? "Opening…" : `Pay with ${PAY_METHOD_META[method].label}`}
+                {paying
+                  ? "Opening…"
+                  : `Pay with ${PAY_METHOD_META[fallbackPayment.method].label}`}
               </Text>
             </PressScale>
           </View>
@@ -114,7 +143,7 @@ export default function SettleScreen() {
         ) : (
           totals.people.map((person) => {
             const amount = centsToLabel(person.totalCents);
-            const text = messageFor(person.personName, amount, handle, method);
+            const text = messageFor(person.personName, amount, fallbackPayment);
             const isYou = flow.guest?.name === person.personName;
             return (
               <View
@@ -215,6 +244,20 @@ const styles = StyleSheet.create({
   youHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   youLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   youAmount: { marginTop: 2, fontSize: 28, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  chooser: { gap: 6, marginTop: 4 },
+  chooserRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chooserChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  chooserChipOn: { borderColor: colors.merlot, backgroundColor: "#FFF" },
+  chooserLabel: { fontSize: 12, fontWeight: "600", color: colors.muted },
   payBtn: {
     marginTop: 6,
     height: 48,
