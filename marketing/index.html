@@ -58,44 +58,32 @@
             100% { transform: translateY(0px) rotate(0deg); }
         }
 
-        /* Bottle splitting animation */
+        /* Bottle splitting animation on hover */
         .wine-mark .segment {
             transform-origin: center;
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
-        .wine-mark .seg-1 {
-            animation: split1 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
+        .group:hover .wine-mark .seg-1 {
+            transform: translate(-3px, -4px) rotate(-6deg);
         }
-        .wine-mark .seg-2 {
-            animation: split2 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
+        .group:hover .wine-mark .seg-2 {
+            transform: translate(4px, -1px) rotate(4deg);
         }
-        .wine-mark .seg-3 {
-            animation: split3 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
+        .group:hover .wine-mark .seg-3 {
+            transform: translate(-2px, 3px) rotate(-3deg);
         }
-        .wine-mark .seg-4 {
-            animation: split4 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
-        }
-
-        @keyframes split1 {
-            to { transform: translate(-3px, -4px) rotate(-6deg); }
-        }
-        @keyframes split2 {
-            to { transform: translate(4px, -1px) rotate(4deg); }
-        }
-        @keyframes split3 {
-            to { transform: translate(-2px, 3px) rotate(-3deg); }
-        }
-        @keyframes split4 {
-            to { transform: translate(3px, 5px) rotate(2deg); }
+        .group:hover .wine-mark .seg-4 {
+            transform: translate(3px, 5px) rotate(2deg);
         }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col selection:bg-merlot selection:text-white">
 
     <!-- Navigation -->
-    <nav class="max-w-5xl mx-auto w-full px-6 py-8 flex justify-between items-center fade-up">
+    <nav class="max-w-5xl mx-auto w-full px-6 py-8 flex justify-between items-center fade-up group">
         <div class="flex items-center gap-2">
-            <!-- WineMark SVG with split animation -->
+            <!-- WineMark SVG with hover split animation -->
             <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="wine-mark">
                 <!-- cork -->
                 <path d="M22.2 3.5h3.6v3.2h-3.6V3.5Z" fill="#6E2E35" class="segment seg-1" />
@@ -177,7 +165,7 @@
                     <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
                         <i data-lucide="mouse-pointer-click" class="w-8 h-8 text-merlot"></i>
                     </div>
-                    <h3 class="text-lg font-bold mb-2">3. Claim Drinks</h3>
+                    <h3 class="text-lg font-bold mb-2">3. Claim Drinks and Food</h3>
                     <p class="text-inkSoft text-sm leading-relaxed">
                         Everyone taps what they ordered. Tax and tip are calculated proportionally automatically.
                     </p>
