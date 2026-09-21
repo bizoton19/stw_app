@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
+import { t } from "@/lib/i18n";
 import { centsToLabel } from "@/lib/money";
 import { colors } from "@/lib/theme";
 
@@ -17,34 +18,34 @@ export default function HostItems() {
       <InterviewChrome
         step={5}
         total={8}
-        kicker="The drinks"
-        title="Does this look right?"
+        kicker={t("items.kicker")}
+        title={t("items.title")}
         onBack={() => router.back()}
         keyboard
         dense
         footer={
           <View>
-            <Text style={styles.footNote}>Items {centsToLabel(subtotal)}</Text>
+            <Text style={styles.footNote}>
+              {t("items.subtotal", { amount: centsToLabel(subtotal) })}
+            </Text>
             <PrimaryButton
               disabled={
                 draft.items.length === 0 || draft.items.some((i) => !i.name.trim() || i.qty < 1)
               }
               onPress={() => router.push("/host/fees")}
             >
-              Looks good
+              {t("items.looksGood")}
             </PrimaryButton>
           </View>
         }
       >
-        {draft.items.length === 0 ? (
-          <Text style={styles.lead}>Nothing came through. Add what was on the check.</Text>
-        ) : null}
+        {draft.items.length === 0 ? <Text style={styles.lead}>{t("items.empty")}</Text> : null}
         {draft.items.map((item) => (
           <View key={item.id} style={styles.row}>
             <View style={styles.nameRow}>
               <TextInput
                 value={item.name}
-                placeholder="Item name"
+                placeholder={t("items.itemName")}
                 placeholderTextColor={colors.muted}
                 style={styles.nameInput}
                 autoCorrect={false}
@@ -55,7 +56,9 @@ export default function HostItems() {
                 }
               />
               <PressScale
-                accessibilityLabel={`Remove ${item.name || "line"}`}
+                accessibilityLabel={t("items.remove", {
+                  name: item.name.trim() || t("items.line"),
+                })}
                 onPress={() => draft.setItems(draft.items.filter((row) => row.id !== item.id))}
                 style={styles.trash}
               >
@@ -64,11 +67,12 @@ export default function HostItems() {
             </View>
             <View style={styles.metaRow}>
               <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>qty</Text>
+                <Text style={styles.metaLabel}>{t("items.qty")}</Text>
                 <TextInput
                   value={String(item.qty)}
                   keyboardType="number-pad"
                   style={styles.metaValue}
+                  accessibilityLabel={t("items.qty")}
                   onChangeText={(raw) => {
                     const qty = Math.max(1, Math.floor(Number(raw) || 0));
                     draft.setItems(
@@ -78,11 +82,12 @@ export default function HostItems() {
                 />
               </View>
               <View style={[styles.metaField, styles.metaFieldAmt]}>
-                <Text style={styles.metaLabel}>amt</Text>
+                <Text style={styles.metaLabel}>{t("items.amt")}</Text>
                 <TextInput
                   value={item.totalInput}
                   keyboardType="decimal-pad"
                   style={styles.metaValue}
+                  accessibilityLabel={t("items.amt")}
                   onChangeText={(totalInput) => {
                     const totalCents = Math.round((Number(totalInput) || 0) * 100);
                     draft.setItems(
@@ -110,7 +115,7 @@ export default function HostItems() {
             ])
           }
         >
-          Add a line
+          {t("items.addLine")}
         </QuietButton>
       </InterviewChrome>
     </AppShell>
@@ -150,8 +155,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: colors.inkSoft,
-    textTransform: "lowercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   metaValue: {
     flexGrow: 0,
