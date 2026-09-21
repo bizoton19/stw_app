@@ -24,7 +24,7 @@ export function AppShell({
     <View style={styles.root}>
       <SafeAreaView edges={["top"]} style={styles.headerSafe}>
         <View style={styles.header}>
-          <WineMark size={22} />
+          <WineMark size={26} />
           <Text style={styles.brand}>Split the Wine</Text>
           {meta ? (
             <Text style={[styles.meta, meta === "Live" && { color: colors.merlot }]}>{meta}</Text>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
   brand: { fontSize: 13, fontWeight: "600", color: colors.ink, flex: 1 },
   meta: { fontSize: 11, fontWeight: "600", color: colors.inkSoft },
