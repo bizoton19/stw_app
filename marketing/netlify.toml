@@ -1,0 +1,27 @@
+# Static marketing site on Netlify
+# Site settings: Base directory = marketing
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy.html"
+  status = 200
+
+# Force apex → www (also set www as primary domain in Netlify UI)
+[[redirects]]
+  from = "https://splitthewine.app/*"
+  to = "https://www.splitthewine.app/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://splitthewine.app/*"
+  to = "https://www.splitthewine.app/:splat"
+  status = 301
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
