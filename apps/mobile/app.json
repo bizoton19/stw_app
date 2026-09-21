@@ -15,10 +15,16 @@
         "NSCameraUsageDescription": "Split the Wine photographs the check so the server can read the lines. You still review every item.",
         "NSPhotoLibraryUsageDescription": "Split the Wine reads a receipt photo from your library so the server can extract the tab.",
         "NSPhotoLibraryAddUsageDescription": "Split the Wine only reads photos; it does not save to your library.",
-        "LSApplicationQueriesSchemes": ["venmo", "cashme", "cashapp", "paypal", "paypalme"],
+        "LSApplicationQueriesSchemes": [
+          "venmo",
+          "cashme",
+          "cashapp",
+          "paypal",
+          "paypalme"
+        ],
+        "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
-          "NSAllowsLocalNetworking": true,
-          "NSAllowsArbitraryLoads": true
+          "NSAllowsLocalNetworking": true
         }
       }
     },
@@ -31,7 +37,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": true,
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "single",
@@ -58,6 +67,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c9dffe8e-7f60-4ad0-a74d-87bdeae1dd4c"
+      }
+    },
+    "owner": "bizoton19"
   }
 }

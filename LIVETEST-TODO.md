@@ -23,8 +23,8 @@ Spell-outs used below:
 - [x] **Apple Developer Program** — enrollment submitted / **pending** approval — https://developer.apple.com
 - [ ] **App Store Connect** access once membership is Active — https://appstoreconnect.apple.com
 - [ ] Create the iOS app record: name **Split the Wine**, bundle id **`com.splitthewine.app`**
-- [ ] **Expo** account — https://expo.dev → sign up / sign in
-- [ ] Install EAS CLI on your Mac: `npm i -g eas-cli` then `eas login`
+- [x] **Expo** account — logged in as **bizoton19**
+- [x] EAS CLI available in `apps/mobile` (`eas-cli` devDependency); project linked
 
 ---
 
@@ -45,23 +45,21 @@ Apple and EAS will reject or look broken without these.
 
 Native builds bake env in at compile time. Expo Go LAN defaults will **not** work for TestFlight friends.
 
-- [ ] In `apps/mobile`, set for EAS / production builds:
-  ```bash
-  EXPO_PUBLIC_API_URL=https://api-production-72488.up.railway.app
-  EXPO_PUBLIC_SHARE_URL=https://api-production-72488.up.railway.app
-  ```
-- [ ] Prefer EAS project secrets / `eas.json` `env` over committing real URLs if you want flexibility
+- [x] Railway URLs baked into `apps/mobile/eas.json` for `development` / `preview` / `production`:
+  - `EXPO_PUBLIC_API_URL=https://api-production-72488.up.railway.app`
+  - `EXPO_PUBLIC_SHARE_URL=https://api-production-72488.up.railway.app`
 - [ ] Smoke-test once: phone or Simulator hitting Railway creates a receipt and parses a photo
 
 ---
 
 ## 3. iOS config polish before TestFlight
 
-- [ ] Add `eas.json` under `apps/mobile` (preview + production iOS profiles) via `eas build:configure`
-- [ ] **ATS**: remove or narrow `NSAllowsArbitraryLoads` in `apps/mobile/app.json` for store builds (Railway is HTTPS; cleartext was for local LAN only)
-- [ ] Add `ITSAppUsesNonExemptEncryption: false` in `ios.infoPlist` if you’re not using custom crypto (export-compliance checkbox)
-- [ ] Confirm camera / photo usage strings still read well in `app.json`
-- [ ] Bump `expo.version` / iOS build number when you ship a new TestFlight build
+- [x] Add `eas.json` under `apps/mobile` (preview + production iOS profiles)
+- [x] **ATS**: dropped `NSAllowsArbitraryLoads`; keep `NSAllowsLocalNetworking` for LAN/dev only
+- [x] Add `ITSAppUsesNonExemptEncryption: false` in `ios.infoPlist`
+- [x] Camera / photo usage strings already set in `app.json`
+- [x] Bump `expo.version` / iOS build number when you ship a new TestFlight build (`autoIncrement` is on in eas.json)
+- [x] `eas init` — project **@bizoton19/split-the-wine** (`c9dffe8e-7f60-4ad0-a74d-87bdeae1dd4c`)
 
 ---
 
