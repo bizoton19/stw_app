@@ -45,6 +45,7 @@ export function InterviewChrome({
   children,
   footer,
   keyboard = false,
+  dense = false,
 }: {
   step: number;
   total: number;
@@ -54,6 +55,8 @@ export function InterviewChrome({
   children: React.ReactNode;
   footer: React.ReactNode;
   keyboard?: boolean;
+  /** Tighter title + padding so list screens fit more on one viewport. */
+  dense?: boolean;
 }) {
   const progress = (step / total) * 100;
   const inner = (
@@ -83,13 +86,13 @@ export function InterviewChrome({
       </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, dense && styles.scrollContentDense]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {kicker ? <Text style={styles.kicker}>{kicker}</Text> : null}
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.children}>{children}</View>
+        {kicker ? <Text style={[styles.kicker, dense && styles.kickerDense]}>{kicker}</Text> : null}
+        <Text style={[styles.title, dense && styles.titleDense]}>{title}</Text>
+        <View style={[styles.children, dense && styles.childrenDense]}>{children}</View>
       </ScrollView>
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
         {footer}
@@ -182,7 +185,9 @@ const styles = StyleSheet.create({
   fill: { height: 2, backgroundColor: colors.merlot, borderRadius: 99 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
+  scrollContentDense: { paddingTop: 10, paddingBottom: 12 },
   kicker: { fontSize: type.kicker, fontWeight: "600", color: colors.inkSoft, marginBottom: 4 },
+  kickerDense: { marginBottom: 2, fontSize: 12 },
   title: {
     fontSize: type.title,
     fontWeight: "700",
@@ -190,7 +195,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     lineHeight: 32,
   },
+  titleDense: { fontSize: 22, lineHeight: 26, letterSpacing: -0.3 },
   children: { marginTop: 16 },
+  childrenDense: { marginTop: 10 },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,

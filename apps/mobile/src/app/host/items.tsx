@@ -1,8 +1,7 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
-import { Field } from "@/components/field";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
 import { centsToLabel } from "@/lib/money";
@@ -22,6 +21,7 @@ export default function HostItems() {
         title="Does this look right?"
         onBack={() => router.back()}
         keyboard
+        dense
         footer={
           <View>
             <Text style={styles.footNote}>Items {centsToLabel(subtotal)}</Text>
@@ -36,35 +36,39 @@ export default function HostItems() {
           </View>
         }
       >
-        <Text style={styles.lead}>
-          {draft.items.length === 0
-            ? "Nothing came through. Add what was on the check."
-            : "Fix misreads. Quantities stay whole numbers."}
-        </Text>
-        {draft.items.map((item, index) => (
+        {draft.items.length === 0 ? (
+          <Text style={styles.lead}>Nothing came through. Add what was on the check.</Text>
+        ) : null}
+        {draft.items.map((item) => (
           <View key={item.id} style={styles.row}>
-            <View style={styles.rowHead}>
-              <Text style={styles.line}>Line {index + 1}</Text>
+            <View style={styles.nameRow}>
+              <TextInput
+                value={item.name}
+                placeholder="Item name"
+                placeholderTextColor={colors.muted}
+                style={styles.nameInput}
+                autoCorrect={false}
+                onChangeText={(name) =>
+                  draft.setItems(
+                    draft.items.map((row) => (row.id === item.id ? { ...row, name } : row)),
+                  )
+                }
+              />
               <PressScale
                 accessibilityLabel={`Remove ${item.name || "line"}`}
                 onPress={() => draft.setItems(draft.items.filter((row) => row.id !== item.id))}
                 style={styles.trash}
               >
-                <Trash2 size={16} color={colors.ink} />
+                <Trash2 size={15} color={colors.inkSoft} />
               </PressScale>
             </View>
-            <Field
-              value={item.name}
-              placeholder="Item name"
-              onChangeText={(name) =>
-                draft.setItems(draft.items.map((row) => (row.id === item.id ? { ...row, name } : row)))
-              }
-            />
-            <View style={styles.grid}>
-              <View style={{ flex: 1 }}>
-                <Field
+            <View style={styles.metaRow}>
+              <View style={styles.metaField}>
+                <Text style={styles.metaLabel}>qty</Text>
+                <TextInput
                   value={String(item.qty)}
                   keyboardType="number-pad"
+                  style={styles.metaValue}
                   onChangeText={(raw) => {
                     const qty = Math.max(1, Math.floor(Number(raw) || 0));
                     draft.setItems(
@@ -73,10 +77,12 @@ export default function HostItems() {
                   }}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Field
+              <View style={[styles.metaField, styles.metaFieldAmt]}>
+                <Text style={styles.metaLabel}>amt</Text>
+                <TextInput
                   value={item.totalInput}
                   keyboardType="decimal-pad"
+                  style={styles.metaValue}
                   onChangeText={(totalInput) => {
                     const totalCents = Math.round((Number(totalInput) || 0) * 100);
                     draft.setItems(
@@ -112,16 +118,54 @@ export default function HostItems() {
 }
 
 const styles = StyleSheet.create({
-  lead: { fontSize: 14, color: colors.muted, marginBottom: 12 },
+  lead: { fontSize: 13, color: colors.muted, marginBottom: 8 },
   row: {
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    gap: 6,
   },
-  rowHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  line: { fontSize: 12, color: colors.muted },
-  trash: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  grid: { flexDirection: "row", gap: 8 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  nameInput: {
+    flex: 1,
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.ink,
+  },
+  trash: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 2 },
+  metaField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 72,
+  },
+  metaFieldAmt: { flex: 1 },
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.inkSoft,
+    textTransform: "lowercase",
+    letterSpacing: 0.3,
+  },
+  metaValue: {
+    flexGrow: 0,
+    minWidth: 44,
+    height: 32,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.ink,
+    fontVariant: ["tabular-nums"],
+  },
   footNote: {
     textAlign: "center",
     fontSize: 13,
