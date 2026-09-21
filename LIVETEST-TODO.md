@@ -34,8 +34,8 @@ Apple and EAS will reject or look broken without these.
 - [x] **Draft app icon** installed — merlot split-bottle on cream (`apps/mobile/assets/images/icon.png`); iOS now uses that PNG (not the old Expo blueprint `.icon`)
 - [x] **Draft splash** — `apps/mobile/assets/images/splash-icon.png`
 - [x] **Draft Android adaptive** — `android-icon-foreground/background/monochrome.png`
-- [ ] **Approve or revise drafts** — originals also in `apps/mobile/assets/drafts/`
-- [ ] **Final marketing icon** (1024×1024 PNG, no transparency) before public App Store
+- [x] **Approve draft icons** — four-break merlot bottle on cream (kept; originals in `apps/mobile/assets/drafts/`)
+- [ ] **Final marketing polish** only if App Store review wants a sharper vector remake (optional)
 - [ ] Optional later for public App Store: screenshots (6.7" and 6.1" iPhone), subtitle, description, Privacy Policy URL
 
 ---
