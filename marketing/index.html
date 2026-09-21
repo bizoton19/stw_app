@@ -91,8 +91,23 @@
             </svg>
             <span class="font-bold text-2xl tracking-tight">Split the Wine</span>
         </div>
-        <div>
+        <div class="flex items-center gap-6">
             <a href="#how-it-works" class="text-sm font-semibold text-inkSoft hover:text-merlot transition-colors">How it works</a>
+            
+            <!-- Language Dropdown -->
+            <div class="relative inline-block text-left" id="lang-menu">
+                <button type="button" id="lang-btn" class="flex items-center gap-1.5 text-sm font-semibold text-inkSoft hover:text-merlot transition-colors focus:outline-none" aria-expanded="false" aria-haspopup="true">
+                    <i data-lucide="globe" class="w-4 h-4"></i>
+                    EN
+                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                </button>
+                <div id="lang-dropdown" class="hidden absolute right-0 mt-2 w-32 origin-top-right rounded-xl bg-white shadow-sm border border-[#E6E0D8] focus:outline-none z-10 p-1 transform opacity-0 scale-95 transition-all duration-100 ease-out" role="menu">
+                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-ink bg-paper font-medium" role="menuitem">English</a>
+                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" role="menuitem">Español</a>
+                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" role="menuitem">Français</a>
+                    <a href="#" class="block rounded-lg px-4 py-2 text-sm text-inkSoft hover:bg-paper hover:text-merlot" role="menuitem">Kreyòl</a>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -229,6 +244,40 @@
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
+
+        // Language Dropdown Logic
+        const langBtn = document.getElementById('lang-btn');
+        const langDropdown = document.getElementById('lang-dropdown');
+        let langOpen = false;
+
+        function toggleLangMenu(force) {
+            langOpen = force !== undefined ? force : !langOpen;
+            if (langOpen) {
+                langDropdown.classList.remove('hidden');
+                // slight delay to allow display:block to apply before animating opacity
+                setTimeout(() => {
+                    langDropdown.classList.remove('opacity-0', 'scale-95');
+                    langDropdown.classList.add('opacity-100', 'scale-100');
+                }, 10);
+            } else {
+                langDropdown.classList.remove('opacity-100', 'scale-100');
+                langDropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    langDropdown.classList.add('hidden');
+                }, 100);
+            }
+        }
+
+        langBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleLangMenu();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (langOpen && !langDropdown.contains(e.target)) {
+                toggleLangMenu(false);
+            }
+        });
     </script>
 </body>
 </html>
