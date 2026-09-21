@@ -1,6 +1,14 @@
 import type { HostInfo, HostPayment, PayMethod } from "./types";
 
-export const PAY_METHODS: PayMethod[] = ["venmo", "paypal", "zelle", "cashapp", "other"];
+export const PAY_METHODS: PayMethod[] = [
+  "venmo",
+  "paypal",
+  "zelle",
+  "cashapp",
+  "moncash",
+  "natcash",
+  "other",
+];
 
 const METHODS = PAY_METHODS;
 
@@ -47,6 +55,7 @@ export function primaryHostPayment(info?: HostInfo | null): HostPayment | null {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[\d\s().-]{7,}$/;
+const HT_PHONE_RE = /^(?:\+?509[\s.-]?)?\d{8}$/;
 const VENMO_RE = /^@?[A-Za-z0-9_-]{1,30}$/;
 const CASH_RE = /^\$?[A-Za-z0-9_]{1,20}$/;
 const PAYPAL_ME_RE = /^(?:https?:\/\/)?(?:www\.)?paypal\.me\/[A-Za-z0-9_-]+\/?$/i;
@@ -74,6 +83,15 @@ export function validatePaymentHandle(
     case "zelle":
       if (EMAIL_RE.test(value) || PHONE_RE.test(value.replace(/\s/g, ""))) return { ok: true };
       return { ok: false, message: "Zelle needs an email or phone number." };
+    case "moncash":
+    case "natcash": {
+      const digits = value.replace(/[\s().-]/g, "");
+      if (HT_PHONE_RE.test(digits) || PHONE_RE.test(value.replace(/\s/g, ""))) return { ok: true };
+      return {
+        ok: false,
+        message: `${method === "moncash" ? "MonCash" : "Natcash"} needs a Haiti phone (+509…).`,
+      };
+    }
     case "paypal":
       if (EMAIL_RE.test(value) || PAYPAL_ME_RE.test(value) || PAYPAL_USER_RE.test(value)) {
         return { ok: true };

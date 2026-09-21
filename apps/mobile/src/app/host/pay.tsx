@@ -28,6 +28,7 @@ export default function HostPay() {
     if (bucket === "eu") return `Suggested first for ${region}: PayPal or bank details (Other)`;
     if (bucket === "latam") return `Suggested first for ${region}: PayPal or Other`;
     if (bucket === "ca") return `Suggested first for ${region}: PayPal`;
+    if (bucket === "ht") return `Suggested first for ${region}: MonCash, Natcash`;
     return null;
   }, []);
 
@@ -152,7 +153,11 @@ export default function HostPay() {
               placeholder={placeholderFor(payment.method)}
               autoCapitalize="none"
               keyboardType={
-                payment.method === "zelle" || payment.method === "paypal" ? "email-address" : "default"
+                payment.method === "moncash" || payment.method === "natcash"
+                  ? "phone-pad"
+                  : payment.method === "zelle" || payment.method === "paypal"
+                    ? "email-address"
+                    : "default"
               }
             />
             {draft.payments.length > 1 ? (
@@ -178,6 +183,9 @@ function placeholderFor(method: PayMethod): string {
       return "paypal.me/alex";
     case "zelle":
       return "alex@email.com";
+    case "moncash":
+    case "natcash":
+      return "+509 3XXX XXXX";
     default:
       return "how to pay you";
   }

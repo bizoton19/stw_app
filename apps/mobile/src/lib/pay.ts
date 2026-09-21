@@ -10,6 +10,8 @@ export const PAY_METHOD_META: Record<
   paypal: { label: "PayPal", hint: "email, @user, or paypal.me/name", brand: "#003087", mark: "P" },
   zelle: { label: "Zelle", hint: "email or phone", brand: "#6D1ED4", mark: "Z" },
   cashapp: { label: "Cash App", hint: "$cashtag", brand: "#00D632", mark: "$" },
+  moncash: { label: "MonCash", hint: "Digicel phone (+509…)", brand: "#E31C23", mark: "M" },
+  natcash: { label: "Natcash", hint: "Natcom phone (+509…)", brand: "#F36C00", mark: "N" },
   other: { label: "Other", hint: "how to pay you", brand: "#2A241C", mark: "·" },
 };
 
@@ -92,6 +94,14 @@ export function payUrls(opts: {
     };
   }
 
+  if ((opts.method === "moncash" || opts.method === "natcash") && handle) {
+    const label = PAY_METHOD_META[opts.method].label;
+    return {
+      primary: "",
+      copyText: `${label} ${handle} · ${amount} · ${note}`,
+    };
+  }
+
   return {
     primary: "",
     copyText: `Pay ${opts.handle || "the host"} $${amount} via ${labeled} · ${note}`,
@@ -137,7 +147,10 @@ export async function openHostPay(opts: {
   await Clipboard.setStringAsync(copyText);
   Alert.alert(
     PAY_METHOD_META[opts.method].label,
-    opts.method === "zelle" || (opts.method === "paypal" && !paypalUsername(opts.handle))
+    opts.method === "zelle" ||
+      opts.method === "moncash" ||
+      opts.method === "natcash" ||
+      (opts.method === "paypal" && !paypalUsername(opts.handle))
       ? `Copied ${opts.handle} and the amount. Open ${PAY_METHOD_META[opts.method].label} and paste.`
       : `Couldn't open the app. Payment details were copied — paste them in ${PAY_METHOD_META[opts.method].label}.`,
   );

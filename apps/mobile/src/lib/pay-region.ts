@@ -7,22 +7,76 @@ import type { PayMethod } from "./types";
  * Not driven by language — by device regionCode.
  */
 
-const ALL: PayMethod[] = ["venmo", "paypal", "zelle", "cashapp", "other"];
+const ALL: PayMethod[] = [
+  "venmo",
+  "paypal",
+  "zelle",
+  "cashapp",
+  "moncash",
+  "natcash",
+  "other",
+];
 
-/** US-centric P2P apps first. */
-const US_ORDER: PayMethod[] = ["venmo", "cashapp", "zelle", "paypal", "other"];
+const US_ORDER: PayMethod[] = [
+  "venmo",
+  "cashapp",
+  "zelle",
+  "paypal",
+  "moncash",
+  "natcash",
+  "other",
+];
 
-/** Canada: Interac isn’t in-app yet — PayPal + US apps that some people use. */
-const CA_ORDER: PayMethod[] = ["paypal", "venmo", "cashapp", "zelle", "other"];
+const CA_ORDER: PayMethod[] = [
+  "paypal",
+  "venmo",
+  "cashapp",
+  "zelle",
+  "moncash",
+  "natcash",
+  "other",
+];
 
-/** LatAm: PayPal / freeform first (Mercado Pago etc. → other for now). */
-const LATAM_ORDER: PayMethod[] = ["paypal", "other", "cashapp", "venmo", "zelle"];
+const LATAM_ORDER: PayMethod[] = [
+  "paypal",
+  "other",
+  "cashapp",
+  "venmo",
+  "zelle",
+  "moncash",
+  "natcash",
+];
 
-/** Europe + UK: PayPal / bank instructions; US P2P last. */
-const EU_ORDER: PayMethod[] = ["paypal", "other", "venmo", "cashapp", "zelle"];
+const EU_ORDER: PayMethod[] = [
+  "paypal",
+  "other",
+  "venmo",
+  "cashapp",
+  "zelle",
+  "moncash",
+  "natcash",
+];
 
-/** ANZ / most other. */
-const DEFAULT_ORDER: PayMethod[] = ["paypal", "other", "venmo", "cashapp", "zelle"];
+/** Haiti — MonCash + Natcash first. */
+const HT_ORDER: PayMethod[] = [
+  "moncash",
+  "natcash",
+  "paypal",
+  "other",
+  "venmo",
+  "cashapp",
+  "zelle",
+];
+
+const DEFAULT_ORDER: PayMethod[] = [
+  "paypal",
+  "other",
+  "venmo",
+  "cashapp",
+  "zelle",
+  "moncash",
+  "natcash",
+];
 
 const LATAM = new Set([
   "MX",
@@ -81,7 +135,7 @@ const EU = new Set([
   "LI",
 ]);
 
-export type PayRegionBucket = "us" | "ca" | "latam" | "eu" | "default";
+export type PayRegionBucket = "us" | "ca" | "ht" | "latam" | "eu" | "default";
 
 export function deviceRegionCode(): string | null {
   const code = getLocales()[0]?.regionCode?.toUpperCase();
@@ -92,6 +146,7 @@ export function payRegionBucket(regionCode: string | null = deviceRegionCode()):
   if (!regionCode) return "default";
   if (regionCode === "US") return "us";
   if (regionCode === "CA") return "ca";
+  if (regionCode === "HT") return "ht";
   if (LATAM.has(regionCode)) return "latam";
   if (EU.has(regionCode)) return "eu";
   return "default";
@@ -104,12 +159,13 @@ export function payMethodsForRegion(regionCode: string | null = deviceRegionCode
       ? US_ORDER
       : bucket === "ca"
         ? CA_ORDER
-        : bucket === "latam"
-          ? LATAM_ORDER
-          : bucket === "eu"
-            ? EU_ORDER
-            : DEFAULT_ORDER;
-  // Ensure we never drop a method if the static list drifts.
+        : bucket === "ht"
+          ? HT_ORDER
+          : bucket === "latam"
+            ? LATAM_ORDER
+            : bucket === "eu"
+              ? EU_ORDER
+              : DEFAULT_ORDER;
   const missing = ALL.filter((m) => !order.includes(m));
   return [...order, ...missing];
 }

@@ -48,6 +48,8 @@ const PAY_OPTIONS: { method: PayMethod; label: string; hint: string }[] = [
   { method: "paypal", label: "PayPal", hint: "email, @user, or paypal.me/name" },
   { method: "zelle", label: "Zelle", hint: "email or phone" },
   { method: "cashapp", label: "Cash App", hint: "$cashtag" },
+  { method: "moncash", label: "MonCash", hint: "Digicel phone (+509…)" },
+  { method: "natcash", label: "Natcash", hint: "Natcom phone (+509…)" },
   { method: "other", label: "Other", hint: "how to pay you" },
 ];
 

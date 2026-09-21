@@ -4,15 +4,15 @@ import type { PayMethod } from "@/lib/types";
 import { PAY_METHOD_META } from "@/lib/pay";
 
 /**
- * Official press-kit tiles where available (PayPal Newsroom, Cash App press).
- * Zelle: Early Warning does not publish a public logo kit — drop a licensed
- * `zelle.png` into assets/pay/official/ to replace the fallback mark.
+ * Official / store tiles when we have them.
+ * Zelle stays a glyph on purple (no public Early Warning logo kit).
  */
 const OFFICIAL: Partial<Record<PayMethod, number>> = {
   venmo: require("../../assets/pay/official/venmo.png"),
   paypal: require("../../assets/pay/official/paypal.png"),
   cashapp: require("../../assets/pay/official/cashapp.png"),
-  // zelle: require("../../assets/pay/official/zelle.png"), // add after license
+  moncash: require("../../assets/pay/official/moncash.png"),
+  natcash: require("../../assets/pay/official/natcash.png"),
 };
 
 const FALLBACK: Partial<Record<PayMethod, string>> = {

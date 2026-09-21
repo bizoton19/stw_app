@@ -14,6 +14,8 @@ const METHOD_LABEL = {
   paypal: "PayPal",
   zelle: "Zelle",
   cashapp: "Cash App",
+  moncash: "MonCash",
+  natcash: "Natcash",
   other: "their preferred app",
 } as const;
 
