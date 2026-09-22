@@ -304,10 +304,22 @@ export function HostInterview() {
           onChange={(e) => onPick(e.target.files?.[0] ?? null, "library")}
         />
         {previewUrl ? (
-          <div className="mt-4 overflow-hidden rounded-xl border border-border">
+          <button
+            type="button"
+            className="pressable relative mt-4 block w-full overflow-hidden rounded-xl border border-border text-left"
+            onClick={() =>
+              pickMode === "camera"
+                ? cameraRef.current?.click()
+                : libraryRef.current?.click()
+            }
+            aria-label="Replace receipt photo"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={previewUrl} alt="Receipt preview" className="max-h-48 w-full object-cover" />
-          </div>
+            <span className="absolute inset-x-0 bottom-0 bg-[rgba(42,36,28,0.55)] py-2 text-center text-[12px] font-semibold text-[#F6F4F1]">
+              Tap to replace
+            </span>
+          </button>
         ) : null}
         <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
           Photos are read on the server. You still review every line and can fix anything before
