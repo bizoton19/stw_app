@@ -1,7 +1,7 @@
 import { usingDatabase } from "./db";
 import * as memory from "./store-memory";
 import * as pg from "./store-pg";
-import type { HostInfo } from "./types";
+import type { HostInfo, ParseReviewChoice } from "./types";
 import type { ParseMeta, ReceiptImage } from "./parse-receipt";
 
 /**
@@ -75,6 +75,16 @@ export async function removeClaim(claimId: string, ownerToken: string | null) {
 
 export async function setHostInfo(id: string, hostToken: string | null, info: HostInfo) {
   return usingDatabase() ? pg.setHostInfo(id, hostToken, info) : memory.setHostInfo(id, hostToken, info);
+}
+
+export async function setParseReview(
+  id: string,
+  hostToken: string | null,
+  choice: ParseReviewChoice,
+) {
+  return usingDatabase()
+    ? pg.setParseReview(id, hostToken, choice)
+    : memory.setParseReview(id, hostToken, choice);
 }
 
 export async function finalizeReceipt(id: string, hostToken: string | null) {

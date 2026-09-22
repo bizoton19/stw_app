@@ -9,6 +9,7 @@ import type {
   Item,
   LiveEvent,
   ParseResult,
+  ParseReviewChoice,
   PublicReceipt,
   Receipt,
 } from "./types";
@@ -133,6 +134,8 @@ function toPublic(receipt: InternalReceipt): PublicReceipt {
     createdAt: receipt.createdAt,
     imageName: receipt.imageName,
     parseFlag: receipt.parseFlag,
+    parseReview: receipt.parseReview,
+    parseReviewAt: receipt.parseReviewAt,
   };
   return { ...publicReceipt, remaining: remainingMap(publicReceipt) };
 }
@@ -434,6 +437,31 @@ export async function removeClaim(claimId: string, ownerToken: string | null) {
 
 export async function setHostInfo(id: string, hostToken: string | null, info: HostInfo) {
   return saveReceipt(id, hostToken, { hostInfo: info });
+}
+
+export async function setParseReview(
+  id: string,
+  hostToken: string | null,
+  choice: ParseReviewChoice,
+) {
+  return withLock(id, () => {
+    const receipt = assertHost(id, hostToken);
+    receipt.parseReview = choice;
+    receipt.parseReviewAt = now();
+    console.info(
+      JSON.stringify({
+        event: "parse.review",
+        ts: receipt.parseReviewAt,
+        receiptId: receipt.id,
+        choice,
+        parseFlag: receipt.parseFlag ?? null,
+        itemCount: receipt.items.length,
+        feeCount: receipt.fees.length,
+      }),
+    );
+    emit(receipt, "updated");
+    return toPublic(receipt);
+  });
 }
 
 export async function finalizeReceipt(id: string, hostToken: string | null) {

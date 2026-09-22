@@ -1,9 +1,17 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { api, createDraftReceipt, parseReceiptWithImage } from "@/lib/api";
+import { api, createDraftReceipt, parseReceiptWithImage, submitParseReview } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
 import { nextUnusedPayMethod, preferredPayMethod } from "@/lib/pay-region";
 import { saveHostToken } from "@/lib/session";
-import type { Fee, HostPayment, Item, PayMethod, PickedImage, PublicReceipt } from "@/lib/types";
+import type {
+  Fee,
+  HostPayment,
+  Item,
+  ParseReviewChoice,
+  PayMethod,
+  PickedImage,
+  PublicReceipt,
+} from "@/lib/types";
 
 export type DraftItem = Item & { totalInput: string };
 export type DraftFee = Fee & { amountInput: string };
@@ -34,6 +42,7 @@ type HostDraft = {
   addPayment: (method?: PayMethod) => void;
   removePayment: (index: number) => void;
   runParse: () => Promise<void>;
+  recordParseReview: (choice: ParseReviewChoice) => Promise<void>;
   publish: () => Promise<void>;
 };
 
@@ -127,6 +136,19 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyReceipt, ensureDraft, image]);
 
+  const recordParseReview = useCallback(
+    async (choice: ParseReviewChoice) => {
+      if (!receiptId) return;
+      const { getHostToken } = await import("@/lib/session");
+      try {
+        await submitParseReview(receiptId, choice, getHostToken(receiptId));
+      } catch {
+        /* eval signal — don't block the host flow */
+      }
+    },
+    [receiptId],
+  );
+
   const publish = useCallback(async () => {
     if (!receiptId) throw new Error("no_receipt");
     const { validateHostPayments } = await import("@/lib/host-pay");
@@ -166,6 +188,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       addPayment,
       removePayment,
       runParse,
+      recordParseReview,
       publish,
     }),
     [
@@ -179,6 +202,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       pickMode,
       publish,
       receiptId,
+      recordParseReview,
       removePayment,
       restaurant,
       runParse,

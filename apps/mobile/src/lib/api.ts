@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { getApiUrl } from "./config";
-import type { PickedImage, PublicReceipt } from "./types";
+import type { ParseReviewChoice, PickedImage, PublicReceipt } from "./types";
 
 export type ApiError = Error & {
   code?: string;
@@ -111,6 +111,18 @@ export async function parseReceiptWithImage(
     throw err;
   }
   return data;
+}
+
+export async function submitParseReview(
+  receiptId: string,
+  choice: ParseReviewChoice,
+  hostToken: string | null,
+) {
+  return api<{ receipt: PublicReceipt }>(`/api/receipts/${receiptId}/parse-review`, {
+    method: "POST",
+    hostToken,
+    body: JSON.stringify({ choice }),
+  });
 }
 
 export async function appendReceiptImage(form: FormData, image: PickedImage) {

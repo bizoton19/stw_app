@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { centsToLabel } from "@/lib/money";
 import { validateHostPayments } from "@/lib/host-pay";
 import { payMethodsForRegion } from "@/lib/pay-region";
-import { api, saveHostToken } from "@/lib/session";
-import type { Fee, HostInfo, Item, PayMethod, PublicReceipt } from "@/lib/types";
+import { api, getHostToken, saveHostToken } from "@/lib/session";
+import type { Fee, HostInfo, Item, ParseReviewChoice, PayMethod, PublicReceipt } from "@/lib/types";
 
 type Step =
   | "ready"
@@ -134,7 +134,10 @@ export function HostInterview() {
   const [copied, setCopied] = useState(false);
   const [payConfirming, setPayConfirming] = useState(false);
   const [itemsNoOpen, setItemsNoOpen] = useState(false);
+  const [itemsYesOpen, setItemsYesOpen] = useState(false);
   const [itemsHint, setItemsHint] = useState<string | null>(null);
+  const [parseReview, setParseReview] = useState<ParseReviewChoice | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
 
   const hostInfo: HostInfo = {
     payments: payments
@@ -154,6 +157,39 @@ export function HostInterview() {
     setRestaurant(receipt.restaurant);
     setItems(toDraftItems(receipt.items));
     setFees(toDraftFees(receipt.fees));
+  }
+
+  async function recordParseReview(choice: ParseReviewChoice) {
+    if (!receiptId) return;
+    try {
+      await api(`/api/receipts/${receiptId}/parse-review`, {
+        method: "POST",
+        hostToken: getHostToken(receiptId),
+        body: JSON.stringify({ choice }),
+      });
+    } catch {
+      /* eval signal — don't block host */
+    }
+  }
+
+  async function applyItemsReview(choice: ParseReviewChoice, opts?: { continue?: boolean }) {
+    setItemsYesOpen(false);
+    setItemsNoOpen(false);
+    setParseReview(choice);
+    setReviewBusy(true);
+    try {
+      await recordParseReview(choice);
+      if (choice === "remove_items") {
+        setItemsHint("Tap the trash on any line you don't want — then continue.");
+      } else if (choice === "needs_edits") {
+        setItemsHint("Edit any name, qty, or amount below — then continue.");
+      } else {
+        setItemsHint(null);
+      }
+      if (opts?.continue) go("fees");
+    } finally {
+      setReviewBusy(false);
+    }
   }
 
   async function ensureDraft() {
@@ -434,7 +470,9 @@ export function HostInterview() {
               <button
                 type="button"
                 className={`pressable flex h-8 w-7 shrink-0 items-center justify-center ${
-                  itemsHint ? "rounded-md bg-[rgba(110,46,53,0.08)] text-[#6E2E35]" : ""
+                  parseReview === "remove_items"
+                    ? "rounded-md bg-[rgba(110,46,53,0.08)] text-[#6E2E35]"
+                    : ""
                 }`}
                 aria-label={`Remove ${item.name || "line"}`}
                 onClick={() => setItems(items.filter((row) => row.id !== item.id))}
@@ -463,64 +501,97 @@ export function HostInterview() {
         </QuietButton>
       </>
     );
+    const itemsOk =
+      items.length > 0 && !items.some((i) => !i.name.trim() || i.qty < 1);
     footer = (
       <div>
         <p className="mb-2 text-center text-[13px] tabular-nums text-muted-foreground">
           Items {centsToLabel(itemSubtotal)}
         </p>
-        {itemsNoOpen ? (
+        <p className="mb-2 text-center text-[13px] font-bold text-foreground">Looks good?</p>
+        {itemsYesOpen ? (
           <div className="mb-2 overflow-hidden rounded-xl border border-border bg-white">
             <button
               type="button"
-              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1]"
-              onClick={() => {
-                setItemsNoOpen(false);
-                setItemsHint(
-                  "Edit any name, qty, or amount below — then tap Looks good.",
-                );
-              }}
+              disabled={reviewBusy || !itemsOk}
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1] disabled:opacity-40"
+              onClick={() => void applyItemsReview("looks_good", { continue: true })}
             >
-              There are inaccuracies
+              Looks good
             </button>
             <div className="h-px bg-border" />
             <button
               type="button"
-              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1]"
-              onClick={() => {
-                setItemsNoOpen(false);
-                setItemsHint(
-                  "Tap the trash on any line you don't want — then tap Looks good.",
-                );
-              }}
+              disabled={reviewBusy}
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1] disabled:opacity-40"
+              onClick={() => void applyItemsReview("remove_items")}
             >
               Yes but I need to remove some items
+            </button>
+          </div>
+        ) : null}
+        {itemsNoOpen ? (
+          <div className="mb-2 overflow-hidden rounded-xl border border-border bg-white">
+            <button
+              type="button"
+              disabled={reviewBusy}
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1] disabled:opacity-40"
+              onClick={() => void applyItemsReview("needs_edits")}
+            >
+              No I need to make edits
             </button>
           </div>
         ) : null}
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            className="pressable inline-flex h-12 min-w-[88px] items-center justify-center gap-1 rounded-full border border-border bg-background px-4 text-[15px] font-semibold text-foreground"
+            disabled={reviewBusy}
+            className={`pressable inline-flex h-12 flex-1 items-center justify-center gap-1 rounded-full border px-4 text-[15px] font-bold ${
+              parseReview === "looks_good" || parseReview === "remove_items"
+                ? "border-[#6E2E35] bg-[rgba(110,46,53,0.06)]"
+                : "border-border bg-background"
+            }`}
+            aria-expanded={itemsYesOpen}
+            onClick={() => {
+              setItemsYesOpen((v) => !v);
+              setItemsNoOpen(false);
+            }}
+          >
+            Yes
+            <ChevronDown
+              className={`size-4 transition-transform ${itemsYesOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          <button
+            type="button"
+            disabled={reviewBusy}
+            className={`pressable inline-flex h-12 flex-1 items-center justify-center gap-1 rounded-full border px-4 text-[15px] font-bold ${
+              parseReview === "needs_edits"
+                ? "border-[#6E2E35] bg-[rgba(110,46,53,0.06)]"
+                : "border-border bg-background"
+            }`}
             aria-expanded={itemsNoOpen}
-            onClick={() => setItemsNoOpen((v) => !v)}
+            onClick={() => {
+              setItemsNoOpen((v) => !v);
+              setItemsYesOpen(false);
+            }}
           >
             No
             <ChevronDown
               className={`size-4 transition-transform ${itemsNoOpen ? "rotate-180" : ""}`}
             />
           </button>
-          <div className="min-w-0 flex-1">
-            <ContinueButton
-              disabled={items.length === 0 || items.some((i) => !i.name.trim() || i.qty < 1)}
-              onClick={() => {
-                setItemsNoOpen(false);
-                go("fees");
-              }}
-            >
-              Looks good
-            </ContinueButton>
-          </div>
         </div>
+        {parseReview && parseReview !== "looks_good" ? (
+          <button
+            type="button"
+            disabled={reviewBusy || !itemsOk}
+            className="pressable mt-2 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#6E2E35] text-[15px] font-bold text-white disabled:opacity-40"
+            onClick={() => go("fees")}
+          >
+            Continue
+          </button>
+        ) : null}
       </div>
     );
   } else if (step === "fees") {

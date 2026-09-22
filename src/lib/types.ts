@@ -41,6 +41,8 @@ export type HostInfo = {
   payments: HostPayment[];
 };
 
+export type ParseReviewChoice = "looks_good" | "remove_items" | "needs_edits";
+
 export type Receipt = {
   id: string;
   status: ReceiptStatus;
@@ -52,6 +54,9 @@ export type Receipt = {
   createdAt: string;
   imageName?: string;
   parseFlag?: string;
+  /** Host judgment of vision parse quality — used for model eval. */
+  parseReview?: ParseReviewChoice;
+  parseReviewAt?: string;
 };
 
 export type PersonTotal = {
