@@ -7,6 +7,7 @@ import { useShareIntentContext } from "expo-share-intent";
 import { Camera, ImageIcon, Share2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ChoiceRow } from "@/components/choice-row";
+import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
 import { colors } from "@/lib/theme";
 
@@ -82,6 +83,22 @@ export default function HostCapture() {
     });
   }
 
+  function replaceImage() {
+    if (draft.pickMode === "camera") {
+      void takePhoto();
+      return;
+    }
+    if (draft.pickMode === "library") {
+      void pickLibrary("library");
+      return;
+    }
+    Alert.alert("Replace photo", "How do you want to replace this receipt?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Take a photo", onPress: () => void takePhoto() },
+      { text: "Choose from library", onPress: () => void pickLibrary("library") },
+    ]);
+  }
+
   return (
     <AppShell>
       <InterviewChrome
@@ -129,7 +146,16 @@ export default function HostCapture() {
           ) : null}
         </View>
         {draft.image ? (
-          <Image source={{ uri: draft.image.uri }} style={styles.preview} />
+          <PressScale
+            accessibilityLabel="Replace receipt photo"
+            onPress={replaceImage}
+            style={styles.previewWrap}
+          >
+            <Image source={{ uri: draft.image.uri }} style={styles.preview} />
+            <View style={styles.previewOverlay}>
+              <Text style={styles.previewHint}>Tap to replace</Text>
+            </View>
+          </PressScale>
         ) : null}
         <Text style={styles.note}>
           Tip: from Camera or Photos, tap Share → Split the Wine to skip opening the app first.
@@ -142,12 +168,30 @@ export default function HostCapture() {
 
 const styles = StyleSheet.create({
   list: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  preview: {
+  previewWrap: {
     marginTop: 16,
-    height: 180,
     borderRadius: 12,
+    overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+  },
+  preview: {
+    height: 180,
+    width: "100%",
+  },
+  previewOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingVertical: 8,
+    backgroundColor: "rgba(42, 36, 28, 0.55)",
+    alignItems: "center",
+  },
+  previewHint: {
+    color: "#F6F4F1",
+    fontSize: 12,
+    fontWeight: "600",
   },
   note: { marginTop: 16, fontSize: 12, lineHeight: 18, color: colors.muted },
 });
