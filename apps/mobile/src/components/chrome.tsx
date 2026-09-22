@@ -211,6 +211,7 @@ const styles = StyleSheet.create({
   },
   primary: {
     height: 48,
+    width: "100%",
     borderRadius: 999,
     backgroundColor: colors.merlot,
     alignItems: "center",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ImageIcon, Trash2 } from "lucide-react";
+import { Camera, ChevronDown, ImageIcon, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
@@ -133,6 +133,8 @@ export function HostInterview() {
   const [claimUrl, setClaimUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [payConfirming, setPayConfirming] = useState(false);
+  const [itemsNoOpen, setItemsNoOpen] = useState(false);
+  const [itemsHint, setItemsHint] = useState<string | null>(null);
 
   const hostInfo: HostInfo = {
     payments: payments
@@ -354,11 +356,17 @@ export function HostInterview() {
   } else if (step === "items") {
     body = (
       <>
-        <p className="mb-4 text-[14px] text-muted-foreground">
-          {items.length === 0
-            ? "Nothing came through. Add what was on the check."
-            : "Fix misreads. Quantities stay whole numbers."}
-        </p>
+        {itemsHint ? (
+          <p className="mb-3 rounded-xl bg-[#E6E0D8] px-3 py-2.5 text-[13px] font-medium leading-snug text-foreground">
+            {itemsHint}
+          </p>
+        ) : (
+          <p className="mb-4 text-[14px] text-muted-foreground">
+            {items.length === 0
+              ? "Nothing came through. Add what was on the check."
+              : "Fix misreads. Quantities stay whole numbers."}
+          </p>
+        )}
         <ul className="divide-y divide-border border-y border-border">
           {items.map((item) => (
             <li key={item.id} className="flex items-end gap-1.5 py-1.5">
@@ -413,7 +421,9 @@ export function HostInterview() {
               </label>
               <button
                 type="button"
-                className="pressable flex h-8 w-7 shrink-0 items-center justify-center"
+                className={`pressable flex h-8 w-7 shrink-0 items-center justify-center ${
+                  itemsHint ? "rounded-md bg-[rgba(110,46,53,0.08)] text-[#6E2E35]" : ""
+                }`}
                 aria-label={`Remove ${item.name || "line"}`}
                 onClick={() => setItems(items.filter((row) => row.id !== item.id))}
               >
@@ -446,12 +456,59 @@ export function HostInterview() {
         <p className="mb-2 text-center text-[13px] tabular-nums text-muted-foreground">
           Items {centsToLabel(itemSubtotal)}
         </p>
-        <ContinueButton
-          disabled={items.length === 0 || items.some((i) => !i.name.trim() || i.qty < 1)}
-          onClick={() => go("fees")}
-        >
-          Looks good
-        </ContinueButton>
+        {itemsNoOpen ? (
+          <div className="mb-2 overflow-hidden rounded-xl border border-border bg-white">
+            <button
+              type="button"
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1]"
+              onClick={() => {
+                setItemsNoOpen(false);
+                setItemsHint(
+                  "Edit any name, qty, or amount below — then tap Looks good.",
+                );
+              }}
+            >
+              There are inaccuracies
+            </button>
+            <div className="h-px bg-border" />
+            <button
+              type="button"
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1]"
+              onClick={() => {
+                setItemsNoOpen(false);
+                setItemsHint(
+                  "Tap the trash on any line you don't want — then tap Looks good.",
+                );
+              }}
+            >
+              Yes but I need to remove some items
+            </button>
+          </div>
+        ) : null}
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            className="pressable inline-flex h-12 min-w-[88px] items-center justify-center gap-1 rounded-full border border-border bg-background px-4 text-[15px] font-semibold text-foreground"
+            aria-expanded={itemsNoOpen}
+            onClick={() => setItemsNoOpen((v) => !v)}
+          >
+            No
+            <ChevronDown
+              className={`size-4 transition-transform ${itemsNoOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          <div className="min-w-0 flex-1">
+            <ContinueButton
+              disabled={items.length === 0 || items.some((i) => !i.name.trim() || i.qty < 1)}
+              onClick={() => {
+                setItemsNoOpen(false);
+                go("fees");
+              }}
+            >
+              Looks good
+            </ContinueButton>
+          </div>
+        </div>
       </div>
     );
   } else if (step === "fees") {
