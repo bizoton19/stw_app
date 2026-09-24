@@ -249,7 +249,7 @@ export function VenueTypeahead({
           <img
             src={`/api/places/static-map?lat=${venue!.lat}&lng=${venue!.lng}&w=600&h=220`}
             alt={`Map of ${venue!.name}`}
-            className="h-[168px] w-full rounded-[14px] border border-border object-cover bg-[#EDE8E1]"
+            className="h-[280px] w-full rounded-[14px] border border-border object-cover bg-[#EDE8E1]"
           />
         ) : null}
       </div>

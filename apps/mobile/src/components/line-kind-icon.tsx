@@ -2,6 +2,7 @@ import { GlassWater, UtensilsCrossed } from "lucide-react-native";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 import { classifyLineKind, type LineKind } from "@/lib/line-kind";
 import { colors } from "@/lib/theme";
+import type { ItemKind } from "@/lib/types";
 
 const TINT: Record<LineKind, { bg: string; fg: string }> = {
   drink: { bg: "rgba(110, 46, 53, 0.12)", fg: colors.merlot },
@@ -10,17 +11,21 @@ const TINT: Record<LineKind, { bg: string; fg: string }> = {
 
 export function LineKindIcon({
   name,
+  kind,
   size = 14,
   style,
 }: {
   name: string;
+  /** Prefer vision/storage kind; fall back to name heuristic. */
+  kind?: ItemKind | null;
   size?: number;
   style?: StyleProp<ViewStyle>;
 }) {
-  const kind = classifyLineKind(name);
-  if (!kind) return null;
-  const tint = TINT[kind];
-  const Icon = kind === "drink" ? GlassWater : UtensilsCrossed;
+  const resolved: LineKind | null =
+    kind === "food" || kind === "drink" ? kind : classifyLineKind(name);
+  if (!resolved) return null;
+  const tint = TINT[resolved];
+  const Icon = resolved === "drink" ? GlassWater : UtensilsCrossed;
   return (
     <View
       style={[
@@ -34,7 +39,7 @@ export function LineKindIcon({
         },
         style,
       ]}
-      accessibilityLabel={kind === "drink" ? "Drink" : "Food"}
+      accessibilityLabel={resolved === "drink" ? "Drink" : "Food"}
     >
       <Icon size={size} color={tint.fg} strokeWidth={2.25} />
     </View>

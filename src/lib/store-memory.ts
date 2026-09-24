@@ -70,6 +70,7 @@ function itemsFromParse(parsed: ParseResult): Item[] {
     name: item.name,
     qty: item.qty,
     totalCents: dollarsToCents(item.total),
+    kind: item.kind === "food" || item.kind === "drink" ? item.kind : null,
   }));
 }
 
@@ -234,7 +235,13 @@ export async function saveReceipt(
     restaurant?: string;
     venue?: import("./types").ReceiptVenue | null;
     receiptDate?: string | null;
-    items?: { id?: string; name: string; qty: number; totalCents: number }[];
+    items?: {
+      id?: string;
+      name: string;
+      qty: number;
+      totalCents: number;
+      kind?: import("./types").ItemKind | null;
+    }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;
     publish?: boolean;
@@ -278,6 +285,12 @@ export async function saveReceipt(
         name: item.name.trim(),
         qty: item.qty,
         totalCents: item.totalCents,
+        kind:
+          item.kind === "food" || item.kind === "drink"
+            ? item.kind
+            : item.kind === null
+              ? null
+              : receipt.items.find((row) => row.id === item.id)?.kind ?? null,
       }));
     }
     if (patch.fees) {

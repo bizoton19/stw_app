@@ -73,7 +73,7 @@ function ItemRow({
       }}
     >
       <View style={[styles.row, removed && styles.rowRemoved]}>
-        <LineKindIcon name={item.name} style={{ marginBottom: 2 }} />
+        <LineKindIcon name={item.name} kind={item.kind} style={{ marginBottom: 2 }} />
         <View style={styles.nameCol}>
           <Text style={styles.colLabel}>{t("items.nameLabel")}</Text>
           <TextInput
@@ -96,7 +96,15 @@ function ItemRow({
             editable={!removed}
             onChangeText={(raw) => {
               const qty = Math.max(1, Math.floor(Number(raw) || 0));
-              onChange({ ...item, qty });
+              const prevQty = Math.max(1, item.qty);
+              const unitCents = Math.round(item.totalCents / prevQty);
+              const totalCents = unitCents * qty;
+              onChange({
+                ...item,
+                qty,
+                totalCents,
+                totalInput: (totalCents / 100).toFixed(2),
+              });
             }}
           />
         </View>

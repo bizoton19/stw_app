@@ -26,7 +26,13 @@ export async function PUT(
       restaurant?: string;
       venue?: import("@/lib/types").ReceiptVenue | null;
       receiptDate?: string | null;
-      items?: { id?: string; name: string; qty: number; totalCents: number }[];
+      items?: {
+        id?: string;
+        name: string;
+        qty: number;
+        totalCents: number;
+        kind?: import("@/lib/types").ItemKind | null;
+      }[];
       fees?: { id?: string; name: string; amountCents: number }[];
       hostInfo?: unknown;
       publish?: boolean;

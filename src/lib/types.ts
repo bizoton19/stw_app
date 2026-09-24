@@ -9,11 +9,15 @@ export type PayMethod =
   | "natcash"
   | "other";
 
+export type ItemKind = "food" | "drink";
+
 export type Item = {
   id: string;
   name: string;
   qty: number;
   totalCents: number;
+  /** Vision (or heuristic) food vs drink — optional for older receipts. */
+  kind?: ItemKind | null;
 };
 
 export type Fee = {
@@ -100,7 +104,7 @@ export type ParseResult = {
   restaurant: string;
   /** Check date printed on the receipt, if readable — ISO `YYYY-MM-DD`. */
   receiptDate?: string | null;
-  items: { name: string; qty: number; total: number }[];
+  items: { name: string; qty: number; total: number; kind?: ItemKind | null }[];
   fees: { name: string; amount: number }[];
 };
 

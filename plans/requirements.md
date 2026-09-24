@@ -215,7 +215,7 @@ On the “does it look right?” line-item screen:
 
 | Cue | Behavior |
 |---|---|
-| **Food / drink icons** | Each row shows a small colorful icon when the line is clearly food or drink (heuristic + optional vision `kind`). Drink → wine/glass in merlot. Food → plate/utensils in warm olive. Ambiguous / other → no icon (never force a guess). |
+| **Food / drink icons** | Each row shows a small colorful icon when the line is food or drink. **Primary:** vision sets `kind` on each item at parse (`food` \| `drink` \| unknown→null), stored on the receipt body (Postgres jsonb / in-memory). **Fallback:** name heuristic if `kind` missing. Drink → wine/glass in merlot. Food → plate/utensils in warm olive/amber. Ambiguous → no icon. |
 | **Swipe to soft-delete** | Swipe a row to mark it removed. Soft delete: **strikethrough**, row stays visible, **subtotal recalculates** without that line. Not hard-removed until publish filters it out. |
 | **Undo** | Soft-deleted rows expose **Undo** (and an optional brief toast). Restoring puts the line back into the subtotal. |
 | **Trash affordance** | Existing trash control also soft-deletes (same as swipe), not hard-delete. |

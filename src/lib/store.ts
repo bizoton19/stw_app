@@ -42,7 +42,13 @@ export async function saveReceipt(
     restaurant?: string;
     venue?: ReceiptVenue | null;
     receiptDate?: string | null;
-    items?: { id?: string; name: string; qty: number; totalCents: number }[];
+    items?: {
+      id?: string;
+      name: string;
+      qty: number;
+      totalCents: number;
+      kind?: import("./types").ItemKind | null;
+    }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;
     publish?: boolean;

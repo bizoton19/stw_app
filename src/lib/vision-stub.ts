@@ -65,7 +65,10 @@ export function validateParse(raw: unknown): ParseResult {
     const row = item as Record<string, unknown>;
     const name = String(row.name ?? "").trim();
     if (!name) throw new Error("malformed_parse");
-    return { name, qty: wholeQty(row.qty ?? 1), total: money(row.total) };
+    const kindRaw = row.kind;
+    const kind: import("./types").ItemKind | null =
+      kindRaw === "food" || kindRaw === "drink" ? kindRaw : null;
+    return { name, qty: wholeQty(row.qty ?? 1), total: money(row.total), kind };
   });
   const fees = obj.fees.map((fee) => {
     if (typeof fee !== "object" || fee === null) throw new Error("malformed_parse");
@@ -125,7 +128,11 @@ export function normalizeParse(parsed: ParseResult): ParseResult {
       fees.push({ name: item.name, amount: item.total });
       continue;
     }
-    items.push({ ...item, qty: Math.max(1, Math.round(item.qty)) });
+    items.push({
+      ...item,
+      qty: Math.max(1, Math.round(item.qty)),
+      kind: item.kind === "food" || item.kind === "drink" ? item.kind : null,
+    });
   }
   return {
     restaurant: parsed.restaurant.trim(),

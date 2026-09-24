@@ -23,8 +23,13 @@ const RECEIPT_SCHEMA = {
           name: { type: "string" },
           qty: { type: "integer" },
           total: { type: "number" },
+          kind: {
+            type: "string",
+            description: 'food | drink | unknown if unclear',
+            enum: ["food", "drink", "unknown"],
+          },
         },
-        required: ["name", "qty", "total"],
+        required: ["name", "qty", "total", "kind"],
       },
     },
     fees: {
@@ -49,6 +54,7 @@ Return JSON only, matching the schema.
 - restaurant: venue name on the check.
 - receiptDate: the date printed on the receipt as YYYY-MM-DD. If only month/day (no year), assume the most recent past occurrence of that date. If unreadable or absent, null.
 - items: orderable food and drink lines. name, whole-number quantity, line total (not unit price). If quantity is missing, use 1.
+- kind: for each item, "drink" for beverages/alcohol/coffee/tea/juice/soda, "food" for edible dishes/sides/desserts, or "unknown" only if truly ambiguous.
 - fees: tax, VAT, gratuity/tip/service, admin, delivery, surcharges only when they are ADDED on top of the item subtotal. If the printed total equals the item sum (VAT-inclusive prices), omit included tax from fees.
 - Never put Subtotal, Total, Grand Total, Amount Due, Change, Cash, or card-tender lines in items or fees.
 - Numbers only: no currency symbols, no thousands separators.

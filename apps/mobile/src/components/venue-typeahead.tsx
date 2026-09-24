@@ -61,9 +61,9 @@ export function VenueTypeahead({
   onChangeName,
   onChangeVenue,
 }: Props) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const mapW = Math.min(600, Math.max(280, Math.round(width - 48)));
-  const mapH = 168;
+  const mapH = Math.min(340, Math.max(240, Math.round(height * 0.34)));
 
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [loading, setLoading] = useState(false);

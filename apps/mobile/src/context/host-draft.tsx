@@ -20,7 +20,11 @@ export type DraftFee = Fee & { amountInput: string };
 export type PickMode = "camera" | "library" | "share" | null;
 
 function toDraftItems(items: Item[]): DraftItem[] {
-  return items.map((item) => ({ ...item, totalInput: (item.totalCents / 100).toFixed(2) }));
+  return items.map((item) => ({
+    ...item,
+    kind: item.kind ?? null,
+    totalInput: (item.totalCents / 100).toFixed(2),
+  }));
 }
 function toDraftFees(fees: Fee[]): DraftFee[] {
   return fees.map((fee) => ({ ...fee, amountInput: (fee.amountCents / 100).toFixed(2) }));
@@ -179,7 +183,13 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         receiptDate,
         items: items
           .filter((row) => !row.removed)
-          .map(({ id, name, qty, totalCents }) => ({ id, name, qty, totalCents })),
+          .map(({ id, name, qty, totalCents, kind }) => ({
+            id,
+            name,
+            qty,
+            totalCents,
+            kind: kind ?? null,
+          })),
         fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
         hostInfo: { payments: checked.payments },
         publish: true,

@@ -8,11 +8,14 @@ export type PayMethod =
   | "natcash"
   | "other";
 
+export type ItemKind = "food" | "drink";
+
 export type Item = {
   id: string;
   name: string;
   qty: number;
   totalCents: number;
+  kind?: ItemKind | null;
 };
 
 export type Fee = {
