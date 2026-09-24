@@ -9,15 +9,18 @@ export function claimTokenOf(req: Request): string | null {
 }
 
 export function jsonError(err: unknown) {
-  const code = (err as { code?: string; remaining?: number; itemId?: string }).code ?? "error";
+  const code = (err as { code?: string; remaining?: number; itemId?: string; existingId?: string; message?: string })
+    .code ?? "error";
   const remaining = (err as { remaining?: number }).remaining;
   const itemId = (err as { itemId?: string }).itemId;
+  const existingId = (err as { existingId?: string }).existingId;
+  const message = (err as { message?: string }).message;
   const status =
     code === "not_found"
       ? 404
       : code === "forbidden"
         ? 403
-        : code === "not_enough_remaining" || code === "conflict"
+        : code === "not_enough_remaining" || code === "conflict" || code === "venue_day_taken"
           ? 409
           : code === "invalid"
             ? 400
@@ -25,7 +28,7 @@ export function jsonError(err: unknown) {
               ? 502
               : 500;
   return NextResponse.json(
-    { error: code, remaining, itemId },
+    { error: code, remaining, itemId, existingId, message },
     { status },
   );
 }

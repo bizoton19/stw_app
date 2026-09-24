@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { VenueTypeahead, ensureVenueForPublish } from "@/components/venue-typeahead";
+import { VenueTypeahead } from "@/components/venue-typeahead";
 import { centsToLabel } from "@/lib/money";
 import { validateHostPayments } from "@/lib/host-pay";
 import { payVerifyUrl } from "@/lib/pay";
 import { payMethodsForRegion } from "@/lib/pay-region";
 import { api, getHostToken, saveHostToken } from "@/lib/session";
+import { isValidatedVenue } from "@/lib/venue-day";
 import type {
   Fee,
   HostInfo,
@@ -273,8 +274,14 @@ export function HostInterview() {
     setBusy(true);
     setError(null);
     try {
+      if (!isValidatedVenue(venue)) {
+        setError("Confirm the place from suggestions before sharing.");
+        setPayConfirming(false);
+        setStep("restaurant");
+        return;
+      }
       const token = sessionStorage.getItem(`stw-host:${receiptId}`);
-      const venueToSave = ensureVenueForPublish(restaurant, venue);
+      const venueToSave = venue!;
       const { claimUrl: path } = await api<{ claimUrl: string }>(`/api/receipts/${receiptId}`, {
         method: "PUT",
         hostToken: token,
@@ -296,7 +303,12 @@ export function HostInterview() {
       setClaimUrl(`${window.location.origin}${path}`);
       go("share");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't publish");
+      const e = err as Error & { code?: string; message?: string };
+      setError(
+        e.code === "venue_day_taken" || e.message
+          ? e.message
+          : "Couldn't publish",
+      );
     } finally {
       setBusy(false);
     }
@@ -398,10 +410,7 @@ export function HostInterview() {
     );
     footer = <ContinueButton disabled>Reading the receipt</ContinueButton>;
   } else if (step === "restaurant") {
-    const placeLocked =
-      venue?.source === "places" &&
-      typeof venue.lat === "number" &&
-      typeof venue.lng === "number";
+    const placeLocked = isValidatedVenue(venue);
     body = (
       <>
         {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
@@ -416,14 +425,14 @@ export function HostInterview() {
         {!placeLocked ? (
           <p className="mt-3 text-[13px] text-muted-foreground">
             {restaurant.trim()
-              ? "Pick a match from the list — we won’t lock until you tap one."
+              ? "Pick a match from the list — we won’t continue until you tap one."
               : "Start typing — nearby matches appear as you go."}
           </p>
         ) : null}
       </>
     );
     footer = (
-      <ContinueButton disabled={!restaurant.trim()} onClick={() => go("items")}>
+      <ContinueButton disabled={!placeLocked} onClick={() => go("items")}>
         Continue
       </ContinueButton>
     );

@@ -9,6 +9,9 @@ export type HostedReceiptSummary = {
   restaurant: string;
   claimUrl: string;
   updatedAt: string;
+  /** Places key used to block duplicate tabs same day. */
+  placeKey?: string;
+  receiptDay?: string;
 };
 
 export async function setActiveHostReceipt(id: string | null) {

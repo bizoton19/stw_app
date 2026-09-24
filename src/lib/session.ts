@@ -65,17 +65,22 @@ export async function api<T>(
   const data = (await res.json().catch(() => ({}))) as T & {
     error?: string;
     remaining?: number;
+    itemId?: string;
+    existingId?: string;
+    message?: string;
   };
   if (!res.ok) {
-    const err = new Error(data.error ?? "request_failed") as Error & {
+    const err = new Error(data.message || data.error || "request_failed") as Error & {
       code?: string;
       remaining?: number;
       itemId?: string;
+      existingId?: string;
       status: number;
     };
     err.code = data.error;
     err.remaining = data.remaining;
-    err.itemId = (data as { itemId?: string }).itemId;
+    err.itemId = data.itemId;
+    err.existingId = data.existingId;
     err.status = res.status;
     throw err;
   }

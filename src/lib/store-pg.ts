@@ -4,6 +4,7 @@ import { DB_SCHEMA, ensureSchema, getPool, withTransaction } from "./db";
 import { dollarsToCents } from "./money";
 import { SAMPLE_PARSE } from "./sample-tab";
 import { computeTotals, leftoverAssignments, remainingForItem, remainingMap } from "./totals";
+import { findVenueDayConflict, isValidatedVenue } from "./venue-day";
 import type {
   Claim,
   Fee,
@@ -357,6 +358,35 @@ export async function saveReceipt(
     if (patch.publish) {
       if (receipt.items.length === 0) {
         throw Object.assign(new Error("no_items"), { code: "invalid" });
+      }
+      if (!isValidatedVenue(receipt.venue)) {
+        throw Object.assign(new Error("venue_required"), {
+          code: "invalid",
+          message: "Confirm the place from suggestions before sharing.",
+        });
+      }
+      const { rows } = await client.query<{
+        id: string;
+        body: Omit<InternalReceipt, "hostToken">;
+      }>(`SELECT id, body FROM ${DB_SCHEMA}.receipts WHERE id <> $1`, [receipt.id]);
+      const others: InternalReceipt[] = rows.map((row) => ({
+        ...row.body,
+        id: row.id,
+        hostToken: "",
+      }));
+      const conflict = findVenueDayConflict(
+        others,
+        receipt.id,
+        receipt.venue,
+        receipt.restaurant,
+        receipt.receiptDate,
+      );
+      if (conflict) {
+        throw Object.assign(new Error("venue_day_taken"), {
+          code: "venue_day_taken",
+          existingId: conflict.id,
+          message: `You already have a tab at ${conflict.restaurant || "this place"} for that day.`,
+        });
       }
       receipt.status = "open";
     }

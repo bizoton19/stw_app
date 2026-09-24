@@ -1,17 +1,15 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { useHostDraft } from "@/context/host-draft";
+import { isValidatedVenue } from "@/lib/venue-day";
 import { colors } from "@/lib/theme";
 
 export default function HostRestaurant() {
   const router = useRouter();
   const draft = useHostDraft();
-  const placeLocked =
-    draft.venue?.source === "places" &&
-    typeof draft.venue.lat === "number" &&
-    typeof draft.venue.lng === "number";
+  const placeLocked = isValidatedVenue(draft.venue);
 
   return (
     <AppShell>
@@ -19,7 +17,7 @@ export default function HostRestaurant() {
         step={4}
         total={8}
         kicker="The place"
-        title="What's the name on the check?"
+        title="Confirm the place on the check"
         onBack={() => router.back()}
         keyboard
         sparse={placeLocked}
@@ -29,13 +27,10 @@ export default function HostRestaurant() {
               {placeLocked
                 ? "This place pins on the claim board for your guests."
                 : draft.restaurant.trim()
-                  ? "Pick a match from the list — we won’t lock until you tap one."
+                  ? "Pick a match from the list — we won’t continue until you tap one."
                   : "Start typing — nearby matches appear as you go."}
             </FooterHint>
-            <PrimaryButton
-              disabled={!draft.restaurant.trim()}
-              onPress={() => router.push("/host/items")}
-            >
+            <PrimaryButton disabled={!placeLocked} onPress={() => router.push("/host/items")}>
               Continue
             </PrimaryButton>
           </View>

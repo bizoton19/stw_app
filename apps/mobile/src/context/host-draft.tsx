@@ -13,7 +13,6 @@ import type {
   PublicReceipt,
   ReceiptVenue,
 } from "@/lib/types";
-import { typedVenue } from "@/lib/places";
 
 export type DraftItem = Item & { totalInput: string; removed?: boolean };
 export type DraftFee = Fee & { amountInput: string };
@@ -167,44 +166,70 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const publish = useCallback(async () => {
     if (!receiptId) throw new Error("no_receipt");
     const { validateHostPayments } = await import("@/lib/host-pay");
+    const { isValidatedVenue, receiptDayKey, venueLocationKey } = await import("@/lib/venue-day");
     const checked = validateHostPayments(payments);
     if (!checked.ok) throw new Error(checked.message);
+    if (!isValidatedVenue(venue)) {
+      throw new Error("Confirm the place from suggestions before sharing.");
+    }
     const { getHostToken } = await import("@/lib/session");
-    const venueToSave =
-      venue && venue.name.trim()
-        ? venue
-        : restaurant.trim()
-          ? typedVenue(restaurant)
-          : null;
-    await api(`/api/receipts/${receiptId}`, {
-      method: "PUT",
-      hostToken: getHostToken(receiptId),
-      body: JSON.stringify({
-        restaurant: venueToSave?.name ?? restaurant,
-        venue: venueToSave,
-        receiptDate,
-        items: items
-          .filter((row) => !row.removed)
-          .map(({ id, name, qty, totalCents, kind }) => ({
-            id,
-            name,
-            qty,
-            totalCents,
-            kind: kind ?? null,
-          })),
-        fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
-        hostInfo: { payments: checked.payments },
-        publish: true,
-      }),
-    });
+    const venueToSave = venue!;
+    const day = receiptDayKey(receiptDate, new Date().toISOString());
+    const placeKey = venueLocationKey(venueToSave, restaurant);
+    if (placeKey) {
+      const { listHostedReceipts } = await import("@/lib/host-tabs");
+      const hosted = await listHostedReceipts();
+      const localHit = hosted.find(
+        (row) =>
+          row.id !== receiptId &&
+          row.placeKey === placeKey &&
+          row.receiptDay === day,
+      );
+      if (localHit) {
+        throw new Error(
+          `You already have a tab at ${localHit.restaurant || "this place"} for that day. Open it from Home.`,
+        );
+      }
+    }
+    try {
+      await api(`/api/receipts/${receiptId}`, {
+        method: "PUT",
+        hostToken: getHostToken(receiptId),
+        body: JSON.stringify({
+          restaurant: venueToSave.name ?? restaurant,
+          venue: venueToSave,
+          receiptDate,
+          items: items
+            .filter((row) => !row.removed)
+            .map(({ id, name, qty, totalCents, kind }) => ({
+              id,
+              name,
+              qty,
+              totalCents,
+              kind: kind ?? null,
+            })),
+          fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
+          hostInfo: { payments: checked.payments },
+          publish: true,
+        }),
+      });
+    } catch (err) {
+      const e = err as { code?: string; message?: string };
+      if (e.code === "venue_day_taken" || e.code === "invalid") {
+        throw new Error(e.message || "Couldn't publish that place for today.");
+      }
+      throw err;
+    }
     const url = publicClaimUrl(receiptId);
     setClaimUrl(url);
     const { rememberHostedReceipt } = await import("@/lib/host-tabs");
     await rememberHostedReceipt({
       id: receiptId,
-      restaurant: (venueToSave?.name ?? restaurant.trim()) || "Tonight’s check",
+      restaurant: venueToSave.name.trim() || restaurant.trim() || "Tonight’s check",
       claimUrl: url,
       updatedAt: new Date().toISOString(),
+      placeKey: placeKey ?? undefined,
+      receiptDay: day,
     });
   }, [fees, items, payments, receiptDate, receiptId, restaurant, venue]);
 

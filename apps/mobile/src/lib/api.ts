@@ -7,6 +7,7 @@ export type ApiError = Error & {
   code?: string;
   remaining?: number;
   itemId?: string;
+  existingId?: string;
   status?: number;
 };
 
@@ -33,12 +34,15 @@ export async function api<T>(
     error?: string;
     remaining?: number;
     itemId?: string;
+    existingId?: string;
+    message?: string;
   };
   if (!res.ok) {
-    const err = new Error(data.error ?? "request_failed") as ApiError;
+    const err = new Error(data.message || data.error || "request_failed") as ApiError;
     err.code = data.error;
     err.remaining = data.remaining;
     err.itemId = data.itemId;
+    err.existingId = data.existingId;
     err.status = res.status;
     throw err;
   }
