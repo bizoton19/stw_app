@@ -1,20 +1,11 @@
 import { Stack } from "expo-router";
 import { HostDraftProvider } from "@/context/host-draft";
-import { colors } from "@/lib/theme";
+import { nativeStackScreenOptions } from "@/lib/navigation";
 
 export default function HostLayout() {
   return (
     <HostDraftProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.paper },
-          animation: "slide_from_right",
-          gestureEnabled: true,
-          fullScreenGestureEnabled: true,
-          animationDuration: 320,
-        }}
-      />
+      <Stack screenOptions={nativeStackScreenOptions} />
     </HostDraftProvider>
   );
 }

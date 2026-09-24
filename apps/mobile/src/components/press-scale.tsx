@@ -1,16 +1,18 @@
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
-import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
+import { hapticImpact, hapticSelect } from "@/lib/haptics";
+
+type HapticKind = false | "select" | "light" | "medium" | "heavy";
 
 export function PressScale({
   children,
   disabled,
-  haptic = true,
+  /** Default off — enable only for meaningful actions. */
+  haptic = false,
   style,
   onPress,
   ...props
 }: PressableProps & {
-  haptic?: boolean;
+  haptic?: HapticKind;
   style?: StyleProp<ViewStyle>;
 }) {
   return (
@@ -18,8 +20,11 @@ export function PressScale({
       accessibilityRole="button"
       disabled={disabled}
       onPress={(event) => {
-        if (haptic && Platform.OS !== "web") {
-          void Haptics.selectionAsync();
+        if (haptic && !disabled) {
+          if (haptic === "select") void hapticSelect();
+          else if (haptic === "light" || haptic === "medium" || haptic === "heavy") {
+            void hapticImpact(haptic);
+          }
         }
         onPress?.(event);
       }}

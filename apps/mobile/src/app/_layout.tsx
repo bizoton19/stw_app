@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { AppState } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -8,8 +9,11 @@ import { ShareIntentGate } from "@/components/share-intent-gate";
 import { colors } from "@/lib/theme";
 import { hydrateApiUrl } from "@/lib/config";
 import { refreshLocaleFromDevice } from "@/lib/i18n";
+import { nativeStackScreenOptions } from "@/lib/navigation";
 import { hydrateSession } from "@/lib/session";
 import { useEffect } from "react";
+
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   useEffect(() => {
@@ -17,6 +21,7 @@ export default function RootLayout() {
       refreshLocaleFromDevice();
       await hydrateApiUrl();
       await hydrateSession();
+      await SplashScreen.hideAsync().catch(() => {});
     })();
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") refreshLocaleFromDevice();
@@ -35,16 +40,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <StatusBar style="dark" />
           <ShareIntentGate />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.paper },
-              animation: "slide_from_right",
-              gestureEnabled: true,
-              fullScreenGestureEnabled: true,
-              animationDuration: 320,
-            }}
-          />
+          <Stack screenOptions={nativeStackScreenOptions} />
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ShareIntentProvider>

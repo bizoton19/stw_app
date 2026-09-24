@@ -28,9 +28,16 @@ export function AppShell({
       <SafeAreaView edges={["top"]} style={styles.headerSafe}>
         <View style={styles.header}>
           <WineMark size={26} />
-          <Text style={styles.brand}>{BRAND}</Text>
+          <Text style={styles.brand} allowFontScaling>
+            {BRAND}
+          </Text>
           {meta ? (
-            <Text style={[styles.meta, meta === "Live" && { color: colors.merlot }]}>{meta}</Text>
+            <Text
+              allowFontScaling
+              style={[styles.meta, meta === "Live" && { color: colors.merlot }]}
+            >
+              {meta}
+            </Text>
           ) : null}
         </View>
       </SafeAreaView>
@@ -51,6 +58,11 @@ export function InterviewChrome({
   dense = false,
   /** Short screens: grow content area so body can use vertical space. */
   sparse = false,
+  /**
+   * When false, title/kicker stay fixed and `children` fill remaining space
+   * (use FlatList inside). Default ScrollView wraps kicker+title+children.
+   */
+  scroll = true,
 }: {
   step: number;
   total: number;
@@ -62,8 +74,70 @@ export function InterviewChrome({
   keyboard?: boolean;
   dense?: boolean;
   sparse?: boolean;
+  scroll?: boolean;
 }) {
   const progress = (step / total) * 100;
+  const heading = (
+    <>
+      {kicker ? (
+        <Text
+          allowFontScaling
+          style={[styles.kicker, dense && styles.kickerDense, sparse && styles.kickerSparse]}
+        >
+          {kicker}
+        </Text>
+      ) : null}
+      <Text
+        allowFontScaling
+        style={[styles.title, dense && styles.titleDense, sparse && styles.titleSparse]}
+      >
+        {title}
+      </Text>
+    </>
+  );
+
+  const body = scroll ? (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={[
+        styles.scrollContent,
+        dense && styles.scrollContentDense,
+        sparse && styles.scrollContentSparse,
+      ]}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+      contentInsetAdjustmentBehavior="automatic"
+      bounces={Platform.OS === "ios"}
+      overScrollMode={Platform.OS === "android" ? "auto" : undefined}
+    >
+      {heading}
+      <View
+        style={[
+          styles.children,
+          dense && styles.childrenDense,
+          sparse && styles.childrenSparse,
+        ]}
+      >
+        {children}
+      </View>
+    </ScrollView>
+  ) : (
+    <View style={styles.scrollFill}>
+      <View style={[styles.scrollContent, dense && styles.scrollContentDense]}>
+        {heading}
+      </View>
+      <View
+        style={[
+          styles.childrenFill,
+          dense && styles.childrenDense,
+          sparse && styles.childrenSparse,
+        ]}
+      >
+        {children}
+      </View>
+    </View>
+  );
+
   const inner = (
     <>
       <View style={styles.progressWrap}>
@@ -74,13 +148,14 @@ export function InterviewChrome({
               onPress={onBack}
               haptic={false}
               style={styles.backBtn}
+              hitSlop={8}
             >
               <ChevronLeft size={26} color={colors.ink} />
             </PressScale>
           ) : (
             <View style={styles.backBtn} />
           )}
-          <Text style={styles.stepLabel}>
+          <Text allowFontScaling style={styles.stepLabel}>
             {step} of {total}
           </Text>
           <View style={styles.backBtn} />
@@ -89,36 +164,7 @@ export function InterviewChrome({
           <View style={[styles.fill, { width: `${progress}%` }]} />
         </View>
       </View>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          dense && styles.scrollContentDense,
-          sparse && styles.scrollContentSparse,
-        ]}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-      >
-        {kicker ? (
-          <Text style={[styles.kicker, dense && styles.kickerDense, sparse && styles.kickerSparse]}>
-            {kicker}
-          </Text>
-        ) : null}
-        <Text
-          style={[styles.title, dense && styles.titleDense, sparse && styles.titleSparse]}
-        >
-          {title}
-        </Text>
-        <View
-          style={[
-            styles.children,
-            dense && styles.childrenDense,
-            sparse && styles.childrenSparse,
-          ]}
-        >
-          {children}
-        </View>
-      </ScrollView>
+      {body}
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
         {footer}
       </SafeAreaView>
@@ -133,7 +179,7 @@ export function InterviewChrome({
     <KeyboardAvoidingView
       style={styles.chrome}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 56 : 0}
     >
       {inner}
     </KeyboardAvoidingView>
@@ -142,7 +188,11 @@ export function InterviewChrome({
 
 /** Quiet helper under the sticky CTA — fills footer without competing with the button. */
 export function FooterHint({ children }: { children: string }) {
-  return <Text style={styles.footerHint}>{children}</Text>;
+  return (
+    <Text allowFontScaling style={styles.footerHint}>
+      {children}
+    </Text>
+  );
 }
 
 export function PrimaryButton({
@@ -160,12 +210,15 @@ export function PrimaryButton({
     <PressScale
       onPress={onPress}
       disabled={disabled || busy || !onPress}
+      haptic="light"
       style={styles.primary}
     >
       {busy ? (
         <ActivityIndicator color={colors.merlotFg} />
       ) : (
-        <Text style={styles.primaryText}>{children}</Text>
+        <Text allowFontScaling style={styles.primaryText}>
+          {children}
+        </Text>
       )}
     </PressScale>
   );
@@ -181,21 +234,31 @@ export function QuietButton({
   disabled?: boolean;
 }) {
   return (
-    <PressScale onPress={onPress} disabled={disabled} style={styles.quiet}>
-      <Text style={styles.quietText}>{children}</Text>
+    <PressScale onPress={onPress} disabled={disabled} haptic={false} style={styles.quiet}>
+      <Text allowFontScaling style={styles.quietText}>
+        {children}
+      </Text>
     </PressScale>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper },
-  headerSafe: { backgroundColor: colors.paper },
+  headerSafe: {
+    backgroundColor: colors.paper,
+    ...Platform.select({
+      android: { elevation: 0 },
+      ios: {},
+    }),
+  },
   header: {
     height: 48,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   brand: { fontSize: 13, fontWeight: "600", color: colors.ink, flex: 1 },
   meta: { fontSize: 11, fontWeight: "600", color: colors.inkSoft },
@@ -214,8 +277,9 @@ const styles = StyleSheet.create({
   track: { height: 2, borderRadius: 99, backgroundColor: colors.border, overflow: "hidden" },
   fill: { height: 2, backgroundColor: colors.merlot, borderRadius: 99 },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
-  scrollContentDense: { paddingTop: 10, paddingBottom: 12 },
+  scrollFill: { flex: 1, minHeight: 0 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  scrollContentDense: { paddingTop: 10, paddingBottom: 8 },
   scrollContentSparse: { flexGrow: 1, paddingTop: 28, paddingBottom: 32 },
   kicker: { fontSize: type.kicker, fontWeight: "600", color: colors.inkSoft, marginBottom: 4 },
   kickerDense: { marginBottom: 2, fontSize: 12 },
@@ -232,6 +296,7 @@ const styles = StyleSheet.create({
   children: { marginTop: 12 },
   childrenDense: { marginTop: 10 },
   childrenSparse: { marginTop: 28, flexGrow: 1 },
+  childrenFill: { flex: 1, minHeight: 0, marginTop: 8 },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
@@ -239,6 +304,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     gap: 6,
+    ...Platform.select({
+      android: { elevation: 4 },
+      default: {},
+    }),
   },
   footerHint: {
     textAlign: "center",
@@ -249,7 +318,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   primary: {
-    height: 52,
+    height: Platform.OS === "android" ? 52 : 50,
     width: "100%",
     borderRadius: 999,
     backgroundColor: colors.merlot,

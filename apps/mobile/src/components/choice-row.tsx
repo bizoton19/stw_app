@@ -16,7 +16,12 @@ export function ChoiceRow({
   onPress: () => void;
 }) {
   return (
-    <PressScale onPress={onPress} style={styles.row} accessibilityState={{ selected }}>
+    <PressScale
+      onPress={onPress}
+      haptic="select"
+      style={styles.row}
+      accessibilityState={{ selected }}
+    >
       <View style={styles.icon}>{icon}</View>
       <View style={styles.copy}>
         <Text style={styles.title}>{title}</Text>

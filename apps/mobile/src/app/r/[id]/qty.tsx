@@ -5,6 +5,7 @@ import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { QtyStepper } from "@/components/qty-stepper";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
+import { hapticNotify } from "@/lib/haptics";
 import { centsToLabel } from "@/lib/money";
 import { colors } from "@/lib/theme";
 
@@ -45,7 +46,12 @@ export default function QtyScreen() {
             busy={flow.busy}
             onPress={() =>
               void flow.claimQueued().then((ok) => {
-                if (ok) router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
+                if (ok) {
+                  void hapticNotify("success");
+                  router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
+                } else {
+                  void hapticNotify("error");
+                }
               })
             }
           >
@@ -74,7 +80,7 @@ export default function QtyScreen() {
                   onChange={(next) => flow.setUnit(item.id, next)}
                 />
               </View>
-              <PressScale onPress={() => flow.toggle(item.id)} style={styles.remove}>
+              <PressScale haptic="select" onPress={() => flow.toggle(item.id)} style={styles.remove}>
                 <Text style={styles.removeText}>Remove</Text>
               </PressScale>
             </View>

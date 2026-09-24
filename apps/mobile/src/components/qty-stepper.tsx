@@ -21,6 +21,7 @@ export function QtyStepper({
       <PressScale
         accessibilityLabel="Decrease quantity"
         disabled={value <= min}
+        haptic="select"
         onPress={() => onChange(Math.max(min, value - 1))}
         style={styles.hit}
       >
@@ -30,6 +31,7 @@ export function QtyStepper({
       <PressScale
         accessibilityLabel="Increase quantity"
         disabled={value >= max}
+        haptic="select"
         onPress={() => onChange(Math.min(max, value + 1))}
         style={styles.hit}
       >

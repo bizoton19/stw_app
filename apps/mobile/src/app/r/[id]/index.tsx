@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { FlatList, Platform, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Check, Receipt, Users } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
@@ -6,11 +6,13 @@ import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { Field } from "@/components/field";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
+import { hapticNotify } from "@/lib/haptics";
 import { centsToLabel } from "@/lib/money";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
 import { colors } from "@/lib/theme";
 import { useMemo, useState } from "react";
+import type { Item } from "@/lib/types";
 
 export default function ClaimScreen() {
   const router = useRouter();
@@ -221,28 +223,45 @@ function PickBoard() {
       title="What did you have?"
       onBack={() => router.replace("/")}
       footer={footer}
+      scroll={false}
     >
-      {flow.guest ? (
-        <Text style={styles.as}>
-          Claiming as {flow.guest.name}
-          {flow.isHost ? " (host)" : ""}
-          {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
-        </Text>
-      ) : null}
-      {mine ? <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text> : null}
-      {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
-      {remainingItems.length === 0 ? (
-        <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
-          Everything on this check is claimed.
-        </Text>
-      ) : (
-        remainingItems.map((item) => {
+      <FlatList
+        data={remainingItems}
+        keyExtractor={(item) => item.id}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        contentInsetAdjustmentBehavior="automatic"
+        bounces={Platform.OS === "ios"}
+        overScrollMode={Platform.OS === "android" ? "auto" : undefined}
+        ListHeaderComponent={
+          <View>
+            {flow.guest ? (
+              <Text style={styles.as}>
+                Claiming as {flow.guest.name}
+                {flow.isHost ? " (host)" : ""}
+                {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
+              </Text>
+            ) : null}
+            {mine ? (
+              <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text>
+            ) : null}
+            {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
+            {remainingItems.length === 0 ? (
+              <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
+                Everything on this check is claimed.
+              </Text>
+            ) : null}
+          </View>
+        }
+        renderItem={({ item }: { item: Item }) => {
           const left = receipt.remaining[item.id] ?? 0;
           const selected = activeQueued.includes(item.id);
           return (
             <PressScale
-              key={item.id}
               accessibilityState={{ selected }}
+              haptic="select"
               onPress={() => flow.toggle(item.id)}
               style={styles.item}
             >
@@ -260,19 +279,23 @@ function PickBoard() {
               <Text style={[styles.left, selected && { color: colors.merlot }]}>{left} left</Text>
             </PressScale>
           );
-        })
-      )}
-      {goneItems.length > 0 ? (
-        <View style={{ marginTop: 24 }}>
-          <Text style={styles.section}>Claimed out</Text>
-          {goneItems.map((item) => (
-            <Text key={item.id} style={styles.muted}>
-              {item.name}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-      <History />
+        }}
+        ListFooterComponent={
+          <View>
+            {goneItems.length > 0 ? (
+              <View style={{ marginTop: 24 }}>
+                <Text style={styles.section}>Claimed out</Text>
+                {goneItems.map((item) => (
+                  <Text key={item.id} style={styles.muted}>
+                    {item.name}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            <History />
+          </View>
+        }
+      />
     </InterviewChrome>
   );
 }
@@ -309,8 +332,12 @@ function History() {
                   {mineToDrop ? (
                     <PressScale
                       disabled={flow.busy}
-                      onPress={() => void flow.unclaim(claim.id)}
-                      style={{ height: 36, justifyContent: "center" }}
+                      haptic="medium"
+                      onPress={() => {
+                        void hapticNotify("warning");
+                        void flow.unclaim(claim.id);
+                      }}
+                      style={{ height: 44, justifyContent: "center", paddingHorizontal: 4 }}
                     >
                       <Text style={{ fontSize: 12, fontWeight: "600", color: colors.ink }}>
                         Unclaim
@@ -335,6 +362,8 @@ const styles = StyleSheet.create({
   mine: { fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], marginBottom: 8 },
   as: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 12 },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: 20, paddingBottom: 24 },
   item: {
     flexDirection: "row",
     alignItems: "center",

@@ -9,6 +9,7 @@ import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/componen
 import { ChoiceRow } from "@/components/choice-row";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
+import { showActionMenu } from "@/lib/action-menu";
 import { colors } from "@/lib/theme";
 
 export default function HostCapture() {
@@ -92,11 +93,14 @@ export default function HostCapture() {
       void pickLibrary("library");
       return;
     }
-    Alert.alert("Replace photo", "How do you want to replace this receipt?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Take a photo", onPress: () => void takePhoto() },
-      { text: "Choose from library", onPress: () => void pickLibrary("library") },
-    ]);
+    showActionMenu({
+      title: "Replace photo",
+      message: "How do you want to replace this receipt?",
+      options: [
+        { label: "Take a photo", onPress: () => void takePhoto() },
+        { label: "Choose from library", onPress: () => void pickLibrary("library") },
+      ],
+    });
   }
 
   return (
