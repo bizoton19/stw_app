@@ -1,0 +1,28 @@
+---
+description: Claim board concurrency and qty rules (web + native)
+globs: "{apps/mobile/src/{app/r,context,lib/claim*},src/{components/claim-board,lib/{store*,claim-queue,totals}}/**/*}"
+alwaysApply: false
+---
+
+# Claiming — concurrency & qty
+
+## Server (source of truth)
+
+- Serialize claim writes per receipt: Postgres `FOR UPDATE` / in-memory mutex.
+- `remaining = item.qty - sum(claims.units)`. Reject overclaim with `409 not_enough_remaining`.
+- No silent optimistic commits. Clients refresh after conflict and show what’s left.
+- Emit live updates (SSE + poll fallback) so other guests see decremented remaining.
+
+## Client UX
+
+- Only show lines with `remaining > 0`. Gone lines leave the pick list (history still shows who claimed).
+- Prune the guest’s selection when live remaining hits 0; clamp queued units to max remaining.
+- **Skip the qty step** when every selected line has `remaining === 1` — claim immediately with 1 unit.
+- Qty stepper only when at least one selected line still has `remaining > 1`.
+- Integer units only; client max = remaining at render; server re-validates.
+
+## Do not
+
+- Soft-hold / reserve units while someone is “thinking” unless product explicitly adds TTL holds.
+- Let the qty screen appear for single-unit lines.
+- Trust client remaining without the server check.

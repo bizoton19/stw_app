@@ -189,13 +189,27 @@ function PickBoard() {
       <View>
         <PrimaryButton
           disabled={flow.busy || !flow.guest || activeQueued.length === 0}
-          onPress={() => router.push({ pathname: "/r/[id]/qty", params: { id: receipt.id } })}
+          busy={flow.busy && !flow.needsQty}
+          onPress={() => {
+            if (flow.needsQty) {
+              router.push({ pathname: "/r/[id]/qty", params: { id: receipt.id } });
+              return;
+            }
+            void flow.claimQueued().then((ok) => {
+              if (ok) void hapticNotify("success");
+              else void hapticNotify("error");
+            });
+          }}
         >
           {activeQueued.length === 0
             ? "Pick what you had"
-            : activeQueued.length === 1
-              ? "Claim 1 item"
-              : `Claim ${activeQueued.length} items`}
+            : flow.needsQty
+              ? activeQueued.length === 1
+                ? "Claim 1 item"
+                : `Claim ${activeQueued.length} items`
+              : activeQueued.length === 1
+                ? "Claim it"
+                : `Claim ${activeQueued.length}`}
         </PrimaryButton>
         {flow.isHost ? (
           <QuietButton

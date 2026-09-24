@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { useReceipt } from "@/hooks/use-receipt";
+import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
 import {
   ensureDemoHost,
   getGuest,
@@ -24,6 +25,8 @@ type ClaimFlow = {
   units: Record<string, number>;
   message: string | null;
   busy: boolean;
+  /** True when any selected line still has >1 unit left (qty screen needed). */
+  needsQty: boolean;
   setMessage: (v: string | null) => void;
   join: (guest: GuestIdentity) => Promise<void>;
   toggle: (itemId: string) => void;
@@ -57,6 +60,34 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [hostQuery, id]);
 
+  // Live remaining: drop sold-out lines from the cart; clamp units.
+  useEffect(() => {
+    if (!receipt) return;
+    setQueued((prevQ) => {
+      const pruned = pruneQueue(receipt.remaining, prevQ, units);
+      const sameQueue =
+        pruned.queued.length === prevQ.length &&
+        pruned.queued.every((id, i) => id === prevQ[i]);
+      const sameUnits =
+        Object.keys(pruned.units).length === Object.keys(units).length &&
+        Object.keys(pruned.units).every((id) => pruned.units[id] === units[id]);
+      if (!sameUnits) setUnits(pruned.units);
+      return sameQueue ? prevQ : pruned.queued;
+    });
+    // units intentionally omitted — we only react to server remaining changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receipt]);
+
+  const activeQueued = useMemo(() => {
+    if (!receipt) return queued;
+    return queued.filter((itemId) => (receipt.remaining[itemId] ?? 0) > 0);
+  }, [queued, receipt]);
+
+  const needsQty = useMemo(
+    () => (receipt ? needsQtyStep(receipt.remaining, activeQueued) : false),
+    [activeQueued, receipt],
+  );
+
   const join = useCallback(
     async (next: GuestIdentity) => {
       await saveGuest(id, next);
@@ -65,25 +96,35 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     [id],
   );
 
-  const toggle = useCallback((itemId: string) => {
-    setMessage(null);
-    setQueued((prev) => {
-      const selected = prev.includes(itemId);
-      setUnits((unitsPrev) => {
-        if (selected) {
-          const next = { ...unitsPrev };
-          delete next[itemId];
-          return next;
-        }
-        return { ...unitsPrev, [itemId]: unitsPrev[itemId] ?? 1 };
+  const toggle = useCallback(
+    (itemId: string) => {
+      if (!receipt) return;
+      const left = receipt.remaining[itemId] ?? 0;
+      if (left <= 0) return;
+      setMessage(null);
+      setQueued((prev) => {
+        const selected = prev.includes(itemId);
+        setUnits((unitsPrev) => {
+          if (selected) {
+            const next = { ...unitsPrev };
+            delete next[itemId];
+            return next;
+          }
+          return { ...unitsPrev, [itemId]: unitsPrev[itemId] ?? 1 };
+        });
+        return selected ? prev.filter((row) => row !== itemId) : [...prev, itemId];
       });
-      return selected ? prev.filter((row) => row !== itemId) : [...prev, itemId];
-    });
-  }, []);
+    },
+    [receipt],
+  );
 
-  const setUnit = useCallback((itemId: string, qty: number) => {
-    setUnits((prev) => ({ ...prev, [itemId]: qty }));
-  }, []);
+  const setUnit = useCallback(
+    (itemId: string, qty: number) => {
+      const max = receipt?.remaining[itemId] ?? qty;
+      setUnits((prev) => ({ ...prev, [itemId]: Math.min(Math.max(1, qty), Math.max(1, max)) }));
+    },
+    [receipt],
+  );
 
   const claimQueued = useCallback(async () => {
     if (!receipt || !guest || queued.length === 0) return false;
@@ -93,6 +134,13 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       const queuedItems = receipt.items.filter(
         (item) => queued.includes(item.id) && (receipt.remaining[item.id] ?? 0) > 0,
       );
+      if (queuedItems.length === 0) {
+        setMessage("Those lines were just claimed by someone else.");
+        setQueued([]);
+        setUnits({});
+        await refresh();
+        return false;
+      }
       const result = await api<{
         claims: { id: string }[];
         tokens: Record<string, string>;
@@ -118,7 +166,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       const e = err as ApiError;
       if (e.code === "not_enough_remaining") {
-        setMessage(`Only ${e.remaining ?? 0} left on one of those lines.`);
+        setMessage(`Only ${e.remaining ?? 0} left on one of those lines — pick again.`);
         await refresh();
       } else if (e.code === "conflict") {
         setMessage("This check is closed.");
@@ -188,10 +236,11 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       refresh,
       guest,
       isHost,
-      queued,
+      queued: activeQueued,
       units,
       message,
       busy,
+      needsQty,
       setMessage,
       join,
       toggle,
@@ -202,6 +251,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       reopen,
     }),
     [
+      activeQueued,
       busy,
       claimQueued,
       closeOut,
@@ -212,7 +262,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       join,
       live,
       message,
-      queued,
+      needsQty,
       receipt,
       refresh,
       reopen,

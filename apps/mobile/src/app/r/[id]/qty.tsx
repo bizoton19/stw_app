@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
@@ -16,6 +16,7 @@ export default function QtyScreen() {
   const receipt = flow.receipt;
   const totalSteps = 3;
   const qtyStep = 3;
+  const autoClaimed = useRef(false);
 
   const queuedItems = (receipt?.items ?? []).filter(
     (item) => flow.queued.includes(item.id) && (receipt?.remaining[item.id] ?? 0) > 0,
@@ -34,10 +35,27 @@ export default function QtyScreen() {
 
   useEffect(() => {
     if (!receipt) return;
-    if (queuedItems.length === 0) router.replace({ pathname: "/r/[id]", params: { id: flow.id } });
-  }, [flow.id, queuedItems.length, receipt, router]);
+    if (queuedItems.length === 0) {
+      router.replace({ pathname: "/r/[id]", params: { id: flow.id } });
+      return;
+    }
+    if (flow.needsQty || flow.busy || autoClaimed.current) return;
+    autoClaimed.current = true;
+    void flow.claimQueued().then((ok) => {
+      if (ok) void hapticNotify("success");
+      else void hapticNotify("error");
+      router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
+    });
+  }, [flow, queuedItems.length, receipt, router]);
 
   if (!receipt) return null;
+  if (!flow.needsQty) {
+    return (
+      <AppShell meta={flow.live === "live" ? "Live" : undefined}>
+        <Text style={[styles.lead, { textAlign: "center", marginTop: 80 }]}>Claiming…</Text>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell meta={flow.live === "live" ? "Live" : undefined}>

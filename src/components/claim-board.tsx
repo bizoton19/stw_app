@@ -9,6 +9,7 @@ import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { centsToLabel } from "@/lib/money";
+import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
 import { api, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
 import type { PublicReceipt } from "@/lib/types";
@@ -42,6 +43,19 @@ export function ClaimBoard({
   const pickStep = 2;
   const qtyStep = 3;
   const activeQueued = queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
+  const needsQty = needsQtyStep(receipt.remaining, activeQueued);
+
+  useEffect(() => {
+    const pruned = pruneQueue(receipt.remaining, queued, units);
+    const sameQueue =
+      pruned.queued.length === queued.length &&
+      pruned.queued.every((id, i) => id === queued[i]);
+    const sameUnits =
+      Object.keys(pruned.units).length === Object.keys(units).length &&
+      Object.keys(pruned.units).every((id) => pruned.units[id] === units[id]);
+    if (!sameQueue) setQueued(pruned.queued);
+    if (!sameUnits) setUnits(pruned.units);
+  }, [receipt.remaining, queued, units]);
 
   useEffect(() => {
     if (phase !== "qty" || activeQueued.length > 0) return;
@@ -60,6 +74,7 @@ export function ClaimBoard({
 
   function toggle(id: string) {
     if (closed) return;
+    if ((receipt.remaining[id] ?? 0) <= 0) return;
     setMessage(null);
     const selected = queued.includes(id);
     setQueued(selected ? queued.filter((row) => row !== id) : [...queued, id]);
@@ -75,6 +90,10 @@ export function ClaimBoard({
 
   function goQty() {
     if (activeQueued.length === 0) return;
+    if (!needsQty) {
+      void claimQueued();
+      return;
+    }
     setDirection(1);
     setPhase("qty");
   }
@@ -251,9 +270,13 @@ export function ClaimBoard({
       >
         {activeQueued.length === 0
           ? "Pick what you had"
-          : activeQueued.length === 1
-            ? "Claim 1 item"
-            : `Claim ${activeQueued.length} items`}
+          : needsQty
+            ? activeQueued.length === 1
+              ? "Claim 1 item"
+              : `Claim ${activeQueued.length} items`
+            : activeQueued.length === 1
+              ? "Claim it"
+              : `Claim ${activeQueued.length}`}
       </ContinueButton>
       {isHost ? (
         <QuietButton
