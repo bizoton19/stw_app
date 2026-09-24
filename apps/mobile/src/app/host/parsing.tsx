@@ -41,10 +41,10 @@ export default function HostParsing() {
         }
       >
         <View style={styles.center}>
-          <WineMark size={56} />
+          <WineMark size={64} glow />
           <ActivityIndicator size="large" color={colors.merlot} style={{ marginTop: 28 }} />
           <Text style={styles.copy}>
-            Reading the check and pinning the place. You’ll review every line next.
+            Reading the check. You’ll review every line next — and pick the place yourself.
           </Text>
         </View>
       </InterviewChrome>

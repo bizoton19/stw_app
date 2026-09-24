@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
 import { AppShell, PrimaryButton, QuietButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
+import { WineMark } from "@/components/wine-mark";
 import {
   getActiveHostReceiptId,
   listHostedReceipts,
@@ -40,6 +41,9 @@ export default function HomeScreen() {
     <AppShell>
       <SafeAreaView edges={["bottom"]} style={styles.main}>
         <View style={styles.copy}>
+          <View style={styles.heroMark}>
+            <WineMark size={88} glow />
+          </View>
           <Text style={styles.kicker}>Fair split</Text>
           <Text style={styles.title}>Ready to split this check?</Text>
           <Text style={styles.body}>
@@ -104,8 +108,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  main: { flex: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  main: { flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
   copy: { flex: 1 },
+  heroMark: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    minHeight: 120,
+  },
   kicker: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   title: {
     marginTop: 8,

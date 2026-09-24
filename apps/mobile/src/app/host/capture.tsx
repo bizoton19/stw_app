@@ -17,6 +17,7 @@ export default function HostCapture() {
   const draft = useHostDraft();
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   const consumedShareRef = useRef(false);
+  const hasImage = Boolean(draft.image);
 
   useEffect(() => {
     if (consumedShareRef.current) return;
@@ -103,6 +104,9 @@ export default function HostCapture() {
     });
   }
 
+  const iconSize = hasImage ? 20 : 28;
+  const iconColor = colors.ink;
+
   return (
     <AppShell>
       <InterviewChrome
@@ -111,6 +115,7 @@ export default function HostCapture() {
         kicker="The receipt"
         title="How should we add the tab?"
         onBack={() => router.back()}
+        sparse={!hasImage}
         footer={
           <View>
             <FooterHint>
@@ -127,9 +132,10 @@ export default function HostCapture() {
           </View>
         }
       >
-        <View style={styles.list}>
+        <View style={[styles.list, !hasImage && styles.listEmpty]}>
           <ChoiceRow
-            icon={<Camera size={20} color={colors.ink} />}
+            size={hasImage ? "default" : "large"}
+            icon={<Camera size={iconSize} color={iconColor} strokeWidth={2.25} />}
             title="Take a photo"
             hint={
               Platform.OS === "web"
@@ -140,7 +146,8 @@ export default function HostCapture() {
             onPress={() => void takePhoto()}
           />
           <ChoiceRow
-            icon={<ImageIcon size={20} color={colors.ink} />}
+            size={hasImage ? "default" : "large"}
+            icon={<ImageIcon size={iconSize} color={iconColor} strokeWidth={2.25} />}
             title="Choose from library"
             hint="JPEG, PNG, or a screenshot"
             selected={draft.pickMode === "library"}
@@ -175,6 +182,13 @@ export default function HostCapture() {
 
 const styles = StyleSheet.create({
   list: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  listEmpty: {
+    borderTopWidth: 0,
+    flexGrow: 1,
+    justifyContent: "center",
+    minHeight: 280,
+    paddingTop: 8,
+  },
   previewWrap: {
     marginTop: 20,
     borderRadius: 16,
