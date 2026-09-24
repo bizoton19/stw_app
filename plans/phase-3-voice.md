@@ -31,14 +31,17 @@ Real-world scene: phone on the table at a loud bar; several people order; we wan
 Product metaphor: **Shazam-like listen**, but gated to food/drink places and aimed at order lines, not songs.
 
 1. **Venue gate:** only offer / auto-arm listening when device location matches a Google Places (or MapKit) category of restaurant / bar / cafe / nightlife.
-2. **Two ways to listen:**
-   - **Manual (primary, Shazam tap):** big “Listen” control — user taps when they’re about to order or right after. Most reliable.
-   - **Auto (optional):** if guest has armed “listen tonight” and venue category is confirmed, app may start a session when they arrive / stay at the place — still session-bound, still killable.
-3. Produce a **personal order draft** from what was heard.
+2. **Ways to listen** (all still no typing for the guest):
+   - **Hold-to-order (best signal):** guest intentionally aims the phone at themselves (or holds it out) while they speak their order. App is already Listening; they say the order out loud — **nothing to type**. UI tip: “Hold your phone toward you when you order.”
+   - **Manual Listen (Shazam tap):** big Listen control — tap when about to order / right after; tap Stop when done. Same pipeline.
+   - **Auto (optional):** if guest has armed “listen tonight” and venue category is confirmed, app may keep a session while they’re at the place — still session-bound, still killable. Lower precision (table chatter); guest prunes later.
+3. Produce a **personal order draft** from what was heard — guest should not need to type item names if listen worked.
 4. When opening host link `/r/:id`, suggest claims if draft overlaps receipt **time + venue** (+ fuzzy items).
-5. Human confirms. Existing claim API unchanged.
+5. Human confirms (check / uncheck). Existing claim API unchanged. Typing remains a fallback only if listen missed something.
 
 This is **guest assist**, not a second host path. The host still photographs the receipt. Vision parse + host review remain source of truth for what’s on the check.
+
+**Design preference:** optimize the **intentional hold-out** moment first. A guest who *wants* the phone to hear them will beat any AI trying to isolate one voice from a phone left in the middle of a loud table.
 
 ---
 
@@ -56,7 +59,7 @@ This is **guest assist**, not a second host path. The host still photographs the
 | Structure | `{ guessName, qty, confidence }` | **Yes — LLM** (or regex for v0) |
 | Speaker separation | Isolate *this* phone-owner’s voice from the table | **Hard** — true diarization / enrollment is research-grade on a phone on a table; **do not bet Phase 3 on it** |
 
-**Honest product stance:** we will **over-hear**, then **filter + rank**, then **let the guest prune**. Success = “suggested 4 lines, 3 were mine, I uncheck 1” — not “only my voice forever.”
+**Honest product stance:** prefer **intentional capture** (phone held toward the guest while they order → no typing). Auto table-listen will **over-hear**, then **filter + rank**, then **let the guest prune**. Success = “suggested 4 lines, 3 were mine, I uncheck 1” — not “only my voice forever.” Typing is the fallback, not the happy path.
 
 ### Practical pipeline (recommended)
 
@@ -194,12 +197,12 @@ Does **not** replace host vision parse or parse-review eval. Orthogonal feature.
 ## UI
 
 - Venue badge when Places says resto/bar: “Listening available here.”
-- **Listen** (Shazam-style primary) — tap to capture a window; tap again / Stop to end.
-- Optional toggle: “Keep listening while I’m here tonight” (auto-arm) — off by default.
-- Live draft list: lines appear as candidates; swipe to delete / mark “not mine” during the meal.
+- **Listen** (Shazam-style primary) — tap to start; coaching copy while active: “Hold your phone toward you and say your order.” Tap Stop when done.
+- Optional toggle: “Keep listening while I’m here tonight” (auto-arm / phone-on-table) — off by default; explain it may catch others’ orders.
+- Live draft list as candidates appear — guest reviews by tap (keep / not mine), **not by retyping** when listen worked.
 - Claim board banner: “We think you ordered these — claim them?”
 - Checklist (pre-check only high confidence + `likelySelf`); confirm → existing multi-claim API.
-- Always: “Ignore suggestions” → normal claim board.
+- Always: “Ignore suggestions” → normal claim board; add lines manually only if something was missed.
 
 No silent claims. No blocking the board if reconcile fails. Host never sees guest audio or private drafts unless the guest claims (then only the claim, as today).
 
@@ -226,9 +229,9 @@ Guest can **manually** Listen at a Places-confirmed venue and get usable draft l
 ## Build order (relative)
 
 1. [Phase 2](./phase-2-venue.md) live + friend-tested venue / category accuracy.
-2. **Manual Listen path:** tap → cloud ASR → LLM extract → on-device draft → reconcile.
-3. Live prune UI (“not mine”) during the meal.
-4. Optional auto-arm when Places category confirmed + geofence.
+2. **Intentional Listen path:** tap Listen → hold phone toward self → cloud ASR → LLM extract → on-device draft (no typing) → reconcile.
+3. Live prune UI (“not mine”) during the meal; manual add only as fallback.
+4. Optional auto-arm when Places category confirmed + geofence (phone on table).
 5. Only later: voice enrollment / diarization experiments (not blocking).
 
 ---
