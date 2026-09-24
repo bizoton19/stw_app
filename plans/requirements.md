@@ -987,9 +987,10 @@ Full technical plans live in separate files (schema, API, UI, philosophy risks, 
 
 | Phase | File | Summary |
 |---|---|---|
+| **DNS (P0)** | [dns-todos.md](./dns-todos.md) | **HIGH PRIORITY** — `api.splitthewine.app` → Railway (API + claim UI); `www` stays marketing. |
 | **2** | [phase-2-venue.md](./phase-2-venue.md) | Host venue typeahead (proximity Places); structured `venue` on receipt. Near-term. |
 | **3** | [phase-3-voice.md](./phase-3-voice.md) | Guest opt-in voice order drafts; reconcile to host claim link by time/place. Later; depends on Phase 2. |
 
-**Build order:** App Store / TestFlight for current v0 → Phase 2 → friend-test venue accuracy → Phase 3 (on-device drafts first).
+**Build order:** Cut over to `api.splitthewine.app` ([dns-todos.md](./dns-todos.md)) → App Store / TestFlight for current v0 → Phase 2 → friend-test venue accuracy → Phase 3 (on-device drafts first).
 
 Do not scaffold Phase 3 until Phase 2 is live and privacy copy covers venue storage. Philosophy risks are spelled out in each plan file — Phase 2 is compatible if venue dies with the receipt; Phase 3 only as optional guest assist.

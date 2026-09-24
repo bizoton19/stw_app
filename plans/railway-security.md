@@ -71,6 +71,16 @@ The API is a **capability-URL** system: knowing a receipt id is enough to join a
 
 ---
 
+## Custom domain — **HIGH PRIORITY**
+
+Full checklist: **[dns-todos.md](./dns-todos.md)**.
+
+Target: **`https://api.splitthewine.app`** → this Railway service (API + `/r/[id]` claim UI). Landing stays on `www.splitthewine.app`.
+
+Until cutover, mobile EAS still points at `https://api-production-72488.up.railway.app`.
+
+---
+
 ## Railway checklist
 
 ```bash

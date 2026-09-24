@@ -2,6 +2,10 @@
 
 Closed friend test: Expo iOS build → Apple TestFlight → Railway HTTPS API.
 
+## HIGH PRIORITY — Custom domain
+
+See **[plans/dns-todos.md](./plans/dns-todos.md)** — cut over to **`https://api.splitthewine.app`** (DNS + Railway + EAS env). Do before the next TestFlight push that friends will share.
+
 **Already done**
 - [x] Deploy API to Railway — `https://api-production-72488.up.railway.app`
 - [x] Set `OPENROUTER_API_KEY`, `OPENROUTER_HTTP_REFERER`, `ALLOWED_ORIGINS` on Railway
