@@ -141,20 +141,30 @@ export async function resolveVenueFromName(
   const q = name.trim();
   if (q.length < 2) return null;
   const session = newSession();
-  const predictions = await searchPlaces(q, coords, session);
-  if (!predictions.length) return null;
 
-  const needle = q.toLowerCase();
-  const best =
-    predictions.find((p) => p.name.toLowerCase() === needle) ||
-    predictions.find(
-      (p) =>
-        p.name.toLowerCase().startsWith(needle) ||
-        needle.startsWith(p.name.toLowerCase()),
-    ) ||
-    predictions[0];
+  const pick = async (query: string) => {
+    const predictions = await searchPlaces(query, coords, session);
+    if (!predictions.length) return null;
+    const needle = query.toLowerCase();
+    return (
+      predictions.find((p) => p.name.toLowerCase() === needle) ||
+      predictions.find(
+        (p) =>
+          p.name.toLowerCase().startsWith(needle) ||
+          needle.startsWith(p.name.toLowerCase()),
+      ) ||
+      predictions[0]
+    );
+  };
 
-  return resolvePlaceDetails(best, session);
+  let best = await pick(q);
+  if (!best && q.includes(" - ")) best = await pick(q.split(" - ")[0]!.trim());
+  if (!best && q.includes(",")) best = await pick(q.split(",")[0]!.trim());
+  if (!best) return null;
+
+  const resolved = await resolvePlaceDetails(best, session);
+  if (resolved.lat == null || resolved.lng == null) return null;
+  return resolved;
 }
 
 export function typedVenue(name: string): ReceiptVenue {

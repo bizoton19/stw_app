@@ -90,7 +90,12 @@ export function VenueTypeahead({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockedRef = useRef(false);
 
-  const placeConfirmed = venue?.source === "places" && Boolean(venue.name.trim());
+  const placeConfirmed =
+    venue?.source === "places" &&
+    typeof venue.lat === "number" &&
+    typeof venue.lng === "number" &&
+    Number.isFinite(venue.lat) &&
+    Number.isFinite(venue.lng);
   const address = venue?.formattedAddress?.trim() || null;
   const dateLabel = formatReceiptDateLabel(receiptDate);
   const hasMap =

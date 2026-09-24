@@ -163,3 +163,88 @@ export async function mapboxDetails(input: {
     provider: "mapbox",
   };
 }
+
+/** Resolve a free-text restaurant name to a Places venue (address + coords). */
+export async function resolveVenueFromName(input: {
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+}): Promise<import("./types").ReceiptVenue | null> {
+  if (!placesConfigured()) return null;
+  const q = input.name.trim();
+  if (q.length < 2) return null;
+
+  const session = randomUUID();
+  const tryQuery = async (query: string) => {
+    const predictions = await mapboxAutocomplete({
+      q: query,
+      lat: input.lat,
+      lng: input.lng,
+      session,
+      limit: 8,
+    });
+    if (!predictions.length) return null;
+    const needle = query.toLowerCase();
+    const scored = [...predictions].sort((a, b) => {
+      const score = (p: (typeof predictions)[0]) => {
+        let s = 0;
+        const n = p.name.toLowerCase();
+        if (n === needle) s += 100;
+        else if (n.startsWith(needle) || needle.startsWith(n)) s += 40;
+        const cat = (p.category || "").toLowerCase();
+        if (cat.includes("restaurant") || cat.includes("bar") || cat.includes("hotel")) s += 20;
+        if (cat.includes("food")) s += 10;
+        if (typeof p.distanceMeters === "number") {
+          if (p.distanceMeters > 80_000) s -= 50;
+          else s += Math.max(0, 25 - p.distanceMeters / 2000);
+        }
+        return s;
+      };
+      return score(b) - score(a);
+    });
+    const best = scored[0]!;
+    // With proximity, refuse absurdly distant first hits (wrong continent).
+    if (
+      typeof input.lat === "number" &&
+      typeof best.distanceMeters === "number" &&
+      best.distanceMeters > 150_000 &&
+      scored.every((p) => (p.distanceMeters ?? Infinity) > 80_000)
+    ) {
+      return null;
+    }
+    return mapboxDetails({ placeId: best.placeId, session });
+  };
+
+  let details = await tryQuery(q);
+  // Receipt OCR often includes neighborhood / street — try shorter clauses.
+  if (!details && q.includes(" - ")) {
+    const parts = q.split(" - ").map((p) => p.trim()).filter(Boolean);
+    details = await tryQuery(parts[0]!);
+    if (!details && parts.length > 1) {
+      details = await tryQuery(`${parts[0]} ${parts[1]}`);
+    }
+  }
+  if (!details && q.includes(",")) {
+    details = await tryQuery(q.split(",")[0]!.trim());
+  }
+  if (!details) {
+    // Drop trailing location fluff: "Name DC Capitol …" → first 1–2 words
+    const words = q.replace(/[-–,]/g, " ").split(/\s+/).filter(Boolean);
+    if (words.length >= 2) details = await tryQuery(words.slice(0, 2).join(" "));
+    if (!details && words.length >= 1) details = await tryQuery(words[0]!);
+  }
+  if (!details?.name) return null;
+  if (details.lat == null || details.lng == null) return null;
+
+  return {
+    name: details.name,
+    placeId: details.placeId,
+    provider: "mapbox",
+    formattedAddress: details.formattedAddress,
+    lat: details.lat,
+    lng: details.lng,
+    category: details.category,
+    source: "places",
+    confirmedAt: new Date().toISOString(),
+  };
+}

@@ -216,7 +216,17 @@ export async function parseReceipt(
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
     const { result, parse } = await parseReceiptImage(image, opts);
-    receipt.restaurant = result.restaurant;
+    let venue: import("./types").ReceiptVenue | null = null;
+    if (result.restaurant.trim().length >= 2) {
+      try {
+        const { resolveVenueFromName } = await import("./places");
+        venue = await resolveVenueFromName({ name: result.restaurant });
+      } catch {
+        venue = null;
+      }
+    }
+    receipt.restaurant = venue?.name || result.restaurant;
+    receipt.venue = venue;
     receipt.receiptDate = result.receiptDate ?? null;
     receipt.items = itemsFromParse(result);
     receipt.fees = feesFromParse(result);

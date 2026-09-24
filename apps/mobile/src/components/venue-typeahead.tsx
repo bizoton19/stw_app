@@ -95,10 +95,10 @@ export function VenueTypeahead({
   /** One auto-pin attempt per restaurant name seed (fallback if parse didn't pin). */
   const autoKeyRef = useRef<string | null>(null);
 
-  const placeConfirmed = venue?.source === "places" && Boolean(venue.name.trim());
+  const placeConfirmed = isPinned(venue);
   const address = venue?.formattedAddress?.trim() || null;
   const dateLabel = formatReceiptDateLabel(receiptDate);
-  const hasMap = isPinned(venue) && !mapFailed;
+  const hasMap = placeConfirmed && !mapFailed;
 
   useEffect(() => {
     setMapFailed(false);
@@ -133,12 +133,14 @@ export function VenueTypeahead({
   }, []);
 
   // Fallback: if step 4 opens with a name but no Places pin, resolve once.
+  // Also re-try when venue is typed / missing coords (common after parse).
   useEffect(() => {
     if (!locationReady || isPinned(venue)) return;
     const seed = value.trim();
     if (seed.length < 2) return;
-    if (autoKeyRef.current === seed) return;
-    autoKeyRef.current = seed;
+    const key = `${seed}|${coordsRef.current?.lat ?? ""}`;
+    if (autoKeyRef.current === key) return;
+    autoKeyRef.current = key;
 
     let cancelled = false;
     setAutoResolving(true);
@@ -287,10 +289,9 @@ export function VenueTypeahead({
                 onError={() => setMapFailed(true)}
               />
             </View>
-          ) : placeConfirmed && !mapFailed ? (
-            <View style={[styles.mapWrap, styles.mapPlaceholder, { minHeight: mapH }]}>
-              <ActivityIndicator color={colors.merlot} />
-              <Text style={styles.autoCopy}>Loading map…</Text>
+          ) : mapFailed ? (
+            <View style={[styles.mapWrap, styles.mapPlaceholder, { minHeight: 120 }]}>
+              <Text style={styles.autoCopy}>Map couldn’t load — address is still saved.</Text>
             </View>
           ) : null}
         </View>

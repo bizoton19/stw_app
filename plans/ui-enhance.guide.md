@@ -243,11 +243,11 @@ Web is a **delivery channel** for guests without the app ([requirements §10](./
 
 **P0 — claim page feels intentional**
 
-- [ ] Fix `PhoneShell` hydration (no SSR/client text mismatch)  
-- [ ] Kill empty first-viewport gap; list starts under lead  
-- [ ] Tighten row padding + remaining typography (tabular, merlot when selected)  
-- [ ] Disabled vs enabled sticky CTA contrast  
-- [ ] Outer canvas = paper on large screens  
+- [x] Fix `PhoneShell` hydration (no SSR/client text mismatch)  
+- [x] Kill empty first-viewport gap; list starts under lead  
+- [x] Tighten row padding + remaining typography (tabular, merlot when selected)  
+- [x] Disabled vs enabled sticky CTA contrast  
+- [x] Outer canvas = paper on large screens  
 
 **P1 — settle polish**
 

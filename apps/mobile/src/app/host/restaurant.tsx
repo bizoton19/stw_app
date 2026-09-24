@@ -8,7 +8,10 @@ import { colors } from "@/lib/theme";
 export default function HostRestaurant() {
   const router = useRouter();
   const draft = useHostDraft();
-  const placeLocked = draft.venue?.source === "places" && Boolean(draft.venue.name.trim());
+  const placeLocked =
+    draft.venue?.source === "places" &&
+    typeof draft.venue.lat === "number" &&
+    typeof draft.venue.lng === "number";
 
   return (
     <AppShell>
