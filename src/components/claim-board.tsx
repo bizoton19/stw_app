@@ -218,6 +218,7 @@ export function ClaimBoard({
               Reopen claiming
             </QuietButton>
           ) : null}
+          <QuietButton onClick={() => router.push("/")}>Home</QuietButton>
         </div>
       </div>
     );
@@ -240,6 +241,7 @@ export function ClaimBoard({
             Close claiming
           </QuietButton>
         ) : null}
+        <QuietButton onClick={() => router.push("/")}>Home</QuietButton>
       </div>
     ) : (
     <div className="space-y-1">
@@ -268,6 +270,7 @@ export function ClaimBoard({
           Running totals
         </Link>
       )}
+      <QuietButton onClick={() => router.push("/")}>Home</QuietButton>
     </div>
     );
 
@@ -357,11 +360,9 @@ export function ClaimBoard({
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
       ) : null}
-      {mine ? (
-        <p className="mb-3 text-[13px] font-medium tabular-nums">
-          You {centsToLabel(mine.totalCents)} so far
-        </p>
-      ) : null}
+      <p className="mb-3 text-[13px] font-medium tabular-nums">
+        Your running total · {centsToLabel(mine?.totalCents ?? 0)}
+      </p>
       {message ? <p className="mb-3 text-sm text-destructive">{message}</p> : null}
 
       {remainingItems.length === 0 ? (
@@ -456,9 +457,13 @@ function BoardHeader({
         </h1>
         {mine != null ? (
           <p className="pt-2 text-[13px] font-medium tabular-nums">
-            You {centsToLabel(mine)}
+            Your running total · {centsToLabel(mine)}
           </p>
-        ) : null}
+        ) : (
+          <p className="pt-2 text-[13px] font-medium tabular-nums">
+            Your running total · {centsToLabel(0)}
+          </p>
+        )}
       </div>
       {guest ? (
         <p className="mb-3 text-[15px] leading-[22px] text-muted-foreground">

@@ -260,22 +260,14 @@ export async function parseReceipt(
     }
   });
   const { result, parse } = await parseReceiptImage(image, opts);
-  let venue: import("./types").ReceiptVenue | null = null;
-  if (result.restaurant.trim().length >= 2) {
-    try {
-      const { resolveVenueFromName } = await import("./places");
-      venue = await resolveVenueFromName({ name: result.restaurant });
-    } catch {
-      venue = null;
-    }
-  }
   return withTransaction(async (client) => {
     const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
     if (receipt.status !== "draft") {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
-    receipt.restaurant = venue?.name || result.restaurant;
-    receipt.venue = venue;
+    // Leave venue unset — host confirms from Places suggestions on step 4.
+    receipt.restaurant = result.restaurant;
+    receipt.venue = null;
     receipt.receiptDate = result.receiptDate ?? null;
     receipt.items = itemsFromParse(result);
     receipt.fees = feesFromParse(result);

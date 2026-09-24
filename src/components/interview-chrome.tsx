@@ -127,7 +127,7 @@ export function QuietButton({
     <button
       type="button"
       className={cn(
-        "pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium text-foreground disabled:opacity-35",
+        "pressable inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-medium text-foreground disabled:opacity-35",
         className,
       )}
       {...props}

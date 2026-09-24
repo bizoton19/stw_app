@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
@@ -7,6 +7,7 @@ import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
 import { centsToLabel } from "@/lib/money";
+import { computeTotals } from "@/lib/totals";
 import { colors } from "@/lib/theme";
 
 export default function QtyScreen() {
@@ -24,6 +25,12 @@ export default function QtyScreen() {
     const value = flow.units[item.id] ?? 1;
     return sum + Math.min(Math.max(1, value), max);
   }, 0);
+  const mineCents = useMemo(() => {
+    if (!receipt || !flow.guest) return 0;
+    return (
+      computeTotals(receipt).people.find((p) => p.personName === flow.guest?.name)?.totalCents ?? 0
+    );
+  }, [flow.guest, receipt]);
 
   useEffect(() => {
     if (!receipt) return;
@@ -60,6 +67,7 @@ export default function QtyScreen() {
         }
       >
         <Text style={styles.lead}>Whole glasses only. We will not split a pour.</Text>
+        <Text style={styles.running}>Your running total · {centsToLabel(mineCents)}</Text>
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         {queuedItems.map((item) => {
           const max = receipt.remaining[item.id] ?? 0;
@@ -92,7 +100,14 @@ export default function QtyScreen() {
 }
 
 const styles = StyleSheet.create({
-  lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 16 },
+  lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 8 },
+  running: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.ink,
+    fontVariant: ["tabular-nums"],
+    marginBottom: 16,
+  },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   row: {
     paddingVertical: 12,

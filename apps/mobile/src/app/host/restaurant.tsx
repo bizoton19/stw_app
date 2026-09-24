@@ -29,7 +29,7 @@ export default function HostRestaurant() {
               {placeLocked
                 ? "This place pins on the claim board for your guests."
                 : draft.restaurant.trim()
-                  ? "Matching the name from your receipt…"
+                  ? "Pick a match from the list — we won’t lock until you tap one."
                   : "Start typing — nearby matches appear as you go."}
             </FooterHint>
             <PrimaryButton

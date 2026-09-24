@@ -89,6 +89,8 @@ export function VenueTypeahead({
   const sessionRef = useRef(newSession());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockedRef = useRef(false);
+  const seededSearchRef = useRef(false);
+  const [locationReady, setLocationReady] = useState(false);
 
   const placeConfirmed =
     venue?.source === "places" &&
@@ -108,14 +110,19 @@ export function VenueTypeahead({
   useEffect(() => {
     if (!navigator.geolocation) {
       setHint("Location off — search by name only.");
+      setLocationReady(true);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setHint("Using nearby places to rank results.");
+        setLocationReady(true);
       },
-      () => setHint("Location off — search by name only."),
+      () => {
+        setHint("Location off — search by name only.");
+        setLocationReady(true);
+      },
       { enableHighAccuracy: false, timeout: 8000 },
     );
   }, []);
@@ -163,8 +170,18 @@ export function VenueTypeahead({
     [coords],
   );
 
+  // After parse: show suggestions for the OCR name — host must tap to confirm.
+  useEffect(() => {
+    if (!locationReady || placeConfirmed || seededSearchRef.current) return;
+    const seed = value.trim();
+    if (seed.length < 2) return;
+    seededSearchRef.current = true;
+    runSearch(seed);
+  }, [locationReady, placeConfirmed, value, runSearch]);
+
   const onChangeText = (text: string) => {
     lockedRef.current = false;
+    seededSearchRef.current = true;
     onChangeName(text);
     onChangeVenue(null);
     runSearch(text);
@@ -221,9 +238,12 @@ export function VenueTypeahead({
 
   const clearSelection = () => {
     lockedRef.current = false;
+    seededSearchRef.current = true;
+    const name = venue?.name?.trim() || value.trim();
     onChangeVenue(null);
-    onChangeName("");
+    onChangeName(name);
     setPredictions([]);
+    if (name.length >= 2) runSearch(name);
   };
 
   if (placeConfirmed) {
@@ -278,6 +298,12 @@ export function VenueTypeahead({
       {hint ? <p className="mt-2 text-[12px] text-muted-foreground">{hint}</p> : null}
       {dateLabel ? (
         <p className="mt-2 text-[12px] text-muted-foreground">Receipt date · {dateLabel}</p>
+      ) : null}
+      {value.trim().length >= 2 && predictions.length === 0 ? (
+        <p className="mt-2 text-[12px] text-muted-foreground">
+          Keep typing or pick a match below when they appear. We won’t lock a place until you tap
+          one.
+        </p>
       ) : null}
       {predictions.length > 0 ? (
         <ul className="mt-2 divide-y divide-border overflow-hidden rounded-xl border border-border">

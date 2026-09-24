@@ -2,8 +2,9 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import * as Sharing from "expo-sharing";
+import { Share } from "react-native";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { IconActionButton } from "@/components/icon-action-button";
 import { useHostDraft } from "@/context/host-draft";
 import { centsToLabel } from "@/lib/money";
 import { colors } from "@/lib/theme";
@@ -17,6 +18,7 @@ export default function HostShare() {
     activeItems.reduce((s, i) => s + i.totalCents, 0) +
     draft.fees.reduce((s, f) => s + f.amountCents, 0);
   const place = draft.venue?.name?.trim() || draft.restaurant.trim() || "Tonight’s check";
+  const receiptId = draft.receiptId ?? "demo";
 
   return (
     <AppShell>
@@ -33,13 +35,13 @@ export default function HostShare() {
               onPress={() =>
                 router.replace({
                   pathname: "/r/[id]",
-                  params: { id: draft.receiptId ?? "demo", host: "1" },
+                  params: { id: receiptId, host: "1" },
                 })
               }
             >
               Open the live board
             </PrimaryButton>
-            <QuietButton onPress={() => router.replace("/")}>Done for now</QuietButton>
+            <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
           </View>
         }
       >
@@ -61,29 +63,32 @@ export default function HostShare() {
         </View>
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <QuietButton
+            <IconActionButton
+              icon="copy"
+              label={copied ? "Copied" : "Copy"}
               onPress={async () => {
                 await Clipboard.setStringAsync(draft.claimUrl);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}
-            >
-              {copied ? "Copied" : "Copy link"}
-            </QuietButton>
+            />
           </View>
           <View style={{ flex: 1 }}>
-            <QuietButton
+            <IconActionButton
+              icon="share"
+              label="Share"
               onPress={async () => {
-                if (await Sharing.isAvailableAsync()) {
-                  await Sharing.shareAsync(draft.claimUrl);
-                } else {
+                try {
+                  await Share.share({
+                    message: `Claim what you ordered on ${place}: ${draft.claimUrl}`,
+                    url: draft.claimUrl,
+                  });
+                } catch {
                   await Clipboard.setStringAsync(draft.claimUrl);
                   setCopied(true);
                 }
               }}
-            >
-              Share
-            </QuietButton>
+            />
           </View>
         </View>
       </InterviewChrome>

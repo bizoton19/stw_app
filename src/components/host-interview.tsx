@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ChevronDown, ImageIcon, Trash2 } from "lucide-react";
+import { Camera, ChevronDown, Copy, ImageIcon, Share2, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
@@ -244,99 +244,7 @@ export function HostInterview() {
         hostToken: token,
       });
       applyReceipt(receipt);
-      const alreadyPinned =
-        receipt.venue?.source === "places" &&
-        receipt.venue.lat != null &&
-        receipt.venue.lng != null;
-      if (!alreadyPinned && receipt.restaurant.trim().length >= 2) {
-        try {
-          let lat: number | undefined;
-          let lng: number | undefined;
-          if (navigator.geolocation) {
-            const pos = await Promise.race([
-              new Promise<GeolocationPosition>((resolve, reject) =>
-                navigator.geolocation.getCurrentPosition(resolve, reject, {
-                  enableHighAccuracy: false,
-                  timeout: 4000,
-                }),
-              ),
-              new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-            ]);
-            if (pos && "coords" in pos) {
-              lat = pos.coords.latitude;
-              lng = pos.coords.longitude;
-            }
-          }
-          const session = `s_${Date.now().toString(36)}`;
-          const params = new URLSearchParams({
-            q: receipt.restaurant.trim(),
-            session,
-          });
-          if (lat != null && lng != null) {
-            params.set("lat", String(lat));
-            params.set("lng", String(lng));
-          }
-          const ac = await fetch(`/api/places/autocomplete?${params}`);
-          const acData = (await ac.json()) as {
-            predictions?: Array<{
-              placeId: string;
-              name: string;
-              secondary: string;
-              provider: "mapbox" | "apple";
-              lat?: number | null;
-              lng?: number | null;
-              formattedAddress?: string | null;
-              category?: string | null;
-            }>;
-          };
-          const rows = acData.predictions ?? [];
-          if (rows.length) {
-            const needle = receipt.restaurant.trim().toLowerCase();
-            const best =
-              rows.find((p) => p.name.toLowerCase() === needle) ||
-              rows.find(
-                (p) =>
-                  p.name.toLowerCase().startsWith(needle) ||
-                  needle.startsWith(p.name.toLowerCase()),
-              ) ||
-              rows[0];
-            const det = await fetch(
-              `/api/places/details?placeId=${encodeURIComponent(best.placeId)}&session=${encodeURIComponent(session)}`,
-            );
-            if (det.ok) {
-              const data = (await det.json()) as {
-                place: {
-                  placeId: string;
-                  name: string;
-                  formattedAddress: string | null;
-                  lat: number | null;
-                  lng: number | null;
-                  category: string | null;
-                  provider: "mapbox" | "apple";
-                };
-              };
-              setRestaurant(data.place.name || best.name);
-              setVenue({
-                name: data.place.name || best.name,
-                placeId: data.place.placeId,
-                provider: data.place.provider === "apple" ? "apple" : "mapbox",
-                formattedAddress:
-                  data.place.formattedAddress ||
-                  best.formattedAddress ||
-                  best.secondary ||
-                  null,
-                lat: data.place.lat,
-                lng: data.place.lng,
-                category: data.place.category || best.category || null,
-                source: "places",
-                confirmedAt: new Date().toISOString(),
-              });
-            }
-          }
-        } catch {
-          /* host can pick on restaurant step */
-        }
-      }
+      // Leave venue unset — host confirms from suggestions on the restaurant step.
       if (parse?.reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {
@@ -489,6 +397,10 @@ export function HostInterview() {
     );
     footer = <ContinueButton disabled>Reading the receipt</ContinueButton>;
   } else if (step === "restaurant") {
+    const placeLocked =
+      venue?.source === "places" &&
+      typeof venue.lat === "number" &&
+      typeof venue.lng === "number";
     body = (
       <>
         {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
@@ -500,6 +412,13 @@ export function HostInterview() {
           onChangeVenue={setVenue}
           fieldClass={fieldClass}
         />
+        {!placeLocked ? (
+          <p className="mt-3 text-[13px] text-muted-foreground">
+            {restaurant.trim()
+              ? "Pick a match from the list — we won’t lock until you tap one."
+              : "Start typing — nearby matches appear as you go."}
+          </p>
+        ) : null}
       </>
     );
     footer = (
@@ -920,7 +839,8 @@ export function HostInterview() {
               window.setTimeout(() => setCopied(false), 1500);
             }}
           >
-            {copied ? "Copied" : "Copy link"}
+            <Copy className="size-4" strokeWidth={2.25} aria-hidden />
+            {copied ? "Copied" : "Copy"}
           </QuietButton>
           <QuietButton
             onClick={async () => {
@@ -936,6 +856,7 @@ export function HostInterview() {
               }
             }}
           >
+            <Share2 className="size-4" strokeWidth={2.25} aria-hidden />
             Share
           </QuietButton>
         </div>

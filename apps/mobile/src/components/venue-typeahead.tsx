@@ -15,7 +15,6 @@ import { getApiUrl } from "@/lib/config";
 import {
   newSession,
   resolvePlaceDetails,
-  resolveVenueFromName,
   searchPlaces,
   typedVenue,
   type PlacePrediction,
@@ -78,22 +77,15 @@ export function VenueTypeahead({
 
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [loading, setLoading] = useState(false);
-  const [autoResolving, setAutoResolving] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
   const [locationHint, setLocationHint] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationReady, setLocationReady] = useState(false);
   const sessionRef = useRef(newSession());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lockedRef = useRef(false);
-  const onChangeNameRef = useRef(onChangeName);
-  const onChangeVenueRef = useRef(onChangeVenue);
-  const coordsRef = useRef(coords);
-  onChangeNameRef.current = onChangeName;
-  onChangeVenueRef.current = onChangeVenue;
-  coordsRef.current = coords;
-  /** One auto-pin attempt per restaurant name seed (fallback if parse didn't pin). */
-  const autoKeyRef = useRef<string | null>(null);
+  const lockedRef = useRef(isPinned(venue));
+  /** Seed search once for a parsed name — never auto-lock a place. */
+  const seededSearchRef = useRef(false);
 
   const placeConfirmed = isPinned(venue);
   const address = venue?.formattedAddress?.trim() || null;
@@ -103,6 +95,10 @@ export function VenueTypeahead({
   useEffect(() => {
     setMapFailed(false);
   }, [venue?.lat, venue?.lng]);
+
+  useEffect(() => {
+    lockedRef.current = isPinned(venue);
+  }, [venue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,37 +127,6 @@ export function VenueTypeahead({
       cancelled = true;
     };
   }, []);
-
-  // Fallback: if step 4 opens with a name but no Places pin, resolve once.
-  // Also re-try when venue is typed / missing coords (common after parse).
-  useEffect(() => {
-    if (!locationReady || isPinned(venue)) return;
-    const seed = value.trim();
-    if (seed.length < 2) return;
-    const key = `${seed}|${coordsRef.current?.lat ?? ""}`;
-    if (autoKeyRef.current === key) return;
-    autoKeyRef.current = key;
-
-    let cancelled = false;
-    setAutoResolving(true);
-    void (async () => {
-      try {
-        const resolved = await resolveVenueFromName(seed, coordsRef.current);
-        if (cancelled || !resolved) return;
-        lockedRef.current = true;
-        onChangeNameRef.current(resolved.name);
-        onChangeVenueRef.current(resolved);
-        setPredictions([]);
-      } catch {
-        /* leave typed name — host can pick from typeahead */
-      } finally {
-        if (!cancelled) setAutoResolving(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [locationReady, value, venue]);
 
   const runSearch = useCallback(
     (q: string) => {
@@ -193,9 +158,18 @@ export function VenueTypeahead({
     [coords],
   );
 
+  // After parse: show suggestions for the OCR name — host must tap to confirm.
+  useEffect(() => {
+    if (!locationReady || isPinned(venue) || seededSearchRef.current) return;
+    const seed = value.trim();
+    if (seed.length < 2) return;
+    seededSearchRef.current = true;
+    runSearch(seed);
+  }, [locationReady, venue, value, runSearch]);
+
   const onChangeText = (text: string) => {
     lockedRef.current = false;
-    autoKeyRef.current = null;
+    seededSearchRef.current = true; // don't re-seed after edits
     onChangeName(text);
     onChangeVenue(null);
     runSearch(text);
@@ -203,7 +177,6 @@ export function VenueTypeahead({
 
   const onSelect = async (row: PlacePrediction) => {
     lockedRef.current = true;
-    autoKeyRef.current = row.name.trim();
     onChangeName(row.name);
     setPredictions([]);
     setLoading(true);
@@ -249,20 +222,16 @@ export function VenueTypeahead({
 
   const clearSelection = () => {
     lockedRef.current = false;
-    autoKeyRef.current = null;
+    seededSearchRef.current = true;
+    const name = venue?.name?.trim() || value.trim();
     onChangeVenue(null);
-    onChangeName("");
+    onChangeName(name);
     setPredictions([]);
+    if (name.length >= 2) runSearch(name);
   };
 
   return (
     <View style={placeConfirmed ? { flexGrow: 1 } : undefined}>
-      {autoResolving && !placeConfirmed ? (
-        <View style={styles.autoBox}>
-          <ActivityIndicator color={colors.merlot} />
-          <Text style={styles.autoCopy}>Pinning “{value.trim()}” on the map…</Text>
-        </View>
-      ) : null}
       {placeConfirmed ? (
         <View style={{ flexGrow: 1 }}>
           <View style={styles.selected}>
@@ -291,7 +260,7 @@ export function VenueTypeahead({
             </View>
           ) : mapFailed ? (
             <View style={[styles.mapWrap, styles.mapPlaceholder, { minHeight: 120 }]}>
-              <Text style={styles.autoCopy}>Map couldn’t load — address is still saved.</Text>
+              <Text style={styles.hintCenter}>Map couldn’t load — address is still saved.</Text>
             </View>
           ) : null}
         </View>
@@ -308,6 +277,12 @@ export function VenueTypeahead({
           {locationHint ? <Text style={styles.hint}>{locationHint}</Text> : null}
           {dateLabel ? (
             <Text style={styles.dateLoose}>Receipt date · {dateLabel}</Text>
+          ) : null}
+          {value.trim().length >= 2 && !loading && predictions.length === 0 ? (
+            <Text style={styles.hint}>
+              Keep typing or pick a match below when they appear. We won’t lock a place until you
+              tap one.
+            </Text>
           ) : null}
           {loading ? (
             <ActivityIndicator style={{ marginVertical: 8 }} color={colors.merlot} />
@@ -347,23 +322,18 @@ export function ensureVenueForPublish(
 
 const styles = StyleSheet.create({
   hint: { fontSize: 12, color: colors.muted, marginTop: -4, marginBottom: 8 },
-  dateLoose: { fontSize: 12, color: colors.muted, marginBottom: 8 },
-  autoBox: {
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 28,
-    marginBottom: 8,
-  },
-  autoCopy: {
+  hintCenter: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.inkSoft,
     textAlign: "center",
   },
+  dateLoose: { fontSize: 12, color: colors.muted, marginBottom: 8 },
   mapPlaceholder: {
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
+    padding: 16,
   },
   list: {
     borderWidth: StyleSheet.hairlineWidth,

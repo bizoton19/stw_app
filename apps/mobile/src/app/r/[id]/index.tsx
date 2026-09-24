@@ -145,12 +145,17 @@ function PickBoard() {
                 Reopen claiming
               </QuietButton>
             ) : null}
+            <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
           </View>
         }
       >
         {mine ? (
-          <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text>
-        ) : null}
+          <Text style={styles.mine}>
+            Your running total · {centsToLabel(mine.totalCents)}
+          </Text>
+        ) : (
+          <Text style={styles.mine}>Your running total · {centsToLabel(0)}</Text>
+        )}
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         <History />
       </InterviewChrome>
@@ -178,6 +183,7 @@ function PickBoard() {
             Close claiming
           </QuietButton>
         ) : null}
+        <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
       </View>
     ) : (
       <View>
@@ -212,6 +218,7 @@ function PickBoard() {
             Running totals
           </QuietButton>
         )}
+        <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
       </View>
     );
 
@@ -244,9 +251,9 @@ function PickBoard() {
                 {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
               </Text>
             ) : null}
-            {mine ? (
-              <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text>
-            ) : null}
+            <Text style={styles.mine}>
+              Your running total · {centsToLabel(mine?.totalCents ?? 0)}
+            </Text>
             {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
             {remainingItems.length === 0 ? (
               <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
