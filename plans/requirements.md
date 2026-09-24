@@ -103,7 +103,7 @@ The claimed quantity is subtracted from what's available in real time, visible t
 
 
 
-Once claiming is done, the app computes what each person owes (their items + their proportional share of tax/tip/fees) and generates a payment-request message per person (never auto-sends money).
+Once claiming is done, the app computes what each person owes (their items + their proportional share of tax/tip/fees). Guests pay the host via the payment methods the host entered (deep link into Venmo / Cash App / PayPal when possible — never auto-sends money).
 
 
 
@@ -141,8 +141,8 @@ HOST (interview)                                GUESTS (claim board)
  | 14. Host closes claiming (host-only)
  |     Unclaimed leftovers assign to the host
  v
- | 15. Per-person totals + pre-filled payment-request messages
- |     (sms: / WhatsApp / copy — not auto-sent)
+ | 15. Per-person totals + guest “You owe” with clickable host payment methods
+ |     (Venmo/Cash App/PayPal open apps; Zelle etc. display handle only)
 
 Interview chrome on every host step: back chevron, “n of m”, filling hairline, one title, sticky primary action. Guest join uses the same chrome (1 of 2). The claim board keeps a persistent header + sticky Claim.
 
@@ -168,7 +168,7 @@ No overclaiming, even under concurrent requests (see §8).
 
 
 
-Shareable link, not phone-number-gated. Anyone with the URL can claim. The URL opens the same phone UI — it is not a desktop site.
+Shareable link, not phone-number-gated. Anyone with the URL can claim. The URL opens the same phone UI — it is not a desktop site. Guests who already have the native app open the same claim + settle flow (deep link / in-app `/r/[id]`); the board and “who owes what” must stay identical between web and app.
 
 
 
@@ -176,7 +176,7 @@ Dispute-resolution visibility. Per item: who claimed how many, plus contact.
 
 
 
-Host-controlled payment info, entered once in the interview, shown to all guests.
+Host-controlled payment info, entered once in the interview, shown to all guests. On settle, guests see clickable payment methods (Venmo / Cash App / PayPal open the host’s app or https pay link with amount; Zelle / MonCash / Natcash / Other display handle only — no deep link). No Texts / WhatsApp / Copy on the guest settle screen.
 
 
 
@@ -256,7 +256,7 @@ Share: Web Share API when present; always a copy-link control.
 
 
 
-Payment-request stub: sms: and https://wa.me/ plus copy. Do not auto-send.
+Settle pay: openable host methods (Venmo / Cash App / PayPal) via deep link / https; Zelle and similar display handle only. Do not auto-send money.
 
 
 
@@ -569,14 +569,24 @@ Claim screen is the dispute board: every claim listed with name + contact.
 
 
 
-9. Payment requests — v1 is a stub, be explicit about it
+9. Settle / pay the host — guest-facing, not a message stub
 
-Generate a pre-filled message per person
-("Hey {name}, your share is ${amount}, send it to {host_handle} via {host_method}")
-and open sms: / https://wa.me/ or copy. The human still taps send.
-Do not claim or imply automatic sending.
+**Parity:** Web `/r/[id]/settle` and native `apps/mobile/.../settle` show the same screen.
 
-True auto-send would need Twilio/WhatsApp Business, server credentials, per-message cost, and an explicit confirm. Real payment apps do not offer public request-money APIs for arbitrary third-party apps. This product requests payment; it never moves money.
+**You owe card (when the viewer has claimed):**
+- Amount owed.
+- Copy: “You can pay your share of {amount} to the host{, hostname,} via the following payment method(s):”
+- Hostname when known (host’s join name on their device); otherwise omit and say “the host”.
+- List every `hostInfo.payments` row with brand icon + label + handle.
+  - **Openable** (tap → same deep-link pattern as mobile `openHostPay` / web `openHostPayWeb`): Venmo, Cash App, PayPal (paypal.me / @user). Prefills amount + note when the scheme allows.
+  - **Display only** (no app open): Zelle, MonCash, Natcash, Other — show label + the phone/email/handle the host entered. Guest pays in that app themselves.
+- Split the Wine never moves money and never auto-sends.
+
+**Everyone’s share:** name, contact, line items, fee share, amount. No Texts / WhatsApp / Copy buttons (those were host-nudging stubs and are useless for a guest paying their own share).
+
+**Do not** imply automatic sending or in-app wallet transfer.
+
+True auto-send would need Twilio/WhatsApp Business, server credentials, per-message cost, and an explicit confirm. Real payment apps do not offer public request-money APIs for arbitrary third-party apps.
 
 10. Product decisions (resolved for v0)
 
@@ -604,7 +614,7 @@ Link expiry? v0 process memory: gone on restart. Later: retention policy (this i
 
 
 
-Guest without a native install? The shareable URL opens the same phone UI in the browser. That is a delivery channel, not a web product. A native wrapper is a later milestone.
+Guest without a native install? The shareable URL opens the same phone UI in the browser. Guests who installed the app use the identical claim board + settle flow in-app. Browser and native must stay feature-parity for guest paths.
 
 
 
@@ -895,7 +905,7 @@ Platform sharing permissions blocked outside guests from writing claims. Claimin
 
 
 
-“Auto-send a payment request” is not “auto-send money.” The app requests payment via a message a human still sends (§9).
+“Auto-send a payment request” is not “auto-send money.” Guests open the host’s pay app (or copy Zelle details) themselves (§9).
 
 
 

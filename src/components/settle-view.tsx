@@ -6,24 +6,20 @@ import { useRouter } from "next/navigation";
 import { Banknote, ChevronLeft } from "lucide-react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
-import { primaryHostPayment } from "@/lib/host-pay";
+import { PayMethodIcon } from "@/components/pay-method-icon";
+import { hostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
-import { api, getHostToken } from "@/lib/session";
+import { openHostPayWeb, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
+import { api, getGuest, getHostToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment, PublicReceipt } from "@/lib/types";
 
-const METHOD_LABEL = {
-  venmo: "Venmo",
-  paypal: "PayPal",
-  zelle: "Zelle",
-  cashapp: "Cash App",
-  moncash: "MonCash",
-  natcash: "Natcash",
-  other: "their preferred app",
-} as const;
-
-function messageFor(name: string, amount: string, payment: HostPayment) {
-  return `Hey ${name}, your share is ${amount}. Send it to ${payment.handle} via ${METHOD_LABEL[payment.method]}.`;
+function hostDisplayName(receipt: PublicReceipt, isHost: boolean): string {
+  if (isHost) {
+    const me = getGuest(receipt.id);
+    if (me?.name.trim()) return me.name.trim();
+  }
+  return "the host";
 }
 
 export function SettleView({
@@ -35,16 +31,21 @@ export function SettleView({
 }) {
   const router = useRouter();
   const totals = useMemo(() => computeTotals(receipt), [receipt]);
-  const [copied, setCopied] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [paying, setPaying] = useState<string | null>(null);
+  const [payHint, setPayHint] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const isHost = Boolean(getHostToken(receipt.id));
-  const payment = primaryHostPayment(receipt.hostInfo) ?? {
-    method: "other" as const,
-    handle: "the host",
-  };
+  const guest = getGuest(receipt.id);
+  const payments = hostPayments(receipt.hostInfo);
   const leftover = totals.unclaimedItemCents > 0 && receipt.status !== "finalized";
   const closed = receipt.status === "finalized";
+  const hostName = hostDisplayName(receipt, isHost);
+  const restaurant = receipt.restaurant || "the check";
+
+  const mine = guest
+    ? totals.people.find((p) => p.personName === guest.name)
+    : undefined;
 
   async function reopen() {
     const token = getHostToken(receipt.id);
@@ -60,6 +61,27 @@ export function SettleView({
       setMessage("Only the host can reopen claiming.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function payWith(payment: HostPayment, amountCents: number) {
+    if (!payMethodIsOpenable(payment.method)) return;
+    setPaying(payment.method);
+    setPayHint(null);
+    try {
+      const result = await openHostPayWeb({
+        method: payment.method,
+        handle: payment.handle,
+        amountCents,
+        note: `${guest?.name ?? "Guest"} · ${restaurant}`,
+      });
+      if (result === "copied") {
+        setPayHint(
+          `Copied ${PAY_METHOD_META[payment.method].label} details — paste in the app.`,
+        );
+      }
+    } finally {
+      setPaying(null);
     }
   }
 
@@ -79,7 +101,8 @@ export function SettleView({
       </p>
       <h1 className="text-[1.65rem] font-semibold tracking-tight">Who owes what</h1>
       <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-        Drinks plus a share of tax and tip. These messages are requests — nothing is auto-sent.
+        Drinks plus a share of tax and tip. Tapping a payment method opens the host&apos;s app when
+        possible — nothing is charged from Split the Wine.
       </p>
       {message ? <p className="mt-3 text-[14px] text-destructive">{message}</p> : null}
 
@@ -109,7 +132,78 @@ export function SettleView({
         </div>
       </div>
 
-      <ul className="mt-4 min-h-0 flex-1 space-y-6 overflow-y-auto">
+      {mine && mine.totalCents > 0 ? (
+        <div className="mt-5 rounded-[14px] border border-border bg-[#FBFAF8] p-3.5">
+          <p className="text-[13px] font-semibold text-ink-soft">You owe</p>
+          <p className="mt-0.5 text-[1.75rem] font-bold tabular-nums">
+            {centsToLabel(mine.totalCents)}
+          </p>
+          {payments.length > 0 ? (
+            <>
+              <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+                You can pay your share of {centsToLabel(mine.totalCents)} to the host
+                {hostName !== "the host" ? `, ${hostName},` : ""} via the following payment
+                method{payments.length === 1 ? "" : "s"}:
+              </p>
+              <ul className="mt-3 space-y-2">
+                {payments.map((payment) => {
+                  const openable = payMethodIsOpenable(payment.method);
+                  const meta = PAY_METHOD_META[payment.method];
+                  const row = (
+                    <>
+                      <PayMethodIcon method={payment.method} size={48} />
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block text-[15px] font-semibold">{meta.label}</span>
+                        <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                          {payment.handle}
+                        </span>
+                      </span>
+                    </>
+                  );
+                  if (openable) {
+                    return (
+                      <li key={payment.method}>
+                        <button
+                          type="button"
+                          disabled={paying === payment.method}
+                          onClick={() => void payWith(payment, mine.totalCents)}
+                          className="pressable flex w-full items-center gap-3 rounded-xl border border-border bg-white px-3 py-2.5 text-left disabled:opacity-60"
+                        >
+                          {row}
+                          <span className="text-[12px] font-semibold text-primary">
+                            {paying === payment.method ? "Opening…" : "Pay"}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li
+                      key={payment.method}
+                      className="flex items-center gap-3 rounded-xl border border-border bg-white px-3 py-2.5"
+                    >
+                      {row}
+                    </li>
+                  );
+                })}
+              </ul>
+              {payHint ? (
+                <p className="mt-2 text-[12px] text-muted-foreground">{payHint}</p>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-3 text-[13px] text-muted-foreground">
+              The host hasn&apos;t added a payment method yet.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      <p className="mt-6 mb-3 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+        <Banknote className="size-3.5" strokeWidth={2} aria-hidden />
+        Everyone&apos;s share
+      </p>
+      <ul className="min-h-0 flex-1 space-y-6 overflow-y-auto">
         {totals.people.length === 0 ? (
           <li className="py-8 text-center text-[14px] text-muted-foreground">
             Nobody has claimed yet.
@@ -117,16 +211,17 @@ export function SettleView({
         ) : (
           totals.people.map((person) => {
             const amount = centsToLabel(person.totalCents);
-            const text = messageFor(person.personName, amount, payment);
-            const sms = `sms:?&body=${encodeURIComponent(text)}`;
-            const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            const isYou = guest?.name === person.personName;
             return (
               <li key={`${person.personName}\0${person.personContact ?? ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <ClaimerAvatar name={person.personName} size={32} />
                     <div className="min-w-0">
-                      <p className="font-medium">{person.personName}</p>
+                      <p className="font-medium">
+                        {person.personName}
+                        {isYou ? " (you)" : ""}
+                      </p>
                       <p className="text-[12px] text-muted-foreground">
                         {person.personContact || "no contact"}
                       </p>
@@ -142,32 +237,6 @@ export function SettleView({
                   ))}
                   <li>Share of tax & tip · {centsToLabel(person.feeCents)}</li>
                 </ul>
-                <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{text}</p>
-                <div className="mt-2 grid grid-cols-3 gap-1">
-                  <a
-                    href={sms}
-                    className="pressable inline-flex h-10 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-primary-foreground"
-                  >
-                    Texts
-                  </a>
-                  <a
-                    href={wa}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="pressable inline-flex h-10 items-center justify-center rounded-full text-[13px] font-medium"
-                  >
-                    WhatsApp
-                  </a>
-                  <QuietButton
-                    className="h-10 text-[13px]"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(text);
-                      setCopied(person.personName);
-                    }}
-                  >
-                    {copied === person.personName ? "Copied" : "Copy"}
-                  </QuietButton>
-                </div>
               </li>
             );
           })

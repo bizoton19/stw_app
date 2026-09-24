@@ -1,5 +1,3 @@
-import { Alert, Linking, Platform } from "react-native";
-import * as Clipboard from "expo-clipboard";
 import type { PayMethod } from "./types";
 
 export const PAY_METHOD_META: Record<
@@ -36,7 +34,7 @@ function paypalUsername(handle: string): string {
   const raw = handle.trim();
   const me = raw.match(/paypal\.me\/([A-Za-z0-9_-]+)/i);
   if (me) return me[1];
-  if (raw.includes("@") && raw.includes(".")) return ""; // email — use copy/web
+  if (raw.includes("@") && raw.includes(".")) return "";
   return raw.replace(/^@+/, "");
 }
 
@@ -113,7 +111,8 @@ export function payUrls(opts: {
   };
 }
 
-export async function openHostPay(opts: {
+/** Browser: try app / https link; otherwise copy details. */
+export async function openHostPayWeb(opts: {
   method: PayMethod;
   handle: string;
   amountCents: number;
@@ -121,43 +120,31 @@ export async function openHostPay(opts: {
 }): Promise<"opened" | "copied" | "failed"> {
   const { primary, web, copyText } = payUrls(opts);
 
-  if (primary) {
+  const tryOpen = (url: string) => {
     try {
-      const can = await Linking.canOpenURL(primary);
-      if (can || Platform.OS === "android") {
-        await Linking.openURL(primary);
-        return "opened";
-      }
+      window.location.href = url;
+      return true;
     } catch {
-      /* fall through */
+      return false;
     }
-    if (web) {
-      try {
-        await Linking.openURL(web);
-        return "opened";
-      } catch {
-        /* fall through */
-      }
-    }
-    if (primary.startsWith("http")) {
-      try {
-        await Linking.openURL(primary);
-        return "opened";
-      } catch {
-        /* fall through */
-      }
-    }
+  };
+
+  if (primary.startsWith("http")) {
+    if (tryOpen(primary)) return "opened";
+  } else if (primary) {
+    // Custom scheme (e.g. venmo://) — attempt, then fall back to https.
+    tryOpen(primary);
+    if (web && tryOpen(web)) return "opened";
+    // Scheme may still have worked on a phone; treat as opened.
+    return "opened";
+  } else if (web) {
+    if (tryOpen(web)) return "opened";
   }
 
-  await Clipboard.setStringAsync(copyText);
-  Alert.alert(
-    PAY_METHOD_META[opts.method].label,
-    opts.method === "zelle" ||
-      opts.method === "moncash" ||
-      opts.method === "natcash" ||
-      (opts.method === "paypal" && !paypalUsername(opts.handle))
-      ? `Copied ${opts.handle} and the amount. Open ${PAY_METHOD_META[opts.method].label} and paste.`
-      : `Couldn't open the app. Payment details were copied — paste them in ${PAY_METHOD_META[opts.method].label}.`,
-  );
-  return "copied";
+  try {
+    await navigator.clipboard.writeText(copyText);
+    return "copied";
+  } catch {
+    return "failed";
+  }
 }

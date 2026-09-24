@@ -1,23 +1,18 @@
 import { useMemo, useState } from "react";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 import { Banknote } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
-import { hostPayments, primaryHostPayment } from "@/lib/host-pay";
+import { hostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
-import { openHostPay, PAY_METHOD_META } from "@/lib/pay";
+import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { computeTotals } from "@/lib/totals";
-import type { HostPayment, PayMethod } from "@/lib/types";
+import type { HostPayment } from "@/lib/types";
 import { colors } from "@/lib/theme";
-
-function messageFor(name: string, amount: string, payment: HostPayment) {
-  return `Hey ${name}, your share is ${amount}. Send it to ${payment.handle} via ${PAY_METHOD_META[payment.method].label}.`;
-}
 
 export default function SettleScreen() {
   const router = useRouter();
@@ -25,12 +20,7 @@ export default function SettleScreen() {
   const receipt = flow.receipt;
   const totals = useMemo(() => (receipt ? computeTotals(receipt) : null), [receipt]);
   const payments = hostPayments(receipt?.hostInfo);
-  const [payWith, setPayWith] = useState<PayMethod | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
-  const [paying, setPaying] = useState(false);
-
-  const selected =
-    payments.find((p) => p.method === payWith) ?? primaryHostPayment(receipt?.hostInfo);
+  const [paying, setPaying] = useState<string | null>(null);
 
   if (!receipt || !totals) {
     return (
@@ -47,7 +37,23 @@ export default function SettleScreen() {
     ? totals.people.find((p) => p.personName === flow.guest?.name)
     : undefined;
   const restaurant = receipt.restaurant || "the check";
-  const fallbackPayment: HostPayment = selected ?? { method: "other", handle: "the host" };
+  const hostName =
+    flow.isHost && flow.guest?.name.trim() ? flow.guest.name.trim() : "the host";
+
+  async function payWith(payment: HostPayment, amountCents: number) {
+    if (!payMethodIsOpenable(payment.method)) return;
+    setPaying(payment.method);
+    try {
+      await openHostPay({
+        method: payment.method,
+        handle: payment.handle,
+        amountCents,
+        note: `${flow.guest?.name ?? "Guest"} · ${restaurant}`,
+      });
+    } finally {
+      setPaying(null);
+    }
+  }
 
   return (
     <AppShell>
@@ -80,8 +86,8 @@ export default function SettleScreen() {
         }
       >
         <Text style={styles.lead}>
-          Drinks plus a share of tax and tip. Pay opens the host's app when possible — nothing is
-          charged from Split the Wine.
+          Drinks plus a share of tax and tip. Tapping a payment method opens the host's app when
+          possible — nothing is charged from Split the Wine.
         </Text>
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         {leftover ? (
@@ -102,58 +108,54 @@ export default function SettleScreen() {
 
         {mine && mine.totalCents > 0 ? (
           <View style={styles.youCard}>
-            <View style={styles.youHead}>
-              <View>
-                <Text style={styles.youLabel}>You owe</Text>
-                <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
-              </View>
-              <PayMethodIcon method={fallbackPayment.method} size={80} />
-            </View>
-            {payments.length > 1 ? (
-              <View style={styles.chooser}>
-                <Text style={styles.muted}>Pay with</Text>
-                <View style={styles.chooserRow}>
+            <Text style={styles.youLabel}>You owe</Text>
+            <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
+            {payments.length > 0 ? (
+              <>
+                <Text style={styles.payIntro}>
+                  You can pay your share of {centsToLabel(mine.totalCents)} to the host
+                  {hostName !== "the host" ? `, ${hostName},` : ""} via the following payment
+                  method{payments.length === 1 ? "" : "s"}:
+                </Text>
+                <View style={styles.payList}>
                   {payments.map((payment) => {
-                    const on = payment.method === fallbackPayment.method;
-                    return (
-                      <PressScale
-                        key={payment.method}
-                        onPress={() => setPayWith(payment.method)}
-                        style={[styles.chooserChip, on && styles.chooserChipOn]}
-                      >
+                    const openable = payMethodIsOpenable(payment.method);
+                    const meta = PAY_METHOD_META[payment.method];
+                    const body = (
+                      <>
                         <PayMethodIcon method={payment.method} size={48} />
-                        <Text style={[styles.chooserLabel, on && { color: colors.ink }]}>
-                          {PAY_METHOD_META[payment.method].label}
-                        </Text>
-                      </PressScale>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={styles.payLabel}>{meta.label}</Text>
+                          <Text style={styles.muted}>{payment.handle}</Text>
+                        </View>
+                      </>
+                    );
+                    if (openable) {
+                      return (
+                        <PressScale
+                          key={payment.method}
+                          disabled={paying === payment.method}
+                          onPress={() => void payWith(payment, mine.totalCents)}
+                          style={styles.payRow}
+                        >
+                          {body}
+                          <Text style={styles.payCta}>
+                            {paying === payment.method ? "Opening…" : "Pay"}
+                          </Text>
+                        </PressScale>
+                      );
+                    }
+                    return (
+                      <View key={payment.method} style={styles.payRow}>
+                        {body}
+                      </View>
                     );
                   })}
                 </View>
-              </View>
-            ) : null}
-            <Text style={styles.muted}>
-              To {fallbackPayment.handle} on {PAY_METHOD_META[fallbackPayment.method].label}
-            </Text>
-            <PressScale
-              disabled={paying}
-              onPress={() => {
-                setPaying(true);
-                void openHostPay({
-                  method: fallbackPayment.method,
-                  handle: fallbackPayment.handle,
-                  amountCents: mine.totalCents,
-                  note: `${flow.guest?.name ?? "Guest"} · ${restaurant}`,
-                }).finally(() => setPaying(false));
-              }}
-              style={styles.payBtn}
-            >
-              <PayMethodIcon method={fallbackPayment.method} size={44} />
-              <Text style={styles.payBtnText}>
-                {paying
-                  ? "Opening…"
-                  : `Pay with ${PAY_METHOD_META[fallbackPayment.method].label}`}
-              </Text>
-            </PressScale>
+              </>
+            ) : (
+              <Text style={styles.muted}>The host hasn't added a payment method yet.</Text>
+            )}
           </View>
         ) : null}
 
@@ -168,7 +170,6 @@ export default function SettleScreen() {
         ) : (
           totals.people.map((person) => {
             const amount = centsToLabel(person.totalCents);
-            const text = messageFor(person.personName, amount, fallbackPayment);
             const isYou = flow.guest?.name === person.personName;
             return (
               <View
@@ -194,41 +195,6 @@ export default function SettleScreen() {
                   </Text>
                 ))}
                 <Text style={styles.muted}>Share of tax & tip · {centsToLabel(person.feeCents)}</Text>
-                {!isYou ? (
-                  <>
-                    <Text style={[styles.muted, { marginTop: 8 }]}>{text}</Text>
-                    <View style={styles.actions}>
-                      <View style={{ flex: 1 }}>
-                        <PrimaryButton
-                          onPress={() =>
-                            void Linking.openURL(`sms:?&body=${encodeURIComponent(text)}`)
-                          }
-                        >
-                          Texts
-                        </PrimaryButton>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <QuietButton
-                          onPress={() =>
-                            void Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`)
-                          }
-                        >
-                          WhatsApp
-                        </QuietButton>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <QuietButton
-                          onPress={async () => {
-                            await Clipboard.setStringAsync(text);
-                            setCopied(person.personName);
-                          }}
-                        >
-                          {copied === person.personName ? "Copied" : "Copy"}
-                        </QuietButton>
-                      </View>
-                    </View>
-                  </>
-                ) : null}
               </View>
             );
           })
@@ -275,36 +241,30 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     backgroundColor: "#FBFAF8",
-    gap: 8,
+    gap: 6,
   },
-  youHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   youLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   youAmount: { marginTop: 2, fontSize: 28, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  chooser: { gap: 6, marginTop: 4 },
-  chooserRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chooserChip: {
+  payIntro: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.muted,
+  },
+  payList: { marginTop: 8, gap: 8 },
+  payRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+    backgroundColor: "#FFF",
   },
-  chooserChipOn: { borderColor: colors.merlot, backgroundColor: "#FFF" },
-  chooserLabel: { fontSize: 12, fontWeight: "600", color: colors.muted },
-  payBtn: {
-    marginTop: 6,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.merlot,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  payBtnText: { color: colors.merlotFg, fontSize: 15, fontWeight: "700" },
+  payLabel: { fontSize: 15, fontWeight: "600", color: colors.ink },
+  payCta: { fontSize: 12, fontWeight: "700", color: colors.merlot },
   peopleHead: {
     flexDirection: "row",
     alignItems: "center",
@@ -317,5 +277,4 @@ const styles = StyleSheet.create({
   personId: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   name: { fontSize: 15, fontWeight: "600", color: colors.ink },
   amount: { fontSize: 22, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  actions: { flexDirection: "row", gap: 4, marginTop: 12 },
 });
