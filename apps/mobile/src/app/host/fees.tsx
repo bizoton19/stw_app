@@ -11,7 +11,9 @@ import { colors } from "@/lib/theme";
 export default function HostFees() {
   const router = useRouter();
   const draft = useHostDraft();
-  const itemSubtotal = draft.items.reduce((s, i) => s + i.totalCents, 0);
+  const itemSubtotal = draft.items
+    .filter((i) => !i.removed)
+    .reduce((s, i) => s + i.totalCents, 0);
   const feeTotal = draft.fees.reduce((s, f) => s + f.amountCents, 0);
 
   return (
@@ -26,6 +28,11 @@ export default function HostFees() {
         dense
         footer={
           <View>
+            <Text style={styles.footBreak}>
+              Items {centsToLabel(itemSubtotal)}
+              {"  ·  "}
+              Fees {centsToLabel(feeTotal)}
+            </Text>
             <Text style={styles.footNote}>
               {t("fees.grand", { amount: centsToLabel(itemSubtotal + feeTotal) })}
             </Text>
@@ -153,11 +160,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginLeft: -2,
   },
+  footBreak: {
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.inkSoft,
+    marginBottom: 4,
+    fontVariant: ["tabular-nums"],
+  },
   footNote: {
     textAlign: "center",
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.ink,
+    marginBottom: 10,
     fontVariant: ["tabular-nums"],
   },
 });

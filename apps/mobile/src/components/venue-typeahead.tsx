@@ -63,7 +63,7 @@ export function VenueTypeahead({
 }: Props) {
   const { width, height } = useWindowDimensions();
   const mapW = Math.min(600, Math.max(280, Math.round(width - 48)));
-  const mapH = Math.min(340, Math.max(240, Math.round(height * 0.34)));
+  const mapH = Math.min(420, Math.max(300, Math.round(height * 0.46)));
 
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [loading, setLoading] = useState(false);
@@ -201,10 +201,10 @@ export function VenueTypeahead({
           <View style={styles.selected}>
             <VenueKindIcon category={venue?.category} name={venue?.name} />
             <View style={styles.selectedBody}>
-              <Text style={styles.name}>{venue!.name}</Text>
-              {address ? <Text style={styles.secondary}>{address}</Text> : null}
+              <Text style={styles.selectedName}>{venue!.name}</Text>
+              {address ? <Text style={styles.selectedSecondary}>{address}</Text> : null}
               {dateLabel ? (
-                <Text style={styles.date}>Receipt date · {dateLabel}</Text>
+                <Text style={styles.selectedDate}>Receipt date · {dateLabel}</Text>
               ) : null}
             </View>
             <Pressable onPress={clearSelection} hitSlop={8}>
@@ -212,7 +212,7 @@ export function VenueTypeahead({
             </Pressable>
           </View>
           {hasMap ? (
-            <View style={styles.mapWrap}>
+            <View style={[styles.mapWrap, { minHeight: mapH }]}>
               <Image
                 source={{
                   uri: staticMapUri(venue!.lat!, venue!.lng!, mapW, mapH),
@@ -295,26 +295,48 @@ const styles = StyleSheet.create({
   selected: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: 14,
+    marginBottom: 12,
+    backgroundColor: "#FFFcf8",
   },
   selectedBody: { flex: 1, minWidth: 0 },
   name: { fontSize: 15, fontWeight: "600", color: colors.ink },
+  selectedName: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.ink,
+    letterSpacing: -0.35,
+    lineHeight: 28,
+  },
   secondary: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  selectedSecondary: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.inkSoft,
+    marginTop: 4,
+  },
   date: { fontSize: 12, color: colors.muted, marginTop: 8 },
-  change: { fontSize: 13, fontWeight: "600", color: colors.merlot, marginTop: 2 },
+  selectedDate: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.inkSoft,
+    marginTop: 10,
+  },
+  change: { fontSize: 14, fontWeight: "700", color: colors.merlot, marginTop: 4 },
   mapWrap: {
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    marginBottom: 8,
+    marginBottom: 4,
     backgroundColor: "#EDE8E1",
+    flexGrow: 1,
+    minHeight: 280,
   },
   map: { width: "100%", backgroundColor: "#EDE8E1" },
 });

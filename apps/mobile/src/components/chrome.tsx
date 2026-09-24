@@ -49,6 +49,8 @@ export function InterviewChrome({
   footer,
   keyboard = false,
   dense = false,
+  /** Short screens: grow content area so body can use vertical space. */
+  sparse = false,
 }: {
   step: number;
   total: number;
@@ -58,8 +60,8 @@ export function InterviewChrome({
   children: React.ReactNode;
   footer: React.ReactNode;
   keyboard?: boolean;
-  /** Tighter title + padding so list screens fit more on one viewport. */
   dense?: boolean;
+  sparse?: boolean;
 }) {
   const progress = (step / total) * 100;
   const inner = (
@@ -89,13 +91,33 @@ export function InterviewChrome({
       </View>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, dense && styles.scrollContentDense]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          dense && styles.scrollContentDense,
+          sparse && styles.scrollContentSparse,
+        ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {kicker ? <Text style={[styles.kicker, dense && styles.kickerDense]}>{kicker}</Text> : null}
-        <Text style={[styles.title, dense && styles.titleDense]}>{title}</Text>
-        <View style={[styles.children, dense && styles.childrenDense]}>{children}</View>
+        {kicker ? (
+          <Text style={[styles.kicker, dense && styles.kickerDense, sparse && styles.kickerSparse]}>
+            {kicker}
+          </Text>
+        ) : null}
+        <Text
+          style={[styles.title, dense && styles.titleDense, sparse && styles.titleSparse]}
+        >
+          {title}
+        </Text>
+        <View
+          style={[
+            styles.children,
+            dense && styles.childrenDense,
+            sparse && styles.childrenSparse,
+          ]}
+        >
+          {children}
+        </View>
       </ScrollView>
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
         {footer}
@@ -116,6 +138,11 @@ export function InterviewChrome({
       {inner}
     </KeyboardAvoidingView>
   );
+}
+
+/** Quiet helper under the sticky CTA — fills footer without competing with the button. */
+export function FooterHint({ children }: { children: string }) {
+  return <Text style={styles.footerHint}>{children}</Text>;
 }
 
 export function PrimaryButton({
@@ -189,8 +216,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
   scrollContentDense: { paddingTop: 10, paddingBottom: 12 },
+  scrollContentSparse: { flexGrow: 1, paddingTop: 28, paddingBottom: 32 },
   kicker: { fontSize: type.kicker, fontWeight: "600", color: colors.inkSoft, marginBottom: 4 },
   kickerDense: { marginBottom: 2, fontSize: 12 },
+  kickerSparse: { fontSize: 14, marginBottom: 8 },
   title: {
     fontSize: type.title,
     fontWeight: "700",
@@ -199,25 +228,35 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   titleDense: { fontSize: 22, lineHeight: 26, letterSpacing: -0.3 },
+  titleSparse: { fontSize: 30, lineHeight: 36, letterSpacing: -0.55 },
   children: { marginTop: 16 },
   childrenDense: { marginTop: 10 },
+  childrenSparse: { marginTop: 28, flexGrow: 1 },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     backgroundColor: colors.paper,
     paddingHorizontal: 20,
     paddingTop: 12,
-    gap: 4,
+    gap: 6,
+  },
+  footerHint: {
+    textAlign: "center",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "500",
+    color: colors.inkSoft,
+    marginBottom: 4,
   },
   primary: {
-    height: 48,
+    height: 52,
     width: "100%",
     borderRadius: 999,
     backgroundColor: colors.merlot,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { color: colors.merlotFg, fontSize: 15, fontWeight: "700" },
+  primaryText: { color: colors.merlotFg, fontSize: 16, fontWeight: "700" },
   quiet: {
     height: 48,
     borderRadius: 999,

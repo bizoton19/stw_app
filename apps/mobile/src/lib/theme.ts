@@ -23,6 +23,6 @@ export const type = {
   kicker: 13,
   body: 15,
   small: 12,
-  title: 27,
+  title: 28,
   step: 12,
 };

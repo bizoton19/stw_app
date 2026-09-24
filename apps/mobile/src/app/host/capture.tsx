@@ -5,7 +5,7 @@ import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import { useShareIntentContext } from "expo-share-intent";
 import { Camera, ImageIcon, Share2 } from "lucide-react-native";
-import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ChoiceRow } from "@/components/choice-row";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
@@ -108,12 +108,19 @@ export default function HostCapture() {
         title="How should we add the tab?"
         onBack={() => router.back()}
         footer={
-          <PrimaryButton
-            disabled={draft.pickMode === null || !draft.image}
-            onPress={() => router.push("/host/parsing")}
-          >
-            Continue
-          </PrimaryButton>
+          <View>
+            <FooterHint>
+              {draft.image
+                ? "Tap the photo above if you need a different shot."
+                : "From Photos you can also Share → Split the Wine."}
+            </FooterHint>
+            <PrimaryButton
+              disabled={draft.pickMode === null || !draft.image}
+              onPress={() => router.push("/host/parsing")}
+            >
+              Continue
+            </PrimaryButton>
+          </View>
         }
       >
         <View style={styles.list}>
@@ -157,10 +164,6 @@ export default function HostCapture() {
             </View>
           </PressScale>
         ) : null}
-        <Text style={styles.note}>
-          Tip: from Camera or Photos, tap Share → Split the Wine to skip opening the app first.
-          Photos are read on the server. You still review every line before sharing.
-        </Text>
       </InterviewChrome>
     </AppShell>
   );
@@ -169,14 +172,14 @@ export default function HostCapture() {
 const styles = StyleSheet.create({
   list: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   previewWrap: {
-    marginTop: 16,
-    borderRadius: 12,
+    marginTop: 20,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   preview: {
-    height: 180,
+    height: 260,
     width: "100%",
   },
   previewOverlay: {
@@ -184,14 +187,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingVertical: 8,
+    paddingVertical: 10,
     backgroundColor: "rgba(42, 36, 28, 0.55)",
     alignItems: "center",
   },
   previewHint: {
     color: "#F6F4F1",
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
   },
-  note: { marginTop: 16, fontSize: 12, lineHeight: 18, color: colors.muted },
 });

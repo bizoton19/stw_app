@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { WineMark } from "@/components/wine-mark";
 import { useHostDraft } from "@/context/host-draft";
 import { colors } from "@/lib/theme";
 
@@ -31,12 +32,19 @@ export default function HostParsing() {
         kicker="Reading"
         title="Looking over every pour…"
         onBack={() => router.back()}
-        footer={<PrimaryButton disabled>Reading the receipt</PrimaryButton>}
+        sparse
+        footer={
+          <View>
+            <FooterHint>Next: confirm the place on the check.</FooterHint>
+            <PrimaryButton disabled>Reading the receipt</PrimaryButton>
+          </View>
+        }
       >
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.merlot} />
+          <WineMark size={56} />
+          <ActivityIndicator size="large" color={colors.merlot} style={{ marginTop: 28 }} />
           <Text style={styles.copy}>
-            This can take a few seconds. You will review every line next and can fix anything.
+            This can take a few seconds. You’ll review every line next and can fix anything.
           </Text>
         </View>
       </InterviewChrome>
@@ -45,13 +53,20 @@ export default function HostParsing() {
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: "center", paddingVertical: 48 },
+  center: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+    minHeight: 280,
+  },
   copy: {
-    marginTop: 24,
-    maxWidth: 280,
+    marginTop: 28,
+    maxWidth: 300,
     textAlign: "center",
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.muted,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: "500",
+    color: colors.inkSoft,
   },
 });
