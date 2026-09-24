@@ -1,7 +1,7 @@
 import { usingDatabase } from "./db";
 import * as memory from "./store-memory";
 import * as pg from "./store-pg";
-import type { HostInfo, ParseReviewChoice } from "./types";
+import type { HostInfo, ParseReviewChoice, ReceiptVenue } from "./types";
 import type { ParseMeta, ReceiptImage } from "./parse-receipt";
 
 /**
@@ -40,6 +40,7 @@ export async function saveReceipt(
   hostToken: string | null,
   patch: {
     restaurant?: string;
+    venue?: ReceiptVenue | null;
     items?: { id?: string; name: string; qty: number; totalCents: number }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;

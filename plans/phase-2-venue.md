@@ -1,6 +1,6 @@
 # Phase 2 — Host venue typeahead
 
-Status: **design + technical plan — near-term.** Places autocomplete + structured venue on the receipt. Foundation for [Phase 3 voice reconcile](./phase-3-voice.md). Do not build Phase 3 until this is live and App Store / privacy copy covers venue storage.
+Status: **in progress — shipping.** iOS uses on-device **Apple MapKit** (free). Android + web use **Mapbox Search Box** via server proxy (`MAPBOX_ACCESS_TOKEN`). Typed-only venue still allowed if Places fails or location is denied.
 
 Parent plan: [requirements.md](./requirements.md) §5 / §17.
 
@@ -100,17 +100,18 @@ CREATE INDEX IF NOT EXISTS receipts_created_at_idx
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/places/autocomplete?q=&lat=&lng=&session=` | Proxied Places suggestions (food/drink types). Rate-limit by IP (+ host token if present). |
-| `GET` | `/api/places/details?placeId=&session=` | Resolve lat/lng/address/category after select. |
+| `GET` | `/api/places/autocomplete?q=&lat=&lng=&session=` | Mapbox suggest (Android/web; iOS Expo Go fallback). |
+| `GET` | `/api/places/details?placeId=&session=` | Mapbox retrieve after select. |
 | `PUT` | `/api/receipts/:id` | Existing save — accept `venue` (+ keep `restaurant`). |
 
-Do **not** put Places API keys in the mobile bundle.
+**iOS native:** `apps/mobile/modules/mapkit-search` — `MKLocalSearch` on-device (no Mapbox cost). Falls back to Mapbox API in Expo Go.
+
+Do **not** put Mapbox tokens in the mobile bundle.
 
 Env (server):
 
 ```
-GOOGLE_PLACES_API_KEY=
-PLACES_PROVIDER=google   # google | apple
+MAPBOX_ACCESS_TOKEN=
 ```
 
 Autocomplete response sketch:

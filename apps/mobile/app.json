@@ -15,6 +15,7 @@
         "NSCameraUsageDescription": "Split the Wine photographs the check so the server can read the lines. You still review every item.",
         "NSPhotoLibraryUsageDescription": "Split the Wine reads a receipt photo from your library so the server can extract the tab.",
         "NSPhotoLibraryAddUsageDescription": "Split the Wine only reads photos; it does not save to your library.",
+        "NSLocationWhenInUseUsageDescription": "Split the Wine uses your location to suggest nearby restaurants when naming the venue on the check.",
         "LSApplicationQueriesSchemes": [
           "venmo",
           "cashme",
@@ -39,7 +40,9 @@
       "predictiveBackGestureEnabled": true,
       "usesCleartextTraffic": true,
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -102,6 +105,12 @@
               "ko"
             ]
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Split the Wine uses your location to suggest nearby restaurants when naming the venue on the check."
         }
       ],
       "expo-asset"

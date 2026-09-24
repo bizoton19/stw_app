@@ -43,10 +43,27 @@ export type HostInfo = {
 
 export type ParseReviewChoice = "looks_good" | "remove_items" | "needs_edits";
 
+export type VenueSource = "places" | "typed";
+
+/** Structured venue on the receipt (Phase 2). Lives and dies with the tab. */
+export type ReceiptVenue = {
+  name: string;
+  placeId?: string | null;
+  provider?: "google" | "apple" | "mapbox" | null;
+  formattedAddress?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  category?: string | null;
+  source: VenueSource;
+  confirmedAt: string;
+};
+
 export type Receipt = {
   id: string;
   status: ReceiptStatus;
   restaurant: string;
+  /** Optional structured place — mirrors restaurant name when set. */
+  venue?: ReceiptVenue | null;
   items: Item[];
   fees: Fee[];
   claims: Claim[];

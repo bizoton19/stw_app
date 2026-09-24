@@ -49,7 +49,7 @@
         <h1 class="text-3xl md:text-4xl font-bold mb-8">Privacy Policy</h1>
         
         <div class="prose prose-stone prose-a:text-merlot max-w-none space-y-6 text-inkSoft leading-relaxed">
-            <p><strong>Last Updated: September 21, 2026</strong></p>
+            <p><strong>Last Updated: September 24, 2026</strong></p>
 
             <p>
                 Split the Wine ("we", "our", or "us") respects your privacy. Our goal is to make splitting the check as frictionless as possible. We do not want your data, your contacts, or a permanent ledger of your dinners.
@@ -59,13 +59,14 @@
             <ul class="list-disc pl-5 space-y-2">
                 <li><strong>Receipt Photos:</strong> When a host snaps a photo of a check, the image is sent to our servers and processed by our third-party AI provider (OpenRouter) to extract the line items and prices. We do not store or use these photos for training.</li>
                 <li><strong>Receipt Data:</strong> The extracted text (restaurant name, items, fees) is stored on our servers so that guests can load the link and claim their items.</li>
+                <li><strong>Venue / Location (optional):</strong> When naming the place on the check, you may allow location so we can suggest nearby restaurants or bars. On iPhone this search can run on-device via Apple MapKit. On Android and the web we may send your search text and approximate location to Mapbox to return suggestions. If you pick a suggestion, we store a structured venue (name, optional place id, and coordinates) <em>on that receipt only</em>, with the same retention as the tab. We do not build a personal place history or user profile of where you eat. You can always type a name without sharing location or picking a suggestion.</li>
                 <li><strong>Names and Payment Handles:</strong> Guests enter a name when claiming drinks. Hosts enter their payment handles (like a Venmo username or a phone number) so guests know where to send money. This is stored plainly alongside the receipt data.</li>
                 <li><strong>No Accounts:</strong> We do not require or collect user accounts, passwords, email addresses, or phone numbers for registration.</li>
             </ul>
 
             <h3 class="text-xl font-bold text-ink mt-8 mb-4">2. How We Use Your Information</h3>
             <p>
-                We only use the data you provide to facilitate splitting the specific check you uploaded. The receipt data, guest names, and host payment handles are visible to anyone who possesses the unique link to that specific receipt.
+                We only use the data you provide to facilitate splitting the specific check you uploaded. The receipt data, guest names, and host payment handles are visible to anyone who possesses the unique link to that specific receipt. Venue coordinates are used for matching and display of the place name — guests see the venue name, not a map of your movements.
             </p>
 
             <h3 class="text-xl font-bold text-ink mt-8 mb-4">3. Payments</h3>
@@ -75,7 +76,7 @@
 
             <h3 class="text-xl font-bold text-ink mt-8 mb-4">4. Third-Party Services</h3>
             <p>
-                We use an external AI provider (OpenRouter) strictly to convert your receipt photo into text. They do not retain your images for model training. We do not share your names, payment handles, or contacts with them.
+                We use an external AI provider (OpenRouter) strictly to convert your receipt photo into text. They do not retain your images for model training. We do not share your names, payment handles, or contacts with them. For venue suggestions on Android and the web, we use Mapbox Search; Apple MapKit may process on-device searches on iOS. Those providers receive the search query and, if you allow it, approximate location for ranking — not your full receipt or payment handles.
             </p>
 
             <h3 class="text-xl font-bold text-ink mt-8 mb-4">5. Data Retention</h3>

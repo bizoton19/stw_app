@@ -42,10 +42,25 @@ export type HostInfo = {
 
 export type ParseReviewChoice = "looks_good" | "remove_items" | "needs_edits";
 
+export type VenueSource = "places" | "typed";
+
+export type ReceiptVenue = {
+  name: string;
+  placeId?: string | null;
+  provider?: "google" | "apple" | "mapbox" | null;
+  formattedAddress?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  category?: string | null;
+  source: VenueSource;
+  confirmedAt: string;
+};
+
 export type Receipt = {
   id: string;
   status: ReceiptStatus;
   restaurant: string;
+  venue?: ReceiptVenue | null;
   items: Item[];
   fees: Fee[];
   claims: Claim[];

@@ -21,7 +21,9 @@ export function jsonError(err: unknown) {
           ? 409
           : code === "invalid"
             ? 400
-            : 500;
+            : code === "places_upstream"
+              ? 502
+              : 500;
   return NextResponse.json(
     { error: code, remaining, itemId },
     { status },

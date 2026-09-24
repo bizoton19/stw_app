@@ -6,11 +6,20 @@ import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VenueTypeahead, ensureVenueForPublish } from "@/components/venue-typeahead";
 import { centsToLabel } from "@/lib/money";
 import { validateHostPayments } from "@/lib/host-pay";
 import { payMethodsForRegion } from "@/lib/pay-region";
 import { api, getHostToken, saveHostToken } from "@/lib/session";
-import type { Fee, HostInfo, Item, ParseReviewChoice, PayMethod, PublicReceipt } from "@/lib/types";
+import type {
+  Fee,
+  HostInfo,
+  Item,
+  ParseReviewChoice,
+  PayMethod,
+  PublicReceipt,
+  ReceiptVenue,
+} from "@/lib/types";
 
 type Step =
   | "ready"
@@ -125,6 +134,7 @@ export function HostInterview() {
   const [file, setFile] = useState<File | null>(null);
   const [pickMode, setPickMode] = useState<"camera" | "library" | null>(null);
   const [restaurant, setRestaurant] = useState("");
+  const [venue, setVenue] = useState<ReceiptVenue | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
   const [payments, setPayments] = useState<{ method: PayMethod; handle: string }[]>([
@@ -155,6 +165,7 @@ export function HostInterview() {
 
   function applyReceipt(receipt: PublicReceipt) {
     setRestaurant(receipt.restaurant);
+    setVenue(receipt.venue ?? null);
     setItems(toDraftItems(receipt.items));
     setFees(toDraftFees(receipt.fees));
   }
@@ -259,11 +270,13 @@ export function HostInterview() {
     setError(null);
     try {
       const token = sessionStorage.getItem(`stw-host:${receiptId}`);
+      const venueToSave = ensureVenueForPublish(restaurant, venue);
       const { claimUrl: path } = await api<{ claimUrl: string }>(`/api/receipts/${receiptId}`, {
         method: "PUT",
         hostToken: token,
         body: JSON.stringify({
-          restaurant,
+          restaurant: venueToSave.name,
+          venue: venueToSave,
           items: items.map(({ id, name, qty, totalCents }) => ({
             id,
             name,
@@ -383,16 +396,12 @@ export function HostInterview() {
     body = (
       <>
         {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
-        <Label htmlFor="restaurant" className="mb-2 text-[13px] font-medium">
-          Restaurant or bar
-        </Label>
-        <Input
-          id="restaurant"
+        <VenueTypeahead
           value={restaurant}
-          onChange={(e) => setRestaurant(e.target.value)}
-          placeholder="The Bar"
-          className={fieldClass}
-          autoComplete="organization"
+          venue={venue}
+          onChangeName={setRestaurant}
+          onChangeVenue={setVenue}
+          fieldClass={fieldClass}
         />
       </>
     );

@@ -24,6 +24,7 @@ export async function PUT(
     const { id } = await ctx.params;
     const body = (await req.json()) as {
       restaurant?: string;
+      venue?: import("@/lib/types").ReceiptVenue | null;
       items?: { id?: string; name: string; qty: number; totalCents: number }[];
       fees?: { id?: string; name: string; amountCents: number }[];
       hostInfo?: unknown;
@@ -35,6 +36,7 @@ export async function PUT(
     }
     const receipt = await saveReceipt(id, hostTokenOf(req), {
       restaurant: body.restaurant,
+      venue: body.venue,
       items: body.items,
       fees: body.fees,
       hostInfo: hostInfo ?? undefined,

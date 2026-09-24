@@ -1,7 +1,7 @@
 import { Text } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
-import { Field } from "@/components/field";
+import { VenueTypeahead } from "@/components/venue-typeahead";
 import { useHostDraft } from "@/context/host-draft";
 import { colors } from "@/lib/theme";
 
@@ -29,13 +29,11 @@ export default function HostRestaurant() {
         {draft.error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 16 }}>{draft.error}</Text>
         ) : null}
-        <Field
-          label="Restaurant or bar"
+        <VenueTypeahead
           value={draft.restaurant}
-          onChangeText={draft.setRestaurant}
-          placeholder="The Bar"
-          autoCapitalize="words"
-          autoComplete="organization"
+          venue={draft.venue}
+          onChangeName={draft.setRestaurant}
+          onChangeVenue={draft.setVenue}
         />
       </InterviewChrome>
     </AppShell>

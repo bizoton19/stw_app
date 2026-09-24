@@ -81,6 +81,7 @@ function toPublic(receipt: InternalReceipt): PublicReceipt {
     id: receipt.id,
     status: receipt.status,
     restaurant: receipt.restaurant,
+    venue: receipt.venue ?? null,
     items: receipt.items,
     fees: receipt.fees,
     claims,
@@ -278,6 +279,7 @@ export async function saveReceipt(
   hostToken: string | null,
   patch: {
     restaurant?: string;
+    venue?: import("./types").ReceiptVenue | null;
     items?: { id?: string; name: string; qty: number; totalCents: number }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;
@@ -291,6 +293,12 @@ export async function saveReceipt(
       throw Object.assign(new Error("finalized"), { code: "conflict" });
     }
     if (patch.restaurant !== undefined) receipt.restaurant = patch.restaurant.trim();
+    if (patch.venue !== undefined) {
+      receipt.venue = patch.venue;
+      if (patch.venue?.name && patch.restaurant === undefined) {
+        receipt.restaurant = patch.venue.name.trim();
+      }
+    }
     if (patch.items) {
       if (receipt.status === "open") {
         for (const incoming of patch.items) {

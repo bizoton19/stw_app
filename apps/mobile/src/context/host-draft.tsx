@@ -11,7 +11,9 @@ import type {
   PayMethod,
   PickedImage,
   PublicReceipt,
+  ReceiptVenue,
 } from "@/lib/types";
+import { typedVenue } from "@/lib/places";
 
 export type DraftItem = Item & { totalInput: string };
 export type DraftFee = Fee & { amountInput: string };
@@ -29,6 +31,7 @@ type HostDraft = {
   pickMode: PickMode;
   image: PickedImage | null;
   restaurant: string;
+  venue: ReceiptVenue | null;
   items: DraftItem[];
   fees: DraftFee[];
   payments: HostPayment[];
@@ -36,6 +39,7 @@ type HostDraft = {
   error: string | null;
   setPick: (mode: PickMode, image?: PickedImage | null) => void;
   setRestaurant: (v: string) => void;
+  setVenue: (v: ReceiptVenue | null) => void;
   setItems: (v: DraftItem[] | ((prev: DraftItem[]) => DraftItem[])) => void;
   setFees: (v: DraftFee[] | ((prev: DraftFee[]) => DraftFee[])) => void;
   setPayment: (index: number, patch: Partial<HostPayment>) => void;
@@ -53,6 +57,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [pickMode, setPickMode] = useState<PickMode>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
   const [restaurant, setRestaurant] = useState("");
+  const [venue, setVenue] = useState<ReceiptVenue | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
   const [payments, setPayments] = useState<HostPayment[]>([
@@ -89,6 +94,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const applyReceipt = useCallback((receipt: PublicReceipt) => {
     setRestaurant(receipt.restaurant);
+    setVenue(receipt.venue ?? null);
     setItems(toDraftItems(receipt.items));
     setFees(toDraftFees(receipt.fees));
   }, []);
@@ -155,11 +161,18 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     const checked = validateHostPayments(payments);
     if (!checked.ok) throw new Error(checked.message);
     const { getHostToken } = await import("@/lib/session");
+    const venueToSave =
+      venue && venue.name.trim()
+        ? venue
+        : restaurant.trim()
+          ? typedVenue(restaurant)
+          : null;
     await api(`/api/receipts/${receiptId}`, {
       method: "PUT",
       hostToken: getHostToken(receiptId),
       body: JSON.stringify({
-        restaurant,
+        restaurant: venueToSave?.name ?? restaurant,
+        venue: venueToSave,
         items: items.map(({ id, name, qty, totalCents }) => ({ id, name, qty, totalCents })),
         fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
         hostInfo: { payments: checked.payments },
@@ -167,7 +180,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       }),
     });
     setClaimUrl(publicClaimUrl(receiptId));
-  }, [fees, items, payments, receiptId, restaurant]);
+  }, [fees, items, payments, receiptId, restaurant, venue]);
 
   const value = useMemo(
     () => ({
@@ -175,6 +188,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       pickMode,
       image,
       restaurant,
+      venue,
       items,
       fees,
       payments,
@@ -182,6 +196,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       error,
       setPick,
       setRestaurant,
+      setVenue,
       setItems,
       setFees,
       setPayment,
@@ -205,6 +220,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       recordParseReview,
       removePayment,
       restaurant,
+      venue,
       runParse,
       setPayment,
       setPick,
