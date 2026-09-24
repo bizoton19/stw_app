@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { VenueTypeahead, ensureVenueForPublish } from "@/components/venue-typeahead";
 import { centsToLabel } from "@/lib/money";
 import { validateHostPayments } from "@/lib/host-pay";
+import { payVerifyUrl } from "@/lib/pay";
 import { payMethodsForRegion } from "@/lib/pay-region";
 import { api, getHostToken, saveHostToken } from "@/lib/session";
 import type {
@@ -709,26 +710,48 @@ export function HostInterview() {
       body = (
         <>
           {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
-          <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
-            Claimers will see these options. A typo here means money goes to the wrong place.
-          </p>
+          <div className="mb-4 rounded-xl border border-[rgba(110,46,53,0.28)] bg-[rgba(110,46,53,0.06)] px-3.5 py-3.5">
+            <p className="text-[14px] font-bold text-foreground">Guests pay exactly what you enter</p>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted-foreground">
+              Wrong handle or number means the payment won’t reach you — we can’t verify accounts
+              live. Double-check each line.
+            </p>
+          </div>
           <ul className="space-y-3">
-            {rows.map((payment) => (
-              <li
-                key={payment.method}
-                className="flex items-center gap-3 rounded-xl border border-border px-3 py-3"
-              >
-                <span className="text-[13px] font-semibold text-ink-soft">
-                  {PAY_OPTIONS.find((o) => o.method === payment.method)?.label}
-                </span>
-                <span className="text-[17px] font-semibold tracking-tight">{payment.handle}</span>
-              </li>
-            ))}
+            {rows.map((payment) => {
+              const verify = payVerifyUrl(payment.method, payment.handle);
+              const label =
+                PAY_OPTIONS.find((o) => o.method === payment.method)?.label ?? payment.method;
+              return (
+                <li
+                  key={payment.method}
+                  className="flex items-start gap-3 rounded-xl border border-border px-3 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[13px] font-semibold text-ink-soft">{label}</span>
+                    <div className="text-[17px] font-semibold tracking-tight">{payment.handle}</div>
+                    {verify ? (
+                      <a
+                        href={verify}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block text-[13px] font-bold text-primary"
+                      >
+                        Open {label} to check
+                      </a>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </>
       );
       footer = (
         <div>
+          <p className="mb-2 text-center text-[13px] font-medium text-muted-foreground">
+            A quick glance now beats chasing people later.
+          </p>
           <ContinueButton disabled={busy} onClick={() => void publish()}>
             {busy ? "Publishing…" : "Looks good — create link"}
           </ContinueButton>

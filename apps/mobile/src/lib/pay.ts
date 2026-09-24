@@ -20,6 +20,31 @@ export function payMethodIsOpenable(method: PayMethod): boolean {
   return method === "venmo" || method === "cashapp" || method === "paypal";
 }
 
+const EMAIL_RE_SIMPLE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Profile / me-link to glance at — no amount. Hosts can spot a typo without
+ * sending a test payment. Returns null when we can't deep-link (Zelle, etc.).
+ */
+export function payVerifyUrl(method: PayMethod, handle: string): string | null {
+  const raw = handle.trim();
+  if (!raw) return null;
+  if (method === "venmo") {
+    const user = stripHandle(raw, "venmo");
+    return user ? `https://venmo.com/${encodeURIComponent(user)}` : null;
+  }
+  if (method === "cashapp") {
+    const tag = raw.startsWith("$") ? raw : `$${raw}`;
+    return `https://cash.app/${encodeURIComponent(tag)}`;
+  }
+  if (method === "paypal") {
+    const user = paypalUsername(raw);
+    if (user) return `https://paypal.me/${encodeURIComponent(user)}`;
+    if (EMAIL_RE_SIMPLE.test(raw)) return `mailto:${raw}`;
+  }
+  return null;
+}
+
 function stripHandle(handle: string, method: PayMethod): string {
   const raw = handle.trim();
   if (method === "venmo") return raw.replace(/^@+/, "");

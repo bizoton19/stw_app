@@ -1,13 +1,13 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { Field } from "@/components/field";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
 import { validateHostPayments } from "@/lib/host-pay";
-import { PAY_METHOD_META } from "@/lib/pay";
+import { PAY_METHOD_META, payVerifyUrl } from "@/lib/pay";
 import { deviceRegionCode, payMethodsForRegion, payRegionBucket } from "@/lib/pay-region";
 import type { PayMethod } from "@/lib/types";
 import { colors } from "@/lib/theme";
@@ -75,6 +75,7 @@ export default function HostPay() {
           onBack={() => setConfirming(false)}
           footer={
             <View>
+              <FooterHint>A quick glance now beats chasing people later.</FooterHint>
               <PrimaryButton busy={busy} onPress={() => void publish()}>
                 Looks good — create link
               </PrimaryButton>
@@ -85,18 +86,38 @@ export default function HostPay() {
           {error ? (
             <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
           ) : null}
-          <Text style={styles.lead}>
-            Claimers will see these options. A typo here means money goes to the wrong place.
-          </Text>
-          {rows.map((payment) => (
-            <View key={payment.method} style={styles.confirmRow}>
-              <PayMethodIcon method={payment.method} size={56} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.confirmLabel}>{PAY_METHOD_META[payment.method].label}</Text>
-                <Text style={styles.confirmHandle}>{payment.handle}</Text>
+          <View style={styles.notice}>
+            <Text style={styles.noticeTitle}>Guests pay exactly what you enter</Text>
+            <Text style={styles.noticeBody}>
+              Wrong handle or number means the payment won’t reach you — we can’t verify accounts
+              live. Double-check each line.
+            </Text>
+          </View>
+          {rows.map((payment) => {
+            const verify = payVerifyUrl(payment.method, payment.handle);
+            return (
+              <View key={payment.method} style={styles.confirmRow}>
+                <PayMethodIcon method={payment.method} size={56} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.confirmLabel}>{PAY_METHOD_META[payment.method].label}</Text>
+                  <Text style={styles.confirmHandle} selectable>
+                    {payment.handle}
+                  </Text>
+                  {verify ? (
+                    <PressScale
+                      onPress={() => void Linking.openURL(verify)}
+                      style={styles.checkLink}
+                      accessibilityLabel={`Open ${PAY_METHOD_META[payment.method].label} to check`}
+                    >
+                      <Text style={styles.checkLinkText}>
+                        Open {PAY_METHOD_META[payment.method].label} to check
+                      </Text>
+                    </PressScale>
+                  ) : null}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </InterviewChrome>
       </AppShell>
     );
@@ -111,9 +132,7 @@ export default function HostPay() {
         title="How should people pay you?"
         onBack={() => router.back()}
         keyboard
-        footer={
-          <PrimaryButton onPress={goConfirm}>Review payment info</PrimaryButton>
-        }
+        footer={<PrimaryButton onPress={goConfirm}>Review payment info</PrimaryButton>}
       >
         {error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
@@ -127,9 +146,7 @@ export default function HostPay() {
           <View key={`${payment.method}-${index}`} style={styles.card}>
             <View style={styles.methodRow}>
               {methods.map((method) => {
-                const taken = draft.payments.some(
-                  (p, i) => i !== index && p.method === method,
-                );
+                const taken = draft.payments.some((p, i) => i !== index && p.method === method);
                 const on = payment.method === method;
                 if (taken) return null;
                 return (
@@ -193,6 +210,26 @@ function placeholderFor(method: PayMethod): string {
 
 const styles = StyleSheet.create({
   lead: { fontSize: 14, lineHeight: 20, color: colors.muted, marginBottom: 14 },
+  notice: {
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(110, 46, 53, 0.28)",
+    backgroundColor: "rgba(110, 46, 53, 0.06)",
+    gap: 6,
+  },
+  noticeTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.ink,
+  },
+  noticeBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.inkSoft,
+  },
   card: {
     marginBottom: 14,
     padding: 12,
@@ -211,7 +248,7 @@ const styles = StyleSheet.create({
   methodChipOn: { borderColor: colors.merlot, backgroundColor: "#FBFAF8" },
   confirmRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -219,4 +256,6 @@ const styles = StyleSheet.create({
   },
   confirmLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   confirmHandle: { marginTop: 2, fontSize: 18, fontWeight: "700", color: colors.ink },
+  checkLink: { marginTop: 8, alignSelf: "flex-start", minHeight: 32, justifyContent: "center" },
+  checkLinkText: { fontSize: 13, fontWeight: "700", color: colors.merlot },
 });
