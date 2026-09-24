@@ -11,7 +11,8 @@ import Animated, {
 import Svg, { Path } from "react-native-svg";
 import { colors } from "@/lib/theme";
 
-const TILT = "16deg";
+/** Match splash/icon.png: bottle leans left (counter-clockwise). */
+const TILT = "-18deg";
 
 /** Brand mark matching the app icon: merlot bottle, tilted, four jagged splits. */
 export function WineMark({ size = 24 }: { size?: number }) {
