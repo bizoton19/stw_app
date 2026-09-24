@@ -25,7 +25,9 @@ export default function HostRestaurant() {
             <FooterHint>
               {placeLocked
                 ? "This place pins on the claim board for your guests."
-                : "Start typing — nearby matches appear as you go."}
+                : draft.restaurant.trim()
+                  ? "Matching the name from your receipt…"
+                  : "Start typing — nearby matches appear as you go."}
             </FooterHint>
             <PrimaryButton
               disabled={!draft.restaurant.trim()}

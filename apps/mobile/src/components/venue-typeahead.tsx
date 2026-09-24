@@ -15,6 +15,7 @@ import { getApiUrl } from "@/lib/config";
 import {
   newSession,
   resolvePlaceDetails,
+  resolveVenueFromName,
   searchPlaces,
   typedVenue,
   type PlacePrediction,
@@ -54,6 +55,16 @@ function staticMapUri(lat: number, lng: number, w: number, h: number): string {
   return `${getApiUrl()}/api/places/static-map?${params}`;
 }
 
+function isPinned(venue: ReceiptVenue | null | undefined): boolean {
+  return (
+    venue?.source === "places" &&
+    typeof venue.lat === "number" &&
+    typeof venue.lng === "number" &&
+    Number.isFinite(venue.lat) &&
+    Number.isFinite(venue.lng)
+  );
+}
+
 export function VenueTypeahead({
   value,
   venue,
@@ -67,21 +78,31 @@ export function VenueTypeahead({
 
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [autoResolving, setAutoResolving] = useState(false);
+  const [mapFailed, setMapFailed] = useState(false);
   const [locationHint, setLocationHint] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationReady, setLocationReady] = useState(false);
   const sessionRef = useRef(newSession());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockedRef = useRef(false);
+  const onChangeNameRef = useRef(onChangeName);
+  const onChangeVenueRef = useRef(onChangeVenue);
+  const coordsRef = useRef(coords);
+  onChangeNameRef.current = onChangeName;
+  onChangeVenueRef.current = onChangeVenue;
+  coordsRef.current = coords;
+  /** One auto-pin attempt per restaurant name seed (fallback if parse didn't pin). */
+  const autoKeyRef = useRef<string | null>(null);
 
   const placeConfirmed = venue?.source === "places" && Boolean(venue.name.trim());
   const address = venue?.formattedAddress?.trim() || null;
   const dateLabel = formatReceiptDateLabel(receiptDate);
-  const hasMap =
-    placeConfirmed &&
-    typeof venue?.lat === "number" &&
-    typeof venue?.lng === "number" &&
-    Number.isFinite(venue.lat) &&
-    Number.isFinite(venue.lng);
+  const hasMap = isPinned(venue) && !mapFailed;
+
+  useEffect(() => {
+    setMapFailed(false);
+  }, [venue?.lat, venue?.lng]);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +112,7 @@ export function VenueTypeahead({
         if (cancelled) return;
         if (status !== "granted") {
           setLocationHint("Location off — search by name only.");
+          setLocationReady(true);
           return;
         }
         setLocationHint("Using nearby places to rank results.");
@@ -101,12 +123,43 @@ export function VenueTypeahead({
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       } catch {
         if (!cancelled) setLocationHint("Location off — search by name only.");
+      } finally {
+        if (!cancelled) setLocationReady(true);
       }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Fallback: if step 4 opens with a name but no Places pin, resolve once.
+  useEffect(() => {
+    if (!locationReady || isPinned(venue)) return;
+    const seed = value.trim();
+    if (seed.length < 2) return;
+    if (autoKeyRef.current === seed) return;
+    autoKeyRef.current = seed;
+
+    let cancelled = false;
+    setAutoResolving(true);
+    void (async () => {
+      try {
+        const resolved = await resolveVenueFromName(seed, coordsRef.current);
+        if (cancelled || !resolved) return;
+        lockedRef.current = true;
+        onChangeNameRef.current(resolved.name);
+        onChangeVenueRef.current(resolved);
+        setPredictions([]);
+      } catch {
+        /* leave typed name — host can pick from typeahead */
+      } finally {
+        if (!cancelled) setAutoResolving(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locationReady, value, venue]);
 
   const runSearch = useCallback(
     (q: string) => {
@@ -140,6 +193,7 @@ export function VenueTypeahead({
 
   const onChangeText = (text: string) => {
     lockedRef.current = false;
+    autoKeyRef.current = null;
     onChangeName(text);
     onChangeVenue(null);
     runSearch(text);
@@ -147,6 +201,7 @@ export function VenueTypeahead({
 
   const onSelect = async (row: PlacePrediction) => {
     lockedRef.current = true;
+    autoKeyRef.current = row.name.trim();
     onChangeName(row.name);
     setPredictions([]);
     setLoading(true);
@@ -154,7 +209,7 @@ export function VenueTypeahead({
       name: row.name,
       placeId: row.placeId,
       provider: row.provider,
-      formattedAddress: row.secondary || row.formattedAddress || null,
+      formattedAddress: row.formattedAddress || row.secondary || null,
       lat: row.lat ?? null,
       lng: row.lng ?? null,
       category: row.category ?? null,
@@ -167,7 +222,10 @@ export function VenueTypeahead({
         ...resolved,
         category: resolved.category || row.category || null,
         formattedAddress:
-          row.secondary || resolved.formattedAddress || row.formattedAddress || null,
+          resolved.formattedAddress ||
+          row.formattedAddress ||
+          row.secondary ||
+          null,
       });
       sessionRef.current = newSession();
     } catch {
@@ -175,7 +233,7 @@ export function VenueTypeahead({
         name: row.name,
         placeId: row.placeId,
         provider: row.provider,
-        formattedAddress: row.secondary || null,
+        formattedAddress: row.formattedAddress || row.secondary || null,
         lat: row.lat ?? null,
         lng: row.lng ?? null,
         category: row.category ?? null,
@@ -189,17 +247,24 @@ export function VenueTypeahead({
 
   const clearSelection = () => {
     lockedRef.current = false;
+    autoKeyRef.current = null;
     onChangeVenue(null);
     onChangeName("");
     setPredictions([]);
   };
 
   return (
-    <View>
+    <View style={placeConfirmed ? { flexGrow: 1 } : undefined}>
+      {autoResolving && !placeConfirmed ? (
+        <View style={styles.autoBox}>
+          <ActivityIndicator color={colors.merlot} />
+          <Text style={styles.autoCopy}>Pinning “{value.trim()}” on the map…</Text>
+        </View>
+      ) : null}
       {placeConfirmed ? (
-        <View>
+        <View style={{ flexGrow: 1 }}>
           <View style={styles.selected}>
-            <VenueKindIcon category={venue?.category} name={venue?.name} />
+            <VenueKindIcon category={venue?.category} name={venue?.name} size={18} />
             <View style={styles.selectedBody}>
               <Text style={styles.selectedName}>{venue!.name}</Text>
               {address ? <Text style={styles.selectedSecondary}>{address}</Text> : null}
@@ -219,7 +284,13 @@ export function VenueTypeahead({
                 }}
                 style={[styles.map, { height: mapH }]}
                 accessibilityLabel={`Map of ${venue!.name}`}
+                onError={() => setMapFailed(true)}
               />
+            </View>
+          ) : placeConfirmed && !mapFailed ? (
+            <View style={[styles.mapWrap, styles.mapPlaceholder, { minHeight: mapH }]}>
+              <ActivityIndicator color={colors.merlot} />
+              <Text style={styles.autoCopy}>Loading map…</Text>
             </View>
           ) : null}
         </View>
@@ -276,6 +347,23 @@ export function ensureVenueForPublish(
 const styles = StyleSheet.create({
   hint: { fontSize: 12, color: colors.muted, marginTop: -4, marginBottom: 8 },
   dateLoose: { fontSize: 12, color: colors.muted, marginBottom: 8 },
+  autoBox: {
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 28,
+    marginBottom: 8,
+  },
+  autoCopy: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.inkSoft,
+    textAlign: "center",
+  },
+  mapPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
   list: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
@@ -320,7 +408,6 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     marginTop: 4,
   },
-  date: { fontSize: 12, color: colors.muted, marginTop: 8 },
   selectedDate: {
     fontSize: 13,
     fontWeight: "600",

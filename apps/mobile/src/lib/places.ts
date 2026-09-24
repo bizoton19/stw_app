@@ -120,10 +120,10 @@ export async function resolvePlaceDetails(
     name: data.place.name || prediction.name,
     placeId: data.place.placeId,
     provider: data.place.provider === "apple" ? "apple" : "mapbox",
-    // Prefer the autocomplete subtitle the host saw in the list.
+    // Prefer Place Details full address (city, state, zip, country) when present.
     formattedAddress:
-      prediction.secondary ||
       data.place.formattedAddress ||
+      prediction.secondary ||
       prediction.formattedAddress ||
       null,
     lat: data.place.lat,
@@ -132,6 +132,29 @@ export async function resolvePlaceDetails(
     source: "places",
     confirmedAt,
   };
+}
+
+export async function resolveVenueFromName(
+  name: string,
+  coords: Coords | null,
+): Promise<ReceiptVenue | null> {
+  const q = name.trim();
+  if (q.length < 2) return null;
+  const session = newSession();
+  const predictions = await searchPlaces(q, coords, session);
+  if (!predictions.length) return null;
+
+  const needle = q.toLowerCase();
+  const best =
+    predictions.find((p) => p.name.toLowerCase() === needle) ||
+    predictions.find(
+      (p) =>
+        p.name.toLowerCase().startsWith(needle) ||
+        needle.startsWith(p.name.toLowerCase()),
+    ) ||
+    predictions[0];
+
+  return resolvePlaceDetails(best, session);
 }
 
 export function typedVenue(name: string): ReceiptVenue {

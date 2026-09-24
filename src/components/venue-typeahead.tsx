@@ -200,7 +200,8 @@ export function VenueTypeahead({
         name: data.place.name || row.name,
         placeId: data.place.placeId,
         provider: data.place.provider === "apple" ? "apple" : "mapbox",
-        formattedAddress: row.secondary || data.place.formattedAddress || null,
+        formattedAddress:
+          data.place.formattedAddress || row.formattedAddress || row.secondary || null,
         lat: data.place.lat,
         lng: data.place.lng,
         category: data.place.category || row.category || null,

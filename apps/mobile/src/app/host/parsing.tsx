@@ -44,7 +44,7 @@ export default function HostParsing() {
           <WineMark size={56} />
           <ActivityIndicator size="large" color={colors.merlot} style={{ marginTop: 28 }} />
           <Text style={styles.copy}>
-            This can take a few seconds. You’ll review every line next and can fix anything.
+            Reading the check and pinning the place. You’ll review every line next.
           </Text>
         </View>
       </InterviewChrome>

@@ -106,6 +106,40 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     setFees(toDraftFees(receipt.fees));
   }, []);
 
+  /** Pin parsed restaurant name to Places (address + coords) before step 4 mounts. */
+  const pinVenueFromName = useCallback(async (name: string) => {
+    const q = name.trim();
+    if (q.length < 2) return;
+    try {
+      const { resolveVenueFromName } = await import("@/lib/places");
+      let coords: { lat: number; lng: number } | null = null;
+      try {
+        const Location = await import("expo-location");
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const pos = await Promise.race([
+            Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            }),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+          ]);
+          if (pos && "coords" in pos) {
+            coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          }
+        }
+      } catch {
+        /* proximity optional */
+      }
+      const resolved = await resolveVenueFromName(q, coords);
+      if (resolved) {
+        setRestaurant(resolved.name);
+        setVenue(resolved);
+      }
+    } catch {
+      /* host can pick manually on step 4 */
+    }
+  }, []);
+
   const ensureDraft = useCallback(async () => {
     if (receiptId) return receiptId;
     const created = await createDraftReceipt();
@@ -124,6 +158,13 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         hostToken: getHostToken(id),
       });
       applyReceipt(receipt);
+      const alreadyPinned =
+        receipt.venue?.source === "places" &&
+        receipt.venue.lat != null &&
+        receipt.venue.lng != null;
+      if (!alreadyPinned && receipt.restaurant.trim()) {
+        await pinVenueFromName(receipt.restaurant);
+      }
       if (parse?.reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {
@@ -147,7 +188,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         );
       }
     }
-  }, [applyReceipt, ensureDraft, image]);
+  }, [applyReceipt, ensureDraft, image, pinVenueFromName]);
 
   const recordParseReview = useCallback(
     async (choice: ParseReviewChoice) => {
