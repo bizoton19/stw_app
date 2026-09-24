@@ -135,6 +135,7 @@ export function HostInterview() {
   const [pickMode, setPickMode] = useState<"camera" | "library" | null>(null);
   const [restaurant, setRestaurant] = useState("");
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
+  const [receiptDate, setReceiptDate] = useState<string | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
   const [payments, setPayments] = useState<{ method: PayMethod; handle: string }[]>([
@@ -166,6 +167,7 @@ export function HostInterview() {
   function applyReceipt(receipt: PublicReceipt) {
     setRestaurant(receipt.restaurant);
     setVenue(receipt.venue ?? null);
+    setReceiptDate(receipt.receiptDate ?? null);
     setItems(toDraftItems(receipt.items));
     setFees(toDraftFees(receipt.fees));
   }
@@ -277,6 +279,7 @@ export function HostInterview() {
         body: JSON.stringify({
           restaurant: venueToSave.name,
           venue: venueToSave,
+          receiptDate,
           items: items.map(({ id, name, qty, totalCents }) => ({
             id,
             name,
@@ -399,6 +402,7 @@ export function HostInterview() {
         <VenueTypeahead
           value={restaurant}
           venue={venue}
+          receiptDate={receiptDate}
           onChangeName={setRestaurant}
           onChangeVenue={setVenue}
           fieldClass={fieldClass}

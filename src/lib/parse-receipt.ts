@@ -13,7 +13,7 @@ export type ReceiptImage = {
 };
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const EMPTY_PARSE: ParseResult = { restaurant: "", items: [], fees: [] };
+const EMPTY_PARSE: ParseResult = { restaurant: "", receiptDate: null, items: [], fees: [] };
 
 export function hasOpenRouterKey(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY?.trim());

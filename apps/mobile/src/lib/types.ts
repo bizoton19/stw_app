@@ -61,6 +61,8 @@ export type Receipt = {
   status: ReceiptStatus;
   restaurant: string;
   venue?: ReceiptVenue | null;
+  /** Date printed on the check, if found — ISO `YYYY-MM-DD`. */
+  receiptDate?: string | null;
   items: Item[];
   fees: Fee[];
   claims: Claim[];

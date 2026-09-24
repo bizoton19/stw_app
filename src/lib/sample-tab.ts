@@ -5,6 +5,7 @@ export const SAMPLE_RESTAURANT = "The Bar";
 
 export const SAMPLE_PARSE: ParseResult = {
   restaurant: SAMPLE_RESTAURANT,
+  receiptDate: "2025-09-20",
   items: [
     { name: "Josephine Old Fashioned", qty: 8, total: 120.0 },
     { name: "Monkey 47", qty: 2, total: 64.0 },

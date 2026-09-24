@@ -10,6 +10,10 @@ const RECEIPT_SCHEMA = {
   additionalProperties: false,
   properties: {
     restaurant: { type: "string" },
+    receiptDate: {
+      type: ["string", "null"],
+      description: "Date printed on the receipt as YYYY-MM-DD, or null if missing/unreadable",
+    },
     items: {
       type: "array",
       items: {
@@ -36,17 +40,19 @@ const RECEIPT_SCHEMA = {
       },
     },
   },
-  required: ["restaurant", "items", "fees"],
+  required: ["restaurant", "receiptDate", "items", "fees"],
 } as const;
 
 const SYSTEM_PROMPT = `You extract restaurant/bar receipts for a check-splitting app.
 
 Return JSON only, matching the schema.
+- restaurant: venue name on the check.
+- receiptDate: the date printed on the receipt as YYYY-MM-DD. If only month/day (no year), assume the most recent past occurrence of that date. If unreadable or absent, null.
 - items: orderable food and drink lines. name, whole-number quantity, line total (not unit price). If quantity is missing, use 1.
 - fees: tax, VAT, gratuity/tip/service, admin, delivery, surcharges only when they are ADDED on top of the item subtotal. If the printed total equals the item sum (VAT-inclusive prices), omit included tax from fees.
 - Never put Subtotal, Total, Grand Total, Amount Due, Change, Cash, or card-tender lines in items or fees.
 - Numbers only: no currency symbols, no thousands separators.
-- If the image is not a receipt or is unreadable, return restaurant as "" and empty items and fees arrays.`;
+- If the image is not a receipt or is unreadable, return restaurant as "", receiptDate as null, and empty items and fees arrays.`;
 
 function dataUrl(image: { type: string; bytes: Buffer }): string {
   const mime = image.type && image.type.startsWith("image/") ? image.type : "image/jpeg";

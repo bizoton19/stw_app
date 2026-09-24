@@ -64,6 +64,8 @@ export type Receipt = {
   restaurant: string;
   /** Optional structured place — mirrors restaurant name when set. */
   venue?: ReceiptVenue | null;
+  /** Date printed on the check, if vision found one — ISO `YYYY-MM-DD`. */
+  receiptDate?: string | null;
   items: Item[];
   fees: Fee[];
   claims: Claim[];
@@ -96,6 +98,8 @@ export type Totals = {
 
 export type ParseResult = {
   restaurant: string;
+  /** Check date printed on the receipt, if readable — ISO `YYYY-MM-DD`. */
+  receiptDate?: string | null;
   items: { name: string; qty: number; total: number }[];
   fees: { name: string; amount: number }[];
 };

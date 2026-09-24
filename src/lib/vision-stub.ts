@@ -56,6 +56,7 @@ export function validateParse(raw: unknown): ParseResult {
   }
   const obj = raw as Record<string, unknown>;
   const restaurant = typeof obj.restaurant === "string" ? obj.restaurant : "";
+  const receiptDate = normalizeReceiptDate(obj.receiptDate);
   if (!Array.isArray(obj.items) || !Array.isArray(obj.fees)) {
     throw new Error("malformed_parse");
   }
@@ -73,7 +74,28 @@ export function validateParse(raw: unknown): ParseResult {
     if (!name) throw new Error("malformed_parse");
     return { name, amount: money(row.amount) };
   });
-  return normalizeParse({ restaurant, items, fees });
+  return normalizeParse({ restaurant, receiptDate, items, fees });
+}
+
+/** Accept YYYY-MM-DD (or null). Soft-parse common printed forms. */
+export function normalizeReceiptDate(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) {
+    let a = Number(m[1]);
+    let b = Number(m[2]);
+    let y = Number(m[3]);
+    if (y < 100) y += 2000;
+    // Prefer US M/D/Y when ambiguous
+    const month = a;
+    const day = b;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return `${y}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  return null;
 }
 
 const TOTAL_LINE =
@@ -105,5 +127,10 @@ export function normalizeParse(parsed: ParseResult): ParseResult {
     }
     items.push({ ...item, qty: Math.max(1, Math.round(item.qty)) });
   }
-  return { restaurant: parsed.restaurant.trim(), items, fees };
+  return {
+    restaurant: parsed.restaurant.trim(),
+    receiptDate: parsed.receiptDate ?? null,
+    items,
+    fees,
+  };
 }

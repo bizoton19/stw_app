@@ -117,10 +117,15 @@ export async function resolvePlaceDetails(
   );
 
   return {
-    name: data.place.name,
+    name: data.place.name || prediction.name,
     placeId: data.place.placeId,
     provider: data.place.provider === "apple" ? "apple" : "mapbox",
-    formattedAddress: data.place.formattedAddress,
+    // Prefer the autocomplete subtitle the host saw in the list.
+    formattedAddress:
+      prediction.secondary ||
+      data.place.formattedAddress ||
+      prediction.formattedAddress ||
+      null,
     lat: data.place.lat,
     lng: data.place.lng,
     category: data.place.category,

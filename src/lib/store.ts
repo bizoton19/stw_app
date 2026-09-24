@@ -41,6 +41,7 @@ export async function saveReceipt(
   patch: {
     restaurant?: string;
     venue?: ReceiptVenue | null;
+    receiptDate?: string | null;
     items?: { id?: string; name: string; qty: number; totalCents: number }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;

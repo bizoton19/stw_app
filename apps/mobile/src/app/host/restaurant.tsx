@@ -32,6 +32,7 @@ export default function HostRestaurant() {
         <VenueTypeahead
           value={draft.restaurant}
           venue={draft.venue}
+          receiptDate={draft.receiptDate}
           onChangeName={draft.setRestaurant}
           onChangeVenue={draft.setVenue}
         />

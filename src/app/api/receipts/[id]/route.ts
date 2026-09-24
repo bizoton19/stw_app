@@ -25,6 +25,7 @@ export async function PUT(
     const body = (await req.json()) as {
       restaurant?: string;
       venue?: import("@/lib/types").ReceiptVenue | null;
+      receiptDate?: string | null;
       items?: { id?: string; name: string; qty: number; totalCents: number }[];
       fees?: { id?: string; name: string; amountCents: number }[];
       hostInfo?: unknown;
@@ -37,6 +38,7 @@ export async function PUT(
     const receipt = await saveReceipt(id, hostTokenOf(req), {
       restaurant: body.restaurant,
       venue: body.venue,
+      receiptDate: body.receiptDate,
       items: body.items,
       fees: body.fees,
       hostInfo: hostInfo ?? undefined,

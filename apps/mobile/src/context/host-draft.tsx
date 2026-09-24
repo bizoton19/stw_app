@@ -32,6 +32,7 @@ type HostDraft = {
   image: PickedImage | null;
   restaurant: string;
   venue: ReceiptVenue | null;
+  receiptDate: string | null;
   items: DraftItem[];
   fees: DraftFee[];
   payments: HostPayment[];
@@ -58,6 +59,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [image, setImage] = useState<PickedImage | null>(null);
   const [restaurant, setRestaurant] = useState("");
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
+  const [receiptDate, setReceiptDate] = useState<string | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
   const [payments, setPayments] = useState<HostPayment[]>([
@@ -95,6 +97,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const applyReceipt = useCallback((receipt: PublicReceipt) => {
     setRestaurant(receipt.restaurant);
     setVenue(receipt.venue ?? null);
+    setReceiptDate(receipt.receiptDate ?? null);
     setItems(toDraftItems(receipt.items));
     setFees(toDraftFees(receipt.fees));
   }, []);
@@ -173,6 +176,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({
         restaurant: venueToSave?.name ?? restaurant,
         venue: venueToSave,
+        receiptDate,
         items: items.map(({ id, name, qty, totalCents }) => ({ id, name, qty, totalCents })),
         fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
         hostInfo: { payments: checked.payments },
@@ -180,7 +184,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       }),
     });
     setClaimUrl(publicClaimUrl(receiptId));
-  }, [fees, items, payments, receiptId, restaurant, venue]);
+  }, [fees, items, payments, receiptDate, receiptId, restaurant, venue]);
 
   const value = useMemo(
     () => ({
@@ -189,6 +193,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       image,
       restaurant,
       venue,
+      receiptDate,
       items,
       fees,
       payments,
@@ -221,6 +226,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       removePayment,
       restaurant,
       venue,
+      receiptDate,
       runParse,
       setPayment,
       setPick,

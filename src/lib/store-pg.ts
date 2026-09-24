@@ -82,6 +82,7 @@ function toPublic(receipt: InternalReceipt): PublicReceipt {
     status: receipt.status,
     restaurant: receipt.restaurant,
     venue: receipt.venue ?? null,
+    receiptDate: receipt.receiptDate ?? null,
     items: receipt.items,
     fees: receipt.fees,
     claims,
@@ -177,6 +178,7 @@ async function seedDemoIfNeeded() {
         id: "demo",
         status: "open",
         restaurant: parsed.restaurant,
+        receiptDate: parsed.receiptDate ?? null,
         items: itemsFromParse(parsed),
         fees: feesFromParse(parsed),
         claims: [],
@@ -263,6 +265,7 @@ export async function parseReceipt(
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
     receipt.restaurant = result.restaurant;
+    receipt.receiptDate = result.receiptDate ?? null;
     receipt.items = itemsFromParse(result);
     receipt.fees = feesFromParse(result);
     receipt.imageName = image?.name ?? receipt.imageName;
@@ -280,6 +283,7 @@ export async function saveReceipt(
   patch: {
     restaurant?: string;
     venue?: import("./types").ReceiptVenue | null;
+    receiptDate?: string | null;
     items?: { id?: string; name: string; qty: number; totalCents: number }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;
@@ -298,6 +302,9 @@ export async function saveReceipt(
       if (patch.venue?.name && patch.restaurant === undefined) {
         receipt.restaurant = patch.venue.name.trim();
       }
+    }
+    if (patch.receiptDate !== undefined) {
+      receipt.receiptDate = patch.receiptDate;
     }
     if (patch.items) {
       if (receipt.status === "open") {

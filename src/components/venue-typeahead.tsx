@@ -19,6 +19,7 @@ type PlacePrediction = {
 type Props = {
   value: string;
   venue: ReceiptVenue | null;
+  receiptDate?: string | null;
   onChangeName: (name: string) => void;
   onChangeVenue: (venue: ReceiptVenue | null) => void;
   fieldClass?: string;
@@ -42,9 +43,24 @@ function typedVenue(name: string): ReceiptVenue {
   };
 }
 
+export function formatReceiptDateLabel(iso: string | null | undefined): string | null {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export function VenueTypeahead({
   value,
   venue,
+  receiptDate,
   onChangeName,
   onChangeVenue,
   fieldClass,
@@ -55,6 +71,10 @@ export function VenueTypeahead({
   const sessionRef = useRef(newSession());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockedRef = useRef(false);
+
+  const placeConfirmed = venue?.source === "places" && Boolean(venue.name.trim());
+  const address = venue?.formattedAddress?.trim() || null;
+  const dateLabel = formatReceiptDateLabel(receiptDate);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -125,6 +145,17 @@ export function VenueTypeahead({
     lockedRef.current = true;
     onChangeName(row.name);
     setPredictions([]);
+    onChangeVenue({
+      name: row.name,
+      placeId: row.placeId,
+      provider: row.provider,
+      formattedAddress: row.secondary || row.formattedAddress || null,
+      lat: row.lat ?? null,
+      lng: row.lng ?? null,
+      category: row.category ?? null,
+      source: "places",
+      confirmedAt: new Date().toISOString(),
+    });
     try {
       const res = await fetch(
         `/api/places/details?placeId=${encodeURIComponent(row.placeId)}&session=${encodeURIComponent(sessionRef.current)}`,
@@ -142,10 +173,10 @@ export function VenueTypeahead({
         };
       };
       onChangeVenue({
-        name: data.place.name,
+        name: data.place.name || row.name,
         placeId: data.place.placeId,
         provider: data.place.provider === "apple" ? "apple" : "mapbox",
-        formattedAddress: data.place.formattedAddress,
+        formattedAddress: row.secondary || data.place.formattedAddress || null,
         lat: data.place.lat,
         lng: data.place.lng,
         category: data.place.category,
@@ -154,17 +185,46 @@ export function VenueTypeahead({
       });
       sessionRef.current = newSession();
     } catch {
-      onChangeVenue(typedVenue(row.name));
+      /* keep optimistic venue from dropdown row */
     }
   };
+
+  const clearSelection = () => {
+    lockedRef.current = false;
+    onChangeVenue(null);
+    onChangeName("");
+    setPredictions([]);
+  };
+
+  if (placeConfirmed) {
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-border px-3.5 py-3.5">
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-semibold">{venue!.name}</div>
+          {address ? (
+            <div className="mt-0.5 text-[12px] text-muted-foreground">{address}</div>
+          ) : null}
+          {dateLabel ? (
+            <div className="mt-2 text-[12px] text-muted-foreground">
+              Receipt date · {dateLabel}
+            </div>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="shrink-0 text-[13px] font-semibold text-primary"
+          onClick={clearSelection}
+        >
+          Change
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
       <Label htmlFor="restaurant" className="mb-2 text-[13px] font-medium">
         Restaurant or bar
-        {venue?.source === "places" ? (
-          <span className="ml-1 font-normal text-muted-foreground">· place confirmed</span>
-        ) : null}
       </Label>
       <Input
         id="restaurant"
@@ -175,6 +235,9 @@ export function VenueTypeahead({
         autoComplete="organization"
       />
       {hint ? <p className="mt-2 text-[12px] text-muted-foreground">{hint}</p> : null}
+      {dateLabel ? (
+        <p className="mt-2 text-[12px] text-muted-foreground">Receipt date · {dateLabel}</p>
+      ) : null}
       {predictions.length > 0 ? (
         <ul className="mt-2 divide-y divide-border overflow-hidden rounded-xl border border-border">
           {predictions.map((row) => (
