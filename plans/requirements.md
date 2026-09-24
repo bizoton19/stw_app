@@ -988,6 +988,7 @@ Full technical plans live in separate files (schema, API, UI, philosophy risks, 
 | Phase | File | Summary |
 |---|---|---|
 | **DNS (P0)** | [dns-todos.md](./dns-todos.md) | **HIGH PRIORITY** — `api.splitthewine.app` → Railway (API + claim UI); `www` stays marketing. |
+| **UI** | [ui-enhance.guide.md](./ui-enhance.guide.md) | Visual pass contract — denser claim/settle, paper+merlot, web↔native parity. |
 | **2** | [phase-2-venue.md](./phase-2-venue.md) | Host venue typeahead (proximity Places); structured `venue` on receipt. Near-term. |
 | **3** | [phase-3-voice.md](./phase-3-voice.md) | Guest opt-in voice order drafts; reconcile to host claim link by time/place. Later; depends on Phase 2. |
 
