@@ -1,5 +1,13 @@
 import { useMemo, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Animated,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Swipeable } from "react-native-gesture-handler";
 import { ChevronDown, RotateCcw, Trash2 } from "lucide-react-native";
@@ -16,13 +24,17 @@ type MenuSide = "yes" | "no" | null;
 
 function ItemRow({
   item,
+  editing,
   highlightTrash,
+  onEdit,
   onChange,
   onSoftDelete,
   onUndo,
 }: {
   item: DraftItem;
+  editing: boolean;
   highlightTrash: boolean;
+  onEdit: () => void;
   onChange: (next: DraftItem) => void;
   onSoftDelete: () => void;
   onUndo: () => void;
@@ -58,12 +70,114 @@ function ItemRow({
     );
   };
 
+  const body = editing && !removed ? (
+    <View style={[styles.row, styles.rowEditing]}>
+      <LineKindIcon name={item.name} kind={item.kind} style={{ marginBottom: 2 }} />
+      <View style={styles.nameCol}>
+        <Text style={styles.colLabel}>{t("items.nameLabel")}</Text>
+        <TextInput
+          value={item.name}
+          placeholder={t("items.itemName")}
+          placeholderTextColor={colors.muted}
+          style={styles.nameInput}
+          autoCorrect={false}
+          autoFocus
+          onChangeText={(name) => onChange({ ...item, name })}
+        />
+      </View>
+      <View style={styles.qtyCol}>
+        <Text style={styles.colLabel}>{t("items.qty")}</Text>
+        <TextInput
+          value={String(item.qty)}
+          keyboardType="number-pad"
+          style={styles.numInput}
+          accessibilityLabel={t("items.qty")}
+          onChangeText={(raw) => {
+            const qty = Math.max(1, Math.floor(Number(raw) || 0));
+            const prevQty = Math.max(1, item.qty);
+            const unitCents = Math.round(item.totalCents / prevQty);
+            const totalCents = unitCents * qty;
+            onChange({
+              ...item,
+              qty,
+              totalCents,
+              totalInput: (totalCents / 100).toFixed(2),
+            });
+          }}
+        />
+      </View>
+      <View style={styles.amtCol}>
+        <Text style={styles.colLabel}>{t("items.amt")}</Text>
+        <TextInput
+          value={item.totalInput}
+          keyboardType="decimal-pad"
+          style={styles.numInput}
+          accessibilityLabel={t("items.amt")}
+          onChangeText={(totalInput) => {
+            const totalCents = Math.round((Number(totalInput) || 0) * 100);
+            onChange({ ...item, totalInput, totalCents });
+          }}
+        />
+      </View>
+      <PressScale
+        accessibilityLabel={t("items.remove", {
+          name: item.name.trim() || t("items.line"),
+        })}
+        onPress={onSoftDelete}
+        style={[styles.trash, highlightTrash ? styles.trashHighlight : null]}
+      >
+        <Trash2 size={13} color={highlightTrash ? colors.merlot : colors.inkSoft} />
+      </PressScale>
+    </View>
+  ) : (
+    <Pressable
+      onPress={() => {
+        if (removed) return;
+        onEdit();
+      }}
+      disabled={removed}
+      style={[styles.row, removed && styles.rowRemoved]}
+      accessibilityRole="button"
+      accessibilityLabel={
+        removed
+          ? item.name.trim() || t("items.line")
+          : `Edit ${item.name.trim() || t("items.line")}`
+      }
+      accessibilityHint={removed ? undefined : "Tap to edit name, quantity, or amount"}
+    >
+      <LineKindIcon name={item.name} kind={item.kind} style={{ marginBottom: 2 }} />
+      <View style={styles.nameCol}>
+        <Text style={[styles.readName, removed && styles.struck]} numberOfLines={2}>
+          {item.name.trim() || t("items.itemName")}
+        </Text>
+        <Text style={styles.readMeta}>
+          ×{item.qty} · {centsToLabel(item.totalCents)}
+        </Text>
+      </View>
+      {removed ? (
+        <PressScale accessibilityLabel="Undo remove" onPress={onUndo} style={styles.undoBtn}>
+          <RotateCcw size={14} color={colors.merlot} />
+        </PressScale>
+      ) : (
+        <PressScale
+          accessibilityLabel={t("items.remove", {
+            name: item.name.trim() || t("items.line"),
+          })}
+          onPress={onSoftDelete}
+          style={[styles.trash, highlightTrash ? styles.trashHighlight : null]}
+        >
+          <Trash2 size={13} color={highlightTrash ? colors.merlot : colors.inkSoft} />
+        </PressScale>
+      )}
+    </Pressable>
+  );
+
   return (
     <Swipeable
       ref={swipeRef}
       friction={2}
       overshootRight={false}
-      enabled={!removed}
+      enabled={!removed && !editing}
       renderRightActions={renderRight}
       onSwipeableOpen={(dir) => {
         if (dir === "right") {
@@ -72,79 +186,7 @@ function ItemRow({
         }
       }}
     >
-      <View style={[styles.row, removed && styles.rowRemoved]}>
-        <LineKindIcon name={item.name} kind={item.kind} style={{ marginBottom: 2 }} />
-        <View style={styles.nameCol}>
-          <Text style={styles.colLabel}>{t("items.nameLabel")}</Text>
-          <TextInput
-            value={item.name}
-            placeholder={t("items.itemName")}
-            placeholderTextColor={colors.muted}
-            style={[styles.nameInput, removed && styles.struck]}
-            autoCorrect={false}
-            editable={!removed}
-            onChangeText={(name) => onChange({ ...item, name })}
-          />
-        </View>
-        <View style={styles.qtyCol}>
-          <Text style={styles.colLabel}>{t("items.qty")}</Text>
-          <TextInput
-            value={String(item.qty)}
-            keyboardType="number-pad"
-            style={[styles.numInput, removed && styles.struck]}
-            accessibilityLabel={t("items.qty")}
-            editable={!removed}
-            onChangeText={(raw) => {
-              const qty = Math.max(1, Math.floor(Number(raw) || 0));
-              const prevQty = Math.max(1, item.qty);
-              const unitCents = Math.round(item.totalCents / prevQty);
-              const totalCents = unitCents * qty;
-              onChange({
-                ...item,
-                qty,
-                totalCents,
-                totalInput: (totalCents / 100).toFixed(2),
-              });
-            }}
-          />
-        </View>
-        <View style={styles.amtCol}>
-          <Text style={styles.colLabel}>{t("items.amt")}</Text>
-          <TextInput
-            value={item.totalInput}
-            keyboardType="decimal-pad"
-            style={[styles.numInput, removed && styles.struck]}
-            accessibilityLabel={t("items.amt")}
-            editable={!removed}
-            onChangeText={(totalInput) => {
-              const totalCents = Math.round((Number(totalInput) || 0) * 100);
-              onChange({ ...item, totalInput, totalCents });
-            }}
-          />
-        </View>
-        {removed ? (
-          <PressScale
-            accessibilityLabel="Undo remove"
-            onPress={onUndo}
-            style={styles.undoBtn}
-          >
-            <RotateCcw size={14} color={colors.merlot} />
-          </PressScale>
-        ) : (
-          <PressScale
-            accessibilityLabel={t("items.remove", {
-              name: item.name.trim() || t("items.line"),
-            })}
-            onPress={onSoftDelete}
-            style={[styles.trash, highlightTrash ? styles.trashHighlight : null]}
-          >
-            <Trash2
-              size={13}
-              color={highlightTrash ? colors.merlot : colors.inkSoft}
-            />
-          </PressScale>
-        )}
-      </View>
+      {body}
     </Swipeable>
   );
 }
@@ -162,10 +204,16 @@ export default function HostItems() {
   const [choice, setChoice] = useState<ParseReviewChoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canContinue =
     activeItems.length > 0 && !activeItems.some((i) => !i.name.trim() || i.qty < 1);
+
+  function stopEditing() {
+    setEditingId(null);
+    Keyboard.dismiss();
+  }
 
   function flashToast(msg: string) {
     setToast(msg);
@@ -175,6 +223,7 @@ export default function HostItems() {
 
   function softDelete(id: string) {
     const row = draft.items.find((i) => i.id === id);
+    if (editingId === id) stopEditing();
     draft.setItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, removed: true } : i)),
     );
@@ -189,6 +238,7 @@ export default function HostItems() {
   }
 
   async function applyChoice(next: ParseReviewChoice, opts?: { continue?: boolean }) {
+    stopEditing();
     setMenu(null);
     setChoice(next);
     setBusy(true);
@@ -203,6 +253,11 @@ export default function HostItems() {
     }
   }
 
+  function openMenu(side: MenuSide) {
+    stopEditing();
+    setMenu((m) => (m === side ? null : side));
+  }
+
   return (
     <AppShell>
       <InterviewChrome
@@ -211,7 +266,7 @@ export default function HostItems() {
         kicker={t("items.kicker")}
         title={t("items.title")}
         onBack={() => router.back()}
-        keyboard
+        keyboard={Boolean(editingId)}
         dense
         footer={
           <View>
@@ -260,7 +315,7 @@ export default function HostItems() {
             <View style={styles.footerRow}>
               <PressScale
                 disabled={busy}
-                onPress={() => setMenu((m) => (m === "yes" ? null : "yes"))}
+                onPress={() => openMenu("yes")}
                 style={[
                   styles.halfBtn,
                   choice === "looks_good" || choice === "remove_items"
@@ -278,7 +333,7 @@ export default function HostItems() {
               </PressScale>
               <PressScale
                 disabled={busy}
-                onPress={() => setMenu((m) => (m === "no" ? null : "no"))}
+                onPress={() => openMenu("no")}
                 style={[styles.halfBtn, choice === "needs_edits" ? styles.halfBtnSelected : null]}
                 accessibilityLabel={t("items.no")}
               >
@@ -293,7 +348,10 @@ export default function HostItems() {
             {choice === "looks_good" ? null : choice ? (
               <PressScale
                 disabled={busy || !canContinue}
-                onPress={() => router.push("/host/fees")}
+                onPress={() => {
+                  stopEditing();
+                  router.push("/host/fees");
+                }}
                 style={[styles.continueBtn, (!canContinue || busy) && styles.continueDisabled]}
               >
                 <Text style={styles.continueText}>{t("items.continueAfterEdit")}</Text>
@@ -303,17 +361,26 @@ export default function HostItems() {
         }
       >
         {hint ? (
-          <View style={styles.hintBox}>
-            <Text style={styles.hintText}>{hint}</Text>
-          </View>
+          <Pressable onPress={stopEditing}>
+            <View style={styles.hintBox}>
+              <Text style={styles.hintText}>{hint}</Text>
+            </View>
+          </Pressable>
         ) : null}
         {draft.items.length === 0 ? <Text style={styles.lead}>{t("items.empty")}</Text> : null}
-        <Text style={styles.swipeHint}>Swipe a line left to remove · undo anytime</Text>
+        <Text style={styles.swipeHint}>
+          Tap a line to edit · swipe left to remove · undo anytime
+        </Text>
         {draft.items.map((item) => (
           <ItemRow
             key={item.id}
             item={item}
+            editing={editingId === item.id}
             highlightTrash={choice === "remove_items"}
+            onEdit={() => {
+              setMenu(null);
+              setEditingId(item.id);
+            }}
             onChange={(next) =>
               draft.setItems(draft.items.map((row) => (row.id === item.id ? next : row)))
             }
@@ -322,18 +389,21 @@ export default function HostItems() {
           />
         ))}
         <QuietButton
-          onPress={() =>
+          onPress={() => {
+            const id = `new_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
             draft.setItems([
               ...draft.items,
               {
-                id: `new_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+                id,
                 name: "",
                 qty: 1,
                 totalCents: 0,
                 totalInput: "0.00",
               },
-            ])
-          }
+            ]);
+            setMenu(null);
+            setEditingId(id);
+          }}
         >
           {t("items.addLine")}
         </QuietButton>
@@ -342,7 +412,7 @@ export default function HostItems() {
   );
 }
 
-const INPUT_H = 30;
+const INPUT_H = 36;
 
 const styles = StyleSheet.create({
   lead: { fontSize: 12, color: colors.muted, marginBottom: 6 },
@@ -362,18 +432,30 @@ const styles = StyleSheet.create({
   hintText: { fontSize: 13, lineHeight: 18, color: colors.ink, fontWeight: "500" },
   row: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 2,
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     backgroundColor: colors.paper,
+    minHeight: 56,
+  },
+  rowEditing: {
+    alignItems: "flex-end",
+    paddingVertical: 10,
+    backgroundColor: "#FFFcf8",
+    borderRadius: 10,
+    borderTopWidth: 0,
+    marginVertical: 4,
+    paddingHorizontal: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.merlot,
   },
   rowRemoved: { opacity: 0.72 },
   nameCol: { flex: 1, minWidth: 0 },
-  qtyCol: { width: 40 },
-  amtCol: { width: 58 },
+  qtyCol: { width: 44 },
+  amtCol: { width: 64 },
   colLabel: {
     fontSize: 10,
     fontWeight: "600",
@@ -382,53 +464,66 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     textAlign: "left",
   },
+  readName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.ink,
+    lineHeight: 22,
+  },
+  readMeta: {
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: "500",
+    color: colors.inkSoft,
+    fontVariant: ["tabular-nums"],
+  },
   nameInput: {
     height: INPUT_H,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 0,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: colors.ink,
     textAlign: "left",
+    backgroundColor: colors.paper,
   },
   numInput: {
     height: INPUT_H,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
     paddingVertical: 0,
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: colors.ink,
     fontVariant: ["tabular-nums"],
     textAlign: "left",
+    backgroundColor: colors.paper,
   },
   struck: {
     textDecorationLine: "line-through",
     color: colors.muted,
-    backgroundColor: "rgba(42, 36, 28, 0.04)",
   },
   trash: {
-    width: 28,
-    height: INPUT_H,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: -2,
   },
   trashHighlight: {
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: "rgba(110, 46, 53, 0.08)",
   },
   undoBtn: {
-    width: 28,
-    height: INPUT_H,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: 8,
     backgroundColor: "rgba(110, 46, 53, 0.08)",
   },
   swipeDelete: {
