@@ -12,7 +12,7 @@ Phase 2 risks (location on receipt, Places, friction) are in [phase-2-venue.md](
 
 | Risk | How it fights the philosophy | Mitigation if we proceed |
 |---|---|---|
-| **Ambient mic** | Listening is the opposite of “we don’t want your life.” | Guest **arms** the night (default off); venue-gated; **manual Listen** always preferred; auto only when Places category confirmed; session-bound kill switch. |
+| **Ambient mic + pushes** | Geofence notices + invites to listen can feel surveilly. | Arrival push must be **opt-in Yes** before mic; never silent listen; unclear recall is an offer not a demand; easy “don’t ask tonight.” |
 | **Scope creep to accounts** | Matching guests across nights tempts “sign in to sync drafts.” | Forbid accounts. Drafts stay **on-device** (or ephemeral guest token tied to one night). |
 | **Trust / review** | App Store will scrutinize mic + location together. | Purpose string: “Optional: remember what you ordered to suggest claims.” Never always-on. |
 
@@ -88,14 +88,59 @@ Enrollment (“say three phrases so we know your voice”) is **optional later**
 | Gate | Rule |
 |---|---|
 | Place type | Only venues classified as restaurant / bar / cafe / nightlife (Places category). Homes, offices, transit, parks → **never** offer or auto-arm listening. |
-| User consent | Explicit arming: “Listen for my orders tonight?” Default **off**. Easy kill switch (notification / in-app Stop). |
-| Manual always available | Shazam-style **Listen** button whenever venue gate is green (and optionally a “I’m not at a listed place — listen anyway” override with extra confirm). |
-| Auto | Only if armed + category confirmed + still inside geofence / recent Places check. Leave venue → stop. |
+| User consent | Never auto-start mic from a geofence alone. First contact is a **push** (or in-app prompt): guest must tap Yes. Default **off**. Easy kill switch. |
+| Manual always available | Shazam-style **Listen** + **re-speak remembered orders** whenever venue gate is/was green. |
+| Auto listen | Only after guest accepts the arrival push (or in-app Yes) + category still confirmed. Leave venue → stop listen; may fire **unclear-orders** push (below). |
 | Duration | Session-bound (leave geofence, host link claimed, N hours, or Stop). No indefinite background listen. |
-| OS permission | Microphone + Location. If either denied → feature unavailable; claim board works as today. |
-| Platform | Store / dev-client build (not Expo Go) for background/geofence + mic patterns Apple will accept. |
+| OS permission | Microphone + Location + **Push Notifications**. If mic/location denied → feature unavailable; claim board works as today. Push denied → in-app prompts only. |
+| Platform | Store / dev-client build (not Expo Go) for background/geofence + mic + push patterns Apple will accept. |
 
 Phrase as **“Shazam for your order — only at restaurants you choose.”** Never as always-on eavesdropping.
+
+---
+
+## Push notifications (explicit product flows)
+
+Two pushes are **first-class**, not nice-to-haves. Copy is illustrative; final strings go through i18n + App Review tone check.
+
+### 1. Arrival — offer to listen
+
+**When:** device is at a Places-confirmed restaurant / bar / cafe (geofence enter or periodic place check), and guest has not already armed/dismissed for this visit.
+
+**Push (example):**  
+> We notice you’re at a bar or restaurant. Would you like Split the Wine to listen for your orders?
+
+**Actions:**
+- **Yes** → open app, request mic if needed, start Listening session (coach: hold phone toward you when you order).
+- **Not now** → dismiss; do not listen; optionally snooze for this visit.
+- **Don’t ask again tonight** → suppress further arrival pushes until next calendar day / next distinct venue.
+
+Never start the mic from the notification alone without a Yes tap (OS + trust).
+
+### 2. Unclear / leave — offer to re-speak from memory
+
+**When** (any of):
+- Guest leaves the venue (geofence exit) **and** draft is empty or mostly low-confidence / “unclear,” **or**
+- Listening session ends and capture quality is poor, **or**
+- Guest armed listen but produced no usable lines after a reasonable window.
+
+**Push (example):**  
+> Your orders weren’t clear. Want to speak them to me now while you still remember? I’ll save them for when the host sends the check.
+
+**Actions:**
+- **Speak now** → open app straight into a **recall Listen** mode (same ASR → LLM pipeline; activation: `"recall"`). Guest holds phone and says what they remember (“I had the Negroni and the oysters”).
+- **Skip** → keep whatever draft exists (or none); normal claim board later.
+
+This is the safety net so the guest still avoids typing: **voice recall**, not a form.
+
+### Push infra (engineering)
+
+| Piece | Notes |
+|---|---|
+| Client | Expo Notifications (or APNs + FCM); local notification may be enough for geofence-on-device; remote push if server-driven |
+| Trigger | Prefer **on-device** place/geofence → local notification (less server stalking). Remote push only if we must wake a killed app and policy allows |
+| Dedupe | One arrival offer per visit; one unclear offer per session |
+| Privacy | Do not put venue name + fine coords in notification body if avoidable; “a bar or restaurant” is enough |
 
 ---
 
@@ -103,10 +148,11 @@ Phrase as **“Shazam for your order — only at restaurants you choose.”** Ne
 
 | Piece | Provider (examples) | Notes |
 |---|---|---|
-| Venue category | Google Places (Phase 2) | Gate auto + badge “Listening OK here” |
-| Location | OS / `expo-location` | Geofence / proximity |
-| ASR (likely cloud for bars) | OpenAI Whisper API, Google Speech-to-Text, or Deepgram | On-device first is fine for quiet tests; **loud bar → plan on cloud** |
-| Order extract / filter | LLM via existing OpenRouter (or similar) | “From this transcript, extract order lines that sound like the speaker ordering for themselves” |
+| Venue category | Google Places (Phase 2) | Gate arrival push + badge “Listening OK here” |
+| Location | OS / `expo-location` | Geofence enter/exit for arrival + leave pushes |
+| Push | Expo Notifications / APNs / FCM | Arrival offer + unclear recall offer |
+| ASR (likely cloud for bars) | OpenAI Whisper API, Google Speech-to-Text, or Deepgram | Live listen + recall re-speak |
+| Order extract / filter | LLM via existing OpenRouter (or similar) | Extract self-orders; score clarity for “unclear” trigger |
 | Reconcile | Our code (± light fuzzy / LLM) | Match draft lines → receipt remaining |
 
 Keys stay **server-side** (same pattern as vision). App sends short consented snippets or transcripts, not a permanent audio diary.
@@ -120,7 +166,7 @@ Keys stay **server-side** (same pattern as vision). App sends short consented sn
 ```ts
 type GuestOrderDraft = {
   sessionId: string;
-  activation: "manual" | "auto";
+  activation: "manual" | "auto" | "recall";  // recall = re-speak from memory after unclear push
   venue: {
     placeId?: string;
     name: string;
@@ -130,6 +176,7 @@ type GuestOrderDraft = {
   };
   startedAt: string;
   endedAt?: string;
+  clarity: "ok" | "unclear" | "empty";  // drives leave / unclear push
   lines: {
     id: string;
     raw: string;              // transcript snippet
@@ -196,13 +243,14 @@ Does **not** replace host vision parse or parse-review eval. Orthogonal feature.
 
 ## UI
 
-- Venue badge when Places says resto/bar: “Listening available here.”
-- **Listen** (Shazam-style primary) — tap to start; coaching copy while active: “Hold your phone toward you and say your order.” Tap Stop when done.
-- Optional toggle: “Keep listening while I’m here tonight” (auto-arm / phone-on-table) — off by default; explain it may catch others’ orders.
-- Live draft list as candidates appear — guest reviews by tap (keep / not mine), **not by retyping** when listen worked.
+- **Arrival push** → Yes opens Listening with coaching: “Hold your phone toward you and say your order.”
+- In-app **Listen** (Shazam-style) always available when venue gate is green.
+- Optional “keep listening while I’m here” only after Yes on the arrival offer.
+- Live draft list — keep / not mine by tap; **no typing** when listen/recall worked.
+- **Unclear / leave push** → Speak now opens **recall** mode: “Tell me what you ordered — I’ll save it for the host’s check.”
 - Claim board banner: “We think you ordered these — claim them?”
 - Checklist (pre-check only high confidence + `likelySelf`); confirm → existing multi-claim API.
-- Always: “Ignore suggestions” → normal claim board; add lines manually only if something was missed.
+- Always: “Ignore suggestions” → normal claim board; add lines manually only if voice missed something.
 
 No silent claims. No blocking the board if reconcile fails. Host never sees guest audio or private drafts unless the guest claims (then only the claim, as today).
 
@@ -210,6 +258,7 @@ No silent claims. No blocking the board if reconcile fails. Host never sees gues
 
 ## Out of scope
 
+- Starting the mic from a push without an explicit Yes.
 - Always-on mic or location outside food/drink context (or without arming).
 - Perfect speaker ID / “only my voice” as a v1 requirement.
 - Auto-claim / auto-fill without review.
@@ -222,26 +271,29 @@ No silent claims. No blocking the board if reconcile fails. Host never sees gues
 
 ## Done when
 
-Guest can **manually** Listen at a Places-confirmed venue and get usable draft lines; optional auto-arm works only at resto/bar; same-night host link suggests claims when Phase 2 venue matches; guest can prune false positives; store review accepts mic/location copy.
+Arrival push only at Places-confirmed resto/bar; Yes starts listen; intentional hold-out produces drafts without typing; unclear/leave push offers recall re-speak; same-night host link suggests claims when Phase 2 venue matches; guest can prune; store review accepts mic/location/notification copy.
 
 ---
 
 ## Build order (relative)
 
 1. [Phase 2](./phase-2-venue.md) live + friend-tested venue / category accuracy.
-2. **Intentional Listen path:** tap Listen → hold phone toward self → cloud ASR → LLM extract → on-device draft (no typing) → reconcile.
-3. Live prune UI (“not mine”) during the meal; manual add only as fallback.
-4. Optional auto-arm when Places category confirmed + geofence (phone on table).
-5. Only later: voice enrollment / diarization experiments (not blocking).
+2. Geofence + **arrival push** → Yes → intentional Listen → ASR → LLM → draft.
+3. Clarity scoring + **unclear/leave push** → recall re-speak mode.
+4. Reconcile to host claim link; live prune UI.
+5. Optional longer auto-listen while at venue (phone on table).
+6. Only later: voice enrollment / diarization experiments (not blocking).
 
 ---
 
 ## Open questions
 
-- ASR vendor for loud bars (Whisper vs Deepgram vs Google STT) — quality vs cost vs latency.
-- LLM prompt/model for “extract self-orders only” — false positive rate at a real table.
-- How aggressive auto-arm can be before App Review / users feel watched.
-- Approximate vs precise location (privacy vs category match).
+- Local vs remote push for geofence (battery, killed-app wake, privacy).
+- How “unclear” is defined (no lines vs mean confidence &lt; X vs LLM says low quality).
+- How long after leave to offer recall (immediate vs 10–30 min while memory is fresh).
+- ASR vendor for loud bars (Whisper vs Deepgram vs Google STT).
+- LLM false-positive rate at a real table.
+- How often arrival pushes before users disable notifications entirely.
+- Approximate vs precise location.
 - Web guests: native-only vs no voice on web.
 - Retention: minutes vs until claim vs until link expires.
-- Whether a short “hold phone near you when you order” tip beats any AI separation.
