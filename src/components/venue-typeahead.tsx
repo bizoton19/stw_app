@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { UtensilsCrossed, Wine } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { classifyVenueKind } from "@/lib/line-kind";
 import type { ReceiptVenue } from "@/lib/types";
 
 type PlacePrediction = {
@@ -43,6 +45,22 @@ function typedVenue(name: string): ReceiptVenue {
   };
 }
 
+function VenueGlyph({ category, name }: { category?: string | null; name?: string | null }) {
+  const kind = classifyVenueKind(category, name);
+  if (!kind) return null;
+  const bar = kind === "bar";
+  return (
+    <span
+      className={`inline-flex size-7 shrink-0 items-center justify-center rounded-lg ${
+        bar ? "bg-[rgba(110,46,53,0.12)] text-[#6E2E35]" : "bg-[rgba(92,122,94,0.14)] text-[#4F6B50]"
+      }`}
+      aria-label={bar ? "Bar" : "Restaurant"}
+    >
+      {bar ? <Wine className="size-4" strokeWidth={2.25} /> : <UtensilsCrossed className="size-4" strokeWidth={2.25} />}
+    </span>
+  );
+}
+
 export function formatReceiptDateLabel(iso: string | null | undefined): string | null {
   if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
   const [y, m, d] = iso.split("-").map(Number);
@@ -75,6 +93,12 @@ export function VenueTypeahead({
   const placeConfirmed = venue?.source === "places" && Boolean(venue.name.trim());
   const address = venue?.formattedAddress?.trim() || null;
   const dateLabel = formatReceiptDateLabel(receiptDate);
+  const hasMap =
+    placeConfirmed &&
+    typeof venue?.lat === "number" &&
+    typeof venue?.lng === "number" &&
+    Number.isFinite(venue.lat) &&
+    Number.isFinite(venue.lng);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -179,7 +203,7 @@ export function VenueTypeahead({
         formattedAddress: row.secondary || data.place.formattedAddress || null,
         lat: data.place.lat,
         lng: data.place.lng,
-        category: data.place.category,
+        category: data.place.category || row.category || null,
         source: "places",
         confirmedAt: new Date().toISOString(),
       });
@@ -198,25 +222,36 @@ export function VenueTypeahead({
 
   if (placeConfirmed) {
     return (
-      <div className="flex items-start gap-3 rounded-xl border border-border px-3.5 py-3.5">
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-semibold">{venue!.name}</div>
-          {address ? (
-            <div className="mt-0.5 text-[12px] text-muted-foreground">{address}</div>
-          ) : null}
-          {dateLabel ? (
-            <div className="mt-2 text-[12px] text-muted-foreground">
-              Receipt date · {dateLabel}
-            </div>
-          ) : null}
+      <div className="space-y-2.5">
+        <div className="flex items-start gap-3 rounded-xl border border-border px-3.5 py-3.5">
+          <VenueGlyph category={venue?.category} name={venue?.name} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-semibold">{venue!.name}</div>
+            {address ? (
+              <div className="mt-0.5 text-[12px] text-muted-foreground">{address}</div>
+            ) : null}
+            {dateLabel ? (
+              <div className="mt-2 text-[12px] text-muted-foreground">
+                Receipt date · {dateLabel}
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="shrink-0 text-[13px] font-semibold text-primary"
+            onClick={clearSelection}
+          >
+            Change
+          </button>
         </div>
-        <button
-          type="button"
-          className="shrink-0 text-[13px] font-semibold text-primary"
-          onClick={clearSelection}
-        >
-          Change
-        </button>
+        {hasMap ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`/api/places/static-map?lat=${venue!.lat}&lng=${venue!.lng}&w=600&h=220`}
+            alt={`Map of ${venue!.name}`}
+            className="h-[168px] w-full rounded-[14px] border border-border object-cover bg-[#EDE8E1]"
+          />
+        ) : null}
       </div>
     );
   }
@@ -244,13 +279,18 @@ export function VenueTypeahead({
             <li key={row.placeId}>
               <button
                 type="button"
-                className="w-full px-3.5 py-3 text-left hover:bg-muted/40"
+                className="flex w-full items-center gap-2.5 px-3 py-3 text-left hover:bg-muted/40"
                 onClick={() => void onSelect(row)}
               >
-                <div className="text-[15px] font-semibold">{row.name}</div>
-                {row.secondary ? (
-                  <div className="mt-0.5 text-[12px] text-muted-foreground">{row.secondary}</div>
-                ) : null}
+                <VenueGlyph category={row.category} name={row.name} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold">{row.name}</span>
+                  {row.secondary ? (
+                    <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                      {row.secondary}
+                    </span>
+                  ) : null}
+                </span>
               </button>
             </li>
           ))}

@@ -15,7 +15,7 @@ import type {
 } from "@/lib/types";
 import { typedVenue } from "@/lib/places";
 
-export type DraftItem = Item & { totalInput: string };
+export type DraftItem = Item & { totalInput: string; removed?: boolean };
 export type DraftFee = Fee & { amountInput: string };
 export type PickMode = "camera" | "library" | "share" | null;
 
@@ -177,7 +177,9 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         restaurant: venueToSave?.name ?? restaurant,
         venue: venueToSave,
         receiptDate,
-        items: items.map(({ id, name, qty, totalCents }) => ({ id, name, qty, totalCents })),
+        items: items
+          .filter((row) => !row.removed)
+          .map(({ id, name, qty, totalCents }) => ({ id, name, qty, totalCents })),
         fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
         hostInfo: { payments: checked.payments },
         publish: true,

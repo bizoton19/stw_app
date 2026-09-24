@@ -100,7 +100,7 @@ export async function mapboxAutocomplete(input: {
       secondary: s.place_formatted || s.full_address || "",
       distanceMeters: typeof s.distance === "number" ? s.distance : null,
       provider: "mapbox" as const,
-      category: s.poi_category?.[0] ?? null,
+      category: s.poi_category?.join(" ") ?? null,
     }));
 }
 

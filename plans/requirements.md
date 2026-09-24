@@ -123,7 +123,7 @@ HOST (interview)                                GUESTS (claim board)
  v
  | 4. Confirm restaurant name (one question)
  v
- | 5. Review/edit line items (fix misreads, add/remove rows)
+ | 5. Review/edit line items (fix misreads, soft-remove rows, food/drink cues)
  v
  | 6. Review fees (tax, gratuity, admin — not Subtotal/Total lines)
  v
@@ -206,8 +206,21 @@ Native wrapper  +  Node API  +  Postgres  +  object storage
 
 A separate native binary is a future milestone. v0 proves the interview, claiming, math, and visual language as a phone app running in a webview-shaped shell.
 
-**Phase 2:** [phase-2-venue.md](./phase-2-venue.md) — host venue typeahead (proximity Places) stored on the receipt.  
+**Phase 2:** [phase-2-venue.md](./phase-2-venue.md) — host venue typeahead (proximity Places) stored on the receipt; resto/bar icons + static map on select.  
 **Phase 3:** [phase-3-voice.md](./phase-3-voice.md) — guest voice order memory + reconcile (depends on Phase 2).
+
+### Host items review UX (step 5) — ship with Phase 2 polish
+
+On the “does it look right?” line-item screen:
+
+| Cue | Behavior |
+|---|---|
+| **Food / drink icons** | Each row shows a small colorful icon when the line is clearly food or drink (heuristic + optional vision `kind`). Drink → wine/glass in merlot. Food → plate/utensils in warm olive. Ambiguous / other → no icon (never force a guess). |
+| **Swipe to soft-delete** | Swipe a row to mark it removed. Soft delete: **strikethrough**, row stays visible, **subtotal recalculates** without that line. Not hard-removed until publish filters it out. |
+| **Undo** | Soft-deleted rows expose **Undo** (and an optional brief toast). Restoring puts the line back into the subtotal. |
+| **Trash affordance** | Existing trash control also soft-deletes (same as swipe), not hard-delete. |
+
+Publish sends only non-removed items. Fees step still follows.
 
 6. Client — native-feeling phone app
 

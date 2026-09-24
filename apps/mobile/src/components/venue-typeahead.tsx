@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import * as Location from "expo-location";
 import { Field } from "@/components/field";
+import { VenueKindIcon } from "@/components/venue-kind-icon";
+import { getApiUrl } from "@/lib/config";
 import {
   newSession,
   resolvePlaceDetails,
@@ -40,6 +44,16 @@ export function formatReceiptDateLabel(iso: string | null | undefined): string |
   });
 }
 
+function staticMapUri(lat: number, lng: number, w: number, h: number): string {
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lng: String(lng),
+    w: String(w),
+    h: String(h),
+  });
+  return `${getApiUrl()}/api/places/static-map?${params}`;
+}
+
 export function VenueTypeahead({
   value,
   venue,
@@ -47,6 +61,10 @@ export function VenueTypeahead({
   onChangeName,
   onChangeVenue,
 }: Props) {
+  const { width } = useWindowDimensions();
+  const mapW = Math.min(600, Math.max(280, Math.round(width - 48)));
+  const mapH = 168;
+
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [loading, setLoading] = useState(false);
   const [locationHint, setLocationHint] = useState<string | null>(null);
@@ -56,10 +74,14 @@ export function VenueTypeahead({
   const lockedRef = useRef(false);
 
   const placeConfirmed = venue?.source === "places" && Boolean(venue.name.trim());
-  const address =
-    venue?.formattedAddress?.trim() ||
-    null;
+  const address = venue?.formattedAddress?.trim() || null;
   const dateLabel = formatReceiptDateLabel(receiptDate);
+  const hasMap =
+    placeConfirmed &&
+    typeof venue?.lat === "number" &&
+    typeof venue?.lng === "number" &&
+    Number.isFinite(venue.lat) &&
+    Number.isFinite(venue.lng);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,7 +150,6 @@ export function VenueTypeahead({
     onChangeName(row.name);
     setPredictions([]);
     setLoading(true);
-    // Show dropdown subtitle immediately while details resolve.
     onChangeVenue({
       name: row.name,
       placeId: row.placeId,
@@ -142,7 +163,12 @@ export function VenueTypeahead({
     });
     try {
       const resolved = await resolvePlaceDetails(row, sessionRef.current);
-      onChangeVenue(resolved);
+      onChangeVenue({
+        ...resolved,
+        category: resolved.category || row.category || null,
+        formattedAddress:
+          row.secondary || resolved.formattedAddress || row.formattedAddress || null,
+      });
       sessionRef.current = newSession();
     } catch {
       onChangeVenue({
@@ -171,17 +197,31 @@ export function VenueTypeahead({
   return (
     <View>
       {placeConfirmed ? (
-        <View style={styles.selected}>
-          <View style={styles.selectedBody}>
-            <Text style={styles.name}>{venue!.name}</Text>
-            {address ? <Text style={styles.secondary}>{address}</Text> : null}
-            {dateLabel ? (
-              <Text style={styles.date}>Receipt date · {dateLabel}</Text>
-            ) : null}
+        <View>
+          <View style={styles.selected}>
+            <VenueKindIcon category={venue?.category} name={venue?.name} />
+            <View style={styles.selectedBody}>
+              <Text style={styles.name}>{venue!.name}</Text>
+              {address ? <Text style={styles.secondary}>{address}</Text> : null}
+              {dateLabel ? (
+                <Text style={styles.date}>Receipt date · {dateLabel}</Text>
+              ) : null}
+            </View>
+            <Pressable onPress={clearSelection} hitSlop={8}>
+              <Text style={styles.change}>Change</Text>
+            </Pressable>
           </View>
-          <Pressable onPress={clearSelection} hitSlop={8}>
-            <Text style={styles.change}>Change</Text>
-          </Pressable>
+          {hasMap ? (
+            <View style={styles.mapWrap}>
+              <Image
+                source={{
+                  uri: staticMapUri(venue!.lat!, venue!.lng!, mapW, mapH),
+                }}
+                style={[styles.map, { height: mapH }]}
+                accessibilityLabel={`Map of ${venue!.name}`}
+              />
+            </View>
+          ) : null}
         </View>
       ) : (
         <>
@@ -208,10 +248,13 @@ export function VenueTypeahead({
                   onPress={() => void onSelect(row)}
                   style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
                 >
-                  <Text style={styles.name}>{row.name}</Text>
-                  {row.secondary ? (
-                    <Text style={styles.secondary}>{row.secondary}</Text>
-                  ) : null}
+                  <VenueKindIcon category={row.category} name={row.name} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.name}>{row.name}</Text>
+                    {row.secondary ? (
+                      <Text style={styles.secondary}>{row.secondary}</Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -222,7 +265,6 @@ export function VenueTypeahead({
   );
 }
 
-/** Call before publish if host typed a name without picking a suggestion. */
 export function ensureVenueForPublish(
   restaurant: string,
   venue: ReceiptVenue | null,
@@ -242,7 +284,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   row: {
-    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
@@ -250,17 +295,26 @@ const styles = StyleSheet.create({
   selected: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
-    paddingHorizontal: 14,
+    gap: 10,
+    paddingHorizontal: 12,
     paddingVertical: 14,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  selectedBody: { flex: 1 },
+  selectedBody: { flex: 1, minWidth: 0 },
   name: { fontSize: 15, fontWeight: "600", color: colors.ink },
   secondary: { fontSize: 12, color: colors.muted, marginTop: 2 },
   date: { fontSize: 12, color: colors.muted, marginTop: 8 },
   change: { fontSize: 13, fontWeight: "600", color: colors.merlot, marginTop: 2 },
+  mapWrap: {
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    marginBottom: 8,
+    backgroundColor: "#EDE8E1",
+  },
+  map: { width: "100%", backgroundColor: "#EDE8E1" },
 });

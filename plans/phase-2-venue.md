@@ -49,12 +49,17 @@ Replace or upgrade current “What’s the name on the check?” screen:
 |---|---|
 | Field | Required. Placeholder: “Restaurant or bar.” |
 | Typeahead list | Appears after ≥2 characters (or immediately if location granted and query empty → “Nearby”). |
-| Row | Place name + short address / neighborhood. |
-| Select | Fills field + locks structured venue metadata (editable by clearing and retyping). |
+| Row | Place name + short address / neighborhood + **venue kind icon** (restaurant or bar only; omit if neither). |
+| Select | Locks structured venue; selected card shows **same name + address + kind icon** as the dropdown row. |
+| Map | After a Places select with lat/lng, show a **static map** under the selected card (server-proxied Mapbox Static Images — token never in the app). Typed-only venues skip the map. |
 | Location banner | Soft: “Using nearby places to rank results” / “Location off — search by name only.” Never a hard wall. |
 | Manual | Host can accept typed name **without** picking a Places row → `placeId` null, `source: "typed"`. Still valid for publish; Phase 3 match quality lower. |
 
 Do **not** auto-select the nearest restaurant without a tap — wrong-venue bugs destroy trust.
+
+**Venue kind icons (Phase 2 UX):** From Places/`category` (and MapKit POI). `restaurant` / `cafe` / `bakery` → plate/utensils. `bar` / `pub` / `nightlife` / `wine_bar` / `brewery` → wine glass. Anything else → no icon. Merlot / warm paper palette — restrained, not emoji.
+
+**Static map:** `GET /api/places/static-map?lat=&lng=&w=&h=` (Mapbox light style + merlot pin). Client `<Image>` under the selected venue.
 
 ---
 
@@ -102,6 +107,7 @@ CREATE INDEX IF NOT EXISTS receipts_created_at_idx
 |---|---|---|
 | `GET` | `/api/places/autocomplete?q=&lat=&lng=&session=` | Mapbox suggest (Android/web; iOS Expo Go fallback). |
 | `GET` | `/api/places/details?placeId=&session=` | Mapbox retrieve after select. |
+| `GET` | `/api/places/static-map?lat=&lng=&w=&h=` | Proxied Mapbox Static Image for the selected venue. |
 | `PUT` | `/api/receipts/:id` | Existing save — accept `venue` (+ keep `restaurant`). |
 
 **iOS native:** `apps/mobile/modules/mapkit-search` — `MKLocalSearch` on-device (no Mapbox cost). Falls back to Mapbox API in Expo Go.
