@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
-import { WineMark } from "@/components/wine-mark";
+import { WineMarkBusy } from "@/components/wine-mark";
 import { useHostDraft } from "@/context/host-draft";
 import { colors } from "@/lib/theme";
 
@@ -41,8 +41,7 @@ export default function HostParsing() {
         }
       >
         <View style={styles.center}>
-          <WineMark size={64} glow />
-          <ActivityIndicator size="large" color={colors.merlot} style={{ marginTop: 28 }} />
+          <WineMarkBusy size={72} />
           <Text style={styles.copy}>
             Reading the check. You’ll review every line next — and pick the place yourself.
           </Text>
@@ -61,7 +60,7 @@ const styles = StyleSheet.create({
     minHeight: 280,
   },
   copy: {
-    marginTop: 28,
+    marginTop: 32,
     maxWidth: 300,
     textAlign: "center",
     fontSize: 16,

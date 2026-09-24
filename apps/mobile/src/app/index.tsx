@@ -42,7 +42,7 @@ export default function HomeScreen() {
       <SafeAreaView edges={["bottom"]} style={styles.main}>
         <View style={styles.copy}>
           <View style={styles.heroMark}>
-            <WineMark size={88} glow />
+            <WineMark size={88} />
           </View>
           <Text style={styles.kicker}>Fair split</Text>
           <Text style={styles.title}>Ready to split this check?</Text>

@@ -31,7 +31,7 @@ export default function HostReady() {
         }
       >
         <View style={styles.hero}>
-          <WineMark size={72} glow />
+          <WineMark size={72} />
           <Text style={styles.lead}>
             One photo, a short review, then a link for the table.
           </Text>
