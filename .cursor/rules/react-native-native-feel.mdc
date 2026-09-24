@@ -1,0 +1,44 @@
+---
+description: Platform-adaptive React Native / Expo native-feel conventions
+globs: apps/mobile/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# React Native — native-feel guidelines
+
+Build **platform-adaptive**, not platform-identical. Business logic, state, and data stay shared. UI diverges only where OS muscle memory matters: navigation, gestures, sheets, dialogs, haptics.
+
+This app is **Expo Router** under `apps/mobile` (already on `expo-router` + `react-native-screens` + `expo-haptics` + safe-area). Prefer iterating here — do not spin up a second native tree unless Expo cannot meet a hard requirement.
+
+## Decision heuristic
+
+1. **System interaction** (nav, sheets, alerts, permissions, haptics) → branch with `Platform.select` / `.ios.tsx` / `.android.tsx`; follow each OS.
+2. **App content** (screens, brand, tokens, forms, claim board) → **one** shared implementation (`apps/mobile/src/lib/theme.ts`, shared components).
+
+## Rules
+
+1. **Navigation** — Use Expo Router / native stack (`react-native-screens`). No JS-stack or hand-rolled push animations. iOS: swipe-back + large titles where appropriate. Android: system back + Material transitions. Keep `gestureEnabled` / `fullScreenGestureEnabled` on claim/host stacks.
+
+2. **Modals / sheets** — iOS: `pageSheet` / `formSheet`. Android: bottom sheet + scrim (`@gorhom/bottom-sheet` when needed). Branch per platform; don’t fake iOS sheets on Android.
+
+3. **Action menus** — iOS: `ActionSheetIOS` / `@expo/react-native-action-sheet`. Android: bottom sheet or menu list — never an iOS-style action sheet.
+
+4. **Haptics** — `expo-haptics` only on meaningful actions (toggle claim, destructive unclaim, success/error). Map Android to vibration patterns; don’t assume iOS feels 1:1. Avoid decoration spam.
+
+5. **Typography** — System fonts (SF / Roboto). Shared **type scale** (sizes, weights, line-heights) from theme; don’t override to Inter/custom for body. Keep `allowFontScaling` on.
+
+6. **System dialogs** — `Alert.alert` for system alerts. Use OS permission prompts; don’t rebuild competing permission UI.
+
+7. **Shared design system** — Paper / ink / merlot tokens, icons, claim/settle chrome stay **one** language. Min tap target: **44pt iOS / 48dp Android** — use ≥44 as shared baseline (prefer 48 where dense lists allow).
+
+8. **Lists / scroll** — `FlatList` / FlashList for long lists. iOS: bounce on; `contentInsetAdjustmentBehavior="automatic"`. Android: default overscroll, no bounce. Always `react-native-safe-area-context`.
+
+9. **Keyboard** — `KeyboardAvoidingView`: iOS `padding`; Android `height` or `adjustResize`. Test both.
+
+10. **Polish** — iOS: blur sparingly (`expo-blur`) for bars. Android: elevation, not blur (unless API 31+ and intentional). Status bar per screen; splash matches first screen per platform.
+
+## Do not
+
+- Fork the whole claim board / theme per OS “to feel native.”
+- Recreate the app in a new `native/` folder to apply these rules.
+- Fight Expo Router with a parallel React Navigation root unless migrating for a concrete blocker.
