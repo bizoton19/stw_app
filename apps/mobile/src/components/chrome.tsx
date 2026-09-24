@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   track: { height: 2, borderRadius: 99, backgroundColor: colors.border, overflow: "hidden" },
   fill: { height: 2, backgroundColor: colors.merlot, borderRadius: 99 },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
   scrollContentDense: { paddingTop: 10, paddingBottom: 12 },
   scrollContentSparse: { flexGrow: 1, paddingTop: 28, paddingBottom: 32 },
   kicker: { fontSize: type.kicker, fontWeight: "600", color: colors.inkSoft, marginBottom: 4 },
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   },
   titleDense: { fontSize: 22, lineHeight: 26, letterSpacing: -0.3 },
   titleSparse: { fontSize: 30, lineHeight: 36, letterSpacing: -0.55 },
-  children: { marginTop: 16 },
+  children: { marginTop: 12 },
   childrenDense: { marginTop: 10 },
   childrenSparse: { marginTop: 28, flexGrow: 1 },
   footer: {

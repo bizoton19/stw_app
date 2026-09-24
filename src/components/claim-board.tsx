@@ -350,16 +350,16 @@ export function ClaimBoard({
       onBack={() => router.push("/")}
       footer={pickFooter}
     >
-      {mine ? (
-        <p className="mb-3 text-[13px] font-medium tabular-nums">
-          You {centsToLabel(mine.totalCents)} so far
-        </p>
-      ) : null}
       {guest ? (
-        <p className="mb-4 text-[13px] text-muted-foreground">
+        <p className="mb-3 text-[15px] leading-[22px] text-muted-foreground">
           Claiming as {guest.name}
           {isHost ? " (host)" : ""}
           {guest.contact ? ` · ${guest.contact}` : ""}
+        </p>
+      ) : null}
+      {mine ? (
+        <p className="mb-3 text-[13px] font-medium tabular-nums">
+          You {centsToLabel(mine.totalCents)} so far
         </p>
       ) : null}
       {message ? <p className="mb-3 text-sm text-destructive">{message}</p> : null}
@@ -379,20 +379,28 @@ export function ClaimBoard({
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggle(item.id)}
-                  className="pressable flex w-full items-start gap-3 py-3.5 text-left"
+                  className="pressable flex w-full items-center gap-2 py-3 text-left"
                 >
-                  <span
-                    className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                      selected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border"
-                    }`}
-                  >
-                    {selected ? <Check className="size-3" strokeWidth={3} /> : null}
+                  <span className="flex size-11 shrink-0 items-center justify-center">
+                    <span
+                      className={`flex size-5 items-center justify-center rounded-full border ${
+                        selected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border"
+                      }`}
+                    >
+                      {selected ? <Check className="size-3" strokeWidth={3} /> : null}
+                    </span>
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-medium">{item.name}</span>
-                    <span className="text-[12px] text-muted-foreground">
+                    <span
+                      className={`block text-[15px] font-medium ${
+                        selected ? "text-foreground" : ""
+                      }`}
+                    >
+                      {item.name}
+                    </span>
+                    <span className="text-[12px] tabular-nums text-muted-foreground">
                       {centsToLabel(item.totalCents)} for {item.qty}
                     </span>
                   </span>
@@ -453,7 +461,7 @@ function BoardHeader({
         ) : null}
       </div>
       {guest ? (
-        <p className="mb-4 text-[13px] text-muted-foreground">
+        <p className="mb-3 text-[15px] leading-[22px] text-muted-foreground">
           Claiming as {guest.name}
           {isHost ? " (host)" : ""}
           {guest.contact ? ` · ${guest.contact}` : ""}
@@ -482,7 +490,7 @@ function History({
   return (
     <>
       {goneItems.length > 0 ? (
-        <section className="mt-8">
+        <section className="mt-6">
           <p className="mb-2 text-[12px] font-medium text-muted-foreground">Claimed out</p>
           <ul className="space-y-1 text-[14px] text-muted-foreground">
             {goneItems.map((item) => (
@@ -493,7 +501,7 @@ function History({
       ) : null}
 
       {hasClaims ? (
-        <section className="mt-8">
+        <section className="mt-6">
           <p className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
             <Users className="size-3.5" strokeWidth={2} aria-hidden />
             Who claimed what

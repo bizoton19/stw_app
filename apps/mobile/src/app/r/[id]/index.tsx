@@ -222,7 +222,6 @@ function PickBoard() {
       onBack={() => router.replace("/")}
       footer={footer}
     >
-      {mine ? <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text> : null}
       {flow.guest ? (
         <Text style={styles.as}>
           Claiming as {flow.guest.name}
@@ -230,6 +229,7 @@ function PickBoard() {
           {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
         </Text>
       ) : null}
+      {mine ? <Text style={styles.mine}>You {centsToLabel(mine.totalCents)} so far</Text> : null}
       {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
       {remainingItems.length === 0 ? (
         <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
@@ -246,12 +246,14 @@ function PickBoard() {
               onPress={() => flow.toggle(item.id)}
               style={styles.item}
             >
-              <View style={[styles.check, selected && styles.checkOn]}>
-                {selected ? <Check size={12} color={colors.merlotFg} strokeWidth={3} /> : null}
+              <View style={styles.checkHit}>
+                <View style={[styles.check, selected && styles.checkOn]}>
+                  {selected ? <Check size={12} color={colors.merlotFg} strokeWidth={3} /> : null}
+                </View>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.muted}>
+                <Text style={[styles.muted, styles.tabular]}>
                   {centsToLabel(item.totalCents)} for {item.qty}
                 </Text>
               </View>
@@ -261,7 +263,7 @@ function PickBoard() {
         })
       )}
       {goneItems.length > 0 ? (
-        <View style={{ marginTop: 32 }}>
+        <View style={{ marginTop: 24 }}>
           <Text style={styles.section}>Claimed out</Text>
           {goneItems.map((item) => (
             <Text key={item.id} style={styles.muted}>
@@ -281,7 +283,7 @@ function History() {
   if (receipt.claims.length === 0) return null;
   const closed = receipt.status === "finalized";
   return (
-    <View style={{ marginTop: 32 }}>
+    <View style={{ marginTop: 24 }}>
       <View style={styles.sectionRow}>
         <Users size={14} color={colors.muted} strokeWidth={2} />
         <Text style={styles.section}>Who claimed what</Text>
@@ -328,20 +330,26 @@ function History() {
 const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: "700", color: colors.ink },
   muted: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 20 },
+  tabular: { fontVariant: ["tabular-nums"] },
+  lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 16 },
   mine: { fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], marginBottom: 8 },
-  as: { fontSize: 13, color: colors.muted, marginBottom: 16 },
+  as: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 12 },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   item: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    paddingVertical: 14,
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
+  checkHit: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   check: {
-    marginTop: 2,
     width: 20,
     height: 20,
     borderRadius: 10,

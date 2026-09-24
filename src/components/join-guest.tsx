@@ -45,7 +45,7 @@ export function JoinGuest({
         </ContinueButton>
       }
     >
-      <p className="mb-6 text-[15px] leading-relaxed text-muted-foreground">
+      <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
         {isHost
           ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
           : "A name is enough. Add a handle so the host can reach you if something looks off."}

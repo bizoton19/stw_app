@@ -77,7 +77,7 @@ export function InterviewChrome({
             transition={{ duration: reduce ? 0 : 0.32, ease }}
             className="absolute inset-0 flex flex-col"
           >
-            <div className="px-5 pt-5">
+            <div className="px-5 pt-3">
               {kicker ? (
                 <p className="mb-1 text-[13px] font-medium text-ink-soft">{kicker}</p>
               ) : null}
@@ -85,7 +85,7 @@ export function InterviewChrome({
                 {title}
               </h1>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-3">{children}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-3">{children}</div>
           </motion.div>
         </AnimatePresence>
       </div>
