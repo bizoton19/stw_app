@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Share, StyleSheet, Text, View } from "react-native";
+import { ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Banknote } from "lucide-react-native";
@@ -295,36 +295,47 @@ export default function SettleScreen() {
               : "Nobody has claimed yet."}
           </Text>
         ) : (
-          totals.people.map((person) => {
-            const amount = centsToLabel(person.totalCents);
-            const isYou = flow.guest?.name === person.personName;
-            return (
-              <View
-                key={`${person.personName}\0${person.personContact ?? ""}`}
-                style={styles.person}
-              >
-                <View style={styles.personHead}>
-                  <View style={styles.personId}>
-                    <ClaimerAvatar name={person.personName} size={32} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.name}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.personCards}
+            style={styles.personScroller}
+          >
+            {totals.people.map((person) => {
+              const amount = centsToLabel(person.totalCents);
+              const isYou = flow.guest?.name === person.personName;
+              return (
+                <View
+                  key={`${person.personName}\0${person.personContact ?? ""}`}
+                  style={styles.personCard}
+                >
+                  <View style={styles.personCardHead}>
+                    <ClaimerAvatar name={person.personName} size={34} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.name} numberOfLines={1}>
                         {person.personName}
                         {isYou ? " (you)" : ""}
                       </Text>
-                      <Text style={styles.muted}>{person.personContact || "no contact"}</Text>
+                      <Text style={styles.personContact} numberOfLines={1}>
+                        {person.personContact || "no contact"}
+                      </Text>
                     </View>
                   </View>
                   <Text style={styles.amount}>{amount}</Text>
+                  <View style={styles.personLines}>
+                    {person.lines.map((line) => (
+                      <Text key={line.itemId} style={styles.personLine} numberOfLines={2}>
+                        {line.units}× {line.itemName}
+                      </Text>
+                    ))}
+                    <Text style={styles.personLine}>
+                      Tax & tip · {centsToLabel(person.feeCents)}
+                    </Text>
+                  </View>
                 </View>
-                {person.lines.map((line) => (
-                  <Text key={line.itemId} style={styles.muted}>
-                    {line.units}× {line.itemName} · {centsToLabel(line.cents)}
-                  </Text>
-                ))}
-                <Text style={styles.muted}>Share of tax & tip · {centsToLabel(person.feeCents)}</Text>
-              </View>
-            );
-          })
+              );
+            })}
+          </ScrollView>
         )}
 
         {flow.isHost && payments.length > 0 ? (
@@ -460,10 +471,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   peopleTitle: { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 4 },
-  person: { marginBottom: 28 },
-  personHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
-  personId: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
-  name: { fontSize: 15, fontWeight: "600", color: colors.ink },
-  amount: { fontSize: 22, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  personScroller: { marginHorizontal: -20, marginBottom: 16 },
+  personCards: { paddingHorizontal: 20, gap: 10 },
+  personCard: {
+    width: 196,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: "#FFFcf8",
+    gap: 10,
+  },
+  personCardHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  personContact: { marginTop: 2, fontSize: 12, color: colors.muted },
+  personLines: { gap: 4 },
+  personLine: { fontSize: 12, lineHeight: 17, color: colors.inkSoft, fontWeight: "500" },
+  name: { fontSize: 15, fontWeight: "700", color: colors.ink },
+  amount: { fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"], color: colors.ink },
   payHostNote: { marginTop: 8, marginBottom: 16, gap: 4 },
 });

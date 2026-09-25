@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from "expo-router";
-import { Home, Plus } from "lucide-react-native";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Plus, Receipt } from "lucide-react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { colors } from "@/lib/theme";
 
 export default function TabsLayout() {
@@ -19,9 +19,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Receipts",
           tabBarIcon: ({ color, size }) => (
-            <Home size={size ?? 22} color={color} strokeWidth={2.25} />
+            <Receipt size={size ?? 22} color={color} strokeWidth={2.25} />
           ),
         }}
       />

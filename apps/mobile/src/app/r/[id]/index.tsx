@@ -1,6 +1,6 @@
-import { FlatList, Platform, StyleSheet, Text, View } from "react-native";
+import { FlatList, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Receipt, Users } from "lucide-react-native";
+import { Users } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
@@ -13,7 +13,7 @@ import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
 import { colors } from "@/lib/theme";
 import { useMemo, useState } from "react";
-import type { Item } from "@/lib/types";
+import type { Claim, Item } from "@/lib/types";
 
 export default function ClaimScreen() {
   const router = useRouter();
@@ -328,56 +328,99 @@ function PickBoard() {
 function History() {
   const flow = useClaimFlow();
   const receipt = flow.receipt!;
-  if (receipt.claims.length === 0) return null;
   const closed = receipt.status === "finalized";
+
+  const claimants = useMemo(() => {
+    const map = new Map<
+      string,
+      { personName: string; personContact?: string; claims: Claim[] }
+    >();
+    for (const claim of receipt.claims) {
+      const key = `${claim.personName}\0${claim.personContact ?? ""}`;
+      let row = map.get(key);
+      if (!row) {
+        row = {
+          personName: claim.personName,
+          personContact: claim.personContact,
+          claims: [],
+        };
+        map.set(key, row);
+      }
+      row.claims.push(claim);
+    }
+    return [...map.values()].sort((a, b) => a.personName.localeCompare(b.personName));
+  }, [receipt.claims]);
+
+  if (claimants.length === 0) return null;
+
+  const itemName = (itemId: string) =>
+    receipt.items.find((item) => item.id === itemId)?.name ?? "Item";
+
   return (
     <View style={{ marginTop: 24 }}>
       <View style={styles.sectionRow}>
         <Users size={14} color={colors.muted} strokeWidth={2} />
         <Text style={styles.section}>Who claimed what</Text>
       </View>
-      {receipt.items.map((item) => {
-        const claims = receipt.claims.filter((c) => c.itemId === item.id);
-        if (claims.length === 0) return null;
-        return (
-          <View key={item.id} style={{ marginBottom: 16 }}>
-            <View style={styles.itemLabelRow}>
-              <Receipt size={13} color={colors.inkSoft} strokeWidth={2} />
-              <Text style={styles.itemName}>{item.name}</Text>
-            </View>
-            {claims.map((claim) => {
-              const mineToDrop =
-                !closed &&
-                (Boolean(getClaimToken(receipt.id, claim.id)) || flow.isHost);
-              return (
-                <View key={claim.id} style={styles.claimRow}>
-                  <ClaimerAvatar name={claim.personName} size={26} />
-                  <Text style={[styles.muted, { flex: 1, marginTop: 0 }]}>
-                    {claim.personName} · {claim.units}
-                    {claim.personContact ? ` · ${claim.personContact}` : ""}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.claimCards}
+        style={styles.claimScroller}
+      >
+        {claimants.map((person) => {
+          const isYou = flow.guest?.name === person.personName;
+          return (
+            <View
+              key={`${person.personName}\0${person.personContact ?? ""}`}
+              style={styles.claimCard}
+            >
+              <View style={styles.claimCardHead}>
+                <ClaimerAvatar name={person.personName} size={32} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.claimCardName} numberOfLines={1}>
+                    {person.personName}
+                    {isYou ? " (you)" : ""}
                   </Text>
-                  {mineToDrop ? (
-                    <PressScale
-                      disabled={flow.busy}
-                      haptic="medium"
-                      onPress={() => {
-                        if (flow.busy) return;
-                        void hapticNotify("warning");
-                        void flow.unclaim(claim.id);
-                      }}
-                      style={{ height: 44, justifyContent: "center", paddingHorizontal: 4 }}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: "600", color: colors.ink }}>
-                        Unclaim
-                      </Text>
-                    </PressScale>
+                  {person.personContact ? (
+                    <Text style={styles.claimCardMeta} numberOfLines={1}>
+                      {person.personContact}
+                    </Text>
                   ) : null}
                 </View>
-              );
-            })}
-          </View>
-        );
-      })}
+              </View>
+              <View style={styles.claimCardLines}>
+                {person.claims.map((claim) => {
+                  const mineToDrop =
+                    !closed &&
+                    (Boolean(getClaimToken(receipt.id, claim.id)) || flow.isHost);
+                  return (
+                    <View key={claim.id} style={styles.claimCardLine}>
+                      <Text style={styles.claimCardLineText} numberOfLines={2}>
+                        {claim.units}× {itemName(claim.itemId)}
+                      </Text>
+                      {mineToDrop ? (
+                        <PressScale
+                          disabled={flow.busy}
+                          haptic="medium"
+                          onPress={() => {
+                            if (flow.busy) return;
+                            void hapticNotify("warning");
+                            void flow.unclaim(claim.id);
+                          }}
+                          style={styles.unclaimHit}
+                        >
+                          <Text style={styles.unclaimText}>Unclaim</Text>
+                        </PressScale>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -392,7 +435,6 @@ const styles = StyleSheet.create({
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 20, paddingBottom: 24 },
-  itemName: { fontSize: 15, fontWeight: "600", color: colors.ink },
   section: { fontSize: 12, fontWeight: "600", color: colors.muted },
   sectionRow: {
     flexDirection: "row",
@@ -400,11 +442,33 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 8,
   },
-  itemLabelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
-  claimRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 8,
+  claimScroller: { marginHorizontal: -20 },
+  claimCards: { paddingHorizontal: 20, gap: 10, paddingVertical: 4 },
+  claimCard: {
+    width: 200,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: "#FFFcf8",
+    gap: 12,
   },
+  claimCardHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  claimCardName: { fontSize: 15, fontWeight: "700", color: colors.ink },
+  claimCardMeta: { marginTop: 2, fontSize: 12, color: colors.muted },
+  claimCardLines: { gap: 8 },
+  claimCardLine: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  claimCardLineText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "500",
+    color: colors.inkSoft,
+  },
+  unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
+  unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
 });

@@ -19,21 +19,23 @@ import {
 } from "@/lib/host-tabs";
 import { colors } from "@/lib/theme";
 
-function dayLabel(isoDay?: string, updatedAt?: string): string {
+function receiptDate(isoDay?: string, updatedAt?: string): string {
   const raw = isoDay && /^\d{4}-\d{2}-\d{2}$/.test(isoDay) ? isoDay : updatedAt?.slice(0, 10);
   if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return "Open check";
   const [y, m, d] = raw.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   if (Number.isNaN(dt.getTime())) return "Open check";
-  const today = new Date();
-  const todayKey = today.toISOString().slice(0, 10);
-  if (raw === todayKey) return "Today";
-  return dt.toLocaleDateString(undefined, {
-    weekday: "short",
+  return dt.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     timeZone: "UTC",
   });
+}
+
+function isToday(isoDay?: string, updatedAt?: string): boolean {
+  const raw = isoDay && /^\d{4}-\d{2}-\d{2}$/.test(isoDay) ? isoDay : updatedAt?.slice(0, 10);
+  if (!raw) return false;
+  return raw === new Date().toISOString().slice(0, 10);
 }
 
 export default function HomeScreen() {
@@ -81,7 +83,7 @@ export default function HomeScreen() {
         <View style={styles.top}>
           <Text style={styles.kicker}>Host desk</Text>
           <Text style={styles.title} numberOfLines={1}>
-            {active ? "Your open tabs" : "Ready when you are"}
+            {active ? "Your receipts" : "Ready when you are"}
           </Text>
         </View>
 
@@ -101,21 +103,23 @@ export default function HomeScreen() {
                   haptic="select"
                   onPress={() => openBoard(active.id)}
                   style={styles.heroCard}
-                  accessibilityLabel={`Open live board for ${active.restaurant || "tonight’s tab"}`}
+                  accessibilityLabel={`Open live board for ${receiptDate(active.receiptDay, active.updatedAt)}`}
                 >
-                  <Text style={styles.heroEyebrow}>Tonight’s tab</Text>
-                  <Text style={styles.heroName} numberOfLines={2}>
-                    {active.restaurant || "Open check"}
-                  </Text>
                   <View style={styles.heroMetaRow}>
-                    <Text style={styles.heroMeta}>
-                      {dayLabel(active.receiptDay, active.updatedAt)}
+                    <Text style={styles.heroEyebrow}>
+                      {isToday(active.receiptDay, active.updatedAt) ? "Tonight’s tab" : "Open tab"}
                     </Text>
                     <View style={styles.livePill}>
                       <View style={styles.liveDot} />
                       <Text style={styles.liveText}>Live board</Text>
                     </View>
                   </View>
+                  <Text style={styles.heroDate}>
+                    {receiptDate(active.receiptDay, active.updatedAt)}
+                  </Text>
+                  <Text style={styles.heroPlace} numberOfLines={2}>
+                    {active.restaurant || "Open check"}
+                  </Text>
                   <Text style={styles.heroCta}>Tap for who owes what · claimed & remaining</Text>
                 </PressScale>
               ) : (
@@ -137,13 +141,15 @@ export default function HomeScreen() {
               haptic="select"
               onPress={() => openBoard(item.id)}
               style={styles.row}
-              accessibilityLabel={`Open ${item.restaurant || item.id}`}
+              accessibilityLabel={`Open ${receiptDate(item.receiptDay, item.updatedAt)}`}
             >
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.rowName} numberOfLines={1}>
+                <Text style={styles.rowDate}>
+                  {receiptDate(item.receiptDay, item.updatedAt)}
+                </Text>
+                <Text style={styles.rowPlace} numberOfLines={1}>
                   {item.restaurant || item.id}
                 </Text>
-                <Text style={styles.rowMeta}>{dayLabel(item.receiptDay, item.updatedAt)}</Text>
               </View>
               <Text style={styles.rowAction}>Board</Text>
               <ChevronRight size={18} color={colors.inkSoft} strokeWidth={2.25} />
@@ -196,22 +202,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroEyebrow: { fontSize: 12, fontWeight: "700", color: colors.merlot },
-  heroName: {
-    marginTop: 8,
-    fontSize: 26,
+  heroDate: {
+    marginTop: 10,
+    fontSize: 34,
     fontWeight: "800",
     color: colors.ink,
-    letterSpacing: -0.45,
-    lineHeight: 32,
+    letterSpacing: -0.7,
+    lineHeight: 40,
+  },
+  heroPlace: {
+    marginTop: 6,
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.inkSoft,
+    letterSpacing: -0.2,
   },
   heroMetaRow: {
-    marginTop: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
   },
-  heroMeta: { fontSize: 14, fontWeight: "600", color: colors.inkSoft },
   livePill: {
     flexDirection: "row",
     alignItems: "center",
@@ -256,8 +267,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  rowName: { fontSize: 16, fontWeight: "700", color: colors.ink },
-  rowMeta: { marginTop: 2, fontSize: 13, fontWeight: "500", color: colors.inkSoft },
+  rowDate: { fontSize: 20, fontWeight: "800", color: colors.ink, letterSpacing: -0.35 },
+  rowPlace: { marginTop: 2, fontSize: 14, fontWeight: "500", color: colors.inkSoft },
   rowAction: { fontSize: 14, fontWeight: "700", color: colors.merlot },
   hint: {
     marginTop: 24,
