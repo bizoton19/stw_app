@@ -12,20 +12,20 @@ One Railway service serves `/api/*` and `/r/[id]` — no separate proxy. DNS + R
 
 ## P0 — Do before next friend / TestFlight push
 
-- [ ] **DNS:** Add `CNAME` record for `api` → Railway custom-domain target (copy from Railway UI when adding the domain). TTL low (e.g. 300) until verified.
-- [ ] **Railway:** Service → **Settings → Networking / Custom Domain** → add `api.splitthewine.app`. Wait for certificate **Active**.
-- [ ] **Railway env** (replace old `*.up.railway.app` values):
-  - [ ] `OPENROUTER_HTTP_REFERER=https://api.splitthewine.app`
-  - [ ] `ALLOWED_ORIGINS=https://api.splitthewine.app,https://www.splitthewine.app` (add other browser origins only if needed)
-- [ ] **Smoke-test custom domain:**
-  - [ ] `GET https://api.splitthewine.app/api/receipts/demo` (or a real open receipt) → 200
+- [x] **DNS:** Add `CNAME` record for `api` → Railway custom-domain target (copy from Railway UI when adding the domain). TTL low (e.g. 300) until verified.
+- [x] **Railway:** Service → **Settings → Networking / Custom Domain** → add `api.splitthewine.app`. Wait for certificate **Active**.
+- [x] **Railway env** (replace old `*.up.railway.app` values):
+  - [x] `OPENROUTER_HTTP_REFERER=https://api.splitthewine.app`
+  - [x] `ALLOWED_ORIGINS=https://api.splitthewine.app,https://www.splitthewine.app` (add other browser origins only if needed)
+- [x] **Smoke-test custom domain:**
+  - [x] `GET https://api.splitthewine.app/api/receipts/demo` (or a real open receipt) → 200
   - [ ] Open `https://api.splitthewine.app/r/<receiptId>` in a phone browser → join + claim
-  - [ ] HTTPS padlock / no mixed-content warnings
-- [ ] **Mobile EAS** (`apps/mobile/eas.json` + rebuild):
-  - [ ] `EXPO_PUBLIC_API_URL=https://api.splitthewine.app`
-  - [ ] `EXPO_PUBLIC_SHARE_URL=https://api.splitthewine.app`
+  - [x] HTTPS padlock / no mixed-content warnings
+- [x] **Mobile EAS** (`apps/mobile/eas.json` + rebuild):
+  - [x] `EXPO_PUBLIC_API_URL=https://api.splitthewine.app`
+  - [x] `EXPO_PUBLIC_SHARE_URL=https://api.splitthewine.app`
   - [ ] New iOS build so TestFlight friends get share links on the custom host
-- [ ] **Share-link convention:** claim URLs are `https://api.splitthewine.app/r/<id>` (same origin as API).
+- [x] **Share-link convention:** claim URLs are `https://api.splitthewine.app/r/<id>` (same origin as API).
 
 ## P1 — Cleanup after cutover
 

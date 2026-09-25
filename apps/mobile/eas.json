@@ -11,23 +11,23 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-production-72488.up.railway.app",
-        "EXPO_PUBLIC_SHARE_URL": "https://api-production-72488.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://api.splitthewine.app",
+        "EXPO_PUBLIC_SHARE_URL": "https://api.splitthewine.app"
       }
     },
     "preview": {
       "distribution": "store",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-production-72488.up.railway.app",
-        "EXPO_PUBLIC_SHARE_URL": "https://api-production-72488.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://api.splitthewine.app",
+        "EXPO_PUBLIC_SHARE_URL": "https://api.splitthewine.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-production-72488.up.railway.app",
-        "EXPO_PUBLIC_SHARE_URL": "https://api-production-72488.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://api.splitthewine.app",
+        "EXPO_PUBLIC_SHARE_URL": "https://api.splitthewine.app"
       }
     }
   },
