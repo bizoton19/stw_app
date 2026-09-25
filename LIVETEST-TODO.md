@@ -94,6 +94,7 @@ From `apps/mobile`:
 - [ ] Tell friends: API redeploys keep tabs (Postgres schema `split_the_wine`); still don’t post the Railway URL publicly
 - [ ] Don’t post the Railway URL publicly
 - [ ] Cap / alert OpenRouter spend in the OpenRouter dashboard
+- [ ] **Host claim push** (see `plans/requirements.md` §4 / §17 Phase 2.5) — after a TestFlight/dev-client build can receive pushes; not Expo Go
 
 ---
 

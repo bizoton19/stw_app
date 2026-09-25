@@ -1,7 +1,7 @@
 Split the Wine — Product & Technical Plan
 
 Owner: Alex Salomon
-Updated: 24 Sep 2026 — Roadmap split: [phase-2-venue.md](./phase-2-venue.md), [phase-3-voice.md](./phase-3-voice.md). Pointers in §17.
+Updated: 25 Sep 2026 — Added host claim push notifications (§4 + §17). Roadmap: [phase-2-venue.md](./phase-2-venue.md), [phase-3-voice.md](./phase-3-voice.md).
 
 
 
@@ -99,7 +99,7 @@ Anyone with the link opens the claim board on their phone, sees only what's stil
 
 
 
-The claimed quantity is subtracted from what's available in real time, visible to everyone.
+The claimed quantity is subtracted from what's available in real time, visible to everyone. If the host has left the live board (app backgrounded / phone locked), they still learn that someone claimed — via a push notification on the native host app.
 
 
 
@@ -130,6 +130,7 @@ HOST (interview)                                GUESTS (claim board)
  | 7. How should people pay you? method + handle
  v
  | 8. Confirm → publish → shareable claim URL
+ |    (native host: register for claim pushes on this receipt)
  |--------------------------------------------->| 9. Guest opens claim URL
  |                                              | 10. Enters name + optional contact
  |                                              | 11. Sees remaining qty per item
@@ -137,6 +138,7 @@ HOST (interview)                                GUESTS (claim board)
  |                                              |     (<= remaining), taps Claim
  |                                              | 13. Remaining decrements live
  |                                              |     (repeat 11–13)
+ | <— push: “Alex claimed 2× Josephine…” ——|     (host notified even if app backgrounded)
  v                                              v
  | 14. Host closes claiming (host-only)
  |     Unclaimed leftovers assign to the host
@@ -161,6 +163,10 @@ Integer-only claim quantities. No fractional/partial units. Validate client- and
 
 
 Real-time decrement. When any guest claims N units, every other open client sees the reduced remaining count without a manual refresh. v0: SSE with poll fallback.
+
+
+
+Host claim push (native). SSE only helps when the host’s board is open. After publish, the host device may register a push token for that receipt. On each successful claim (and optionally unclaim), the API notifies registered host devices: who claimed what and how many (e.g. “Alex claimed 2× Josephine Old Fashioned”). Opens the live board / settle. Opt-in OS permission; no spam to guests. Web claimers do not need push. Ship after TestFlight can install a store/dev-client build (Expo Go is weak for production push). Stack sketch: Expo Notifications → APNs/FCM; store tokens server-side keyed by receipt + host token.
 
 
 
@@ -981,7 +987,7 @@ Key: still only in repo-root .env.local. Native env files must never contain OPE
 
 
 
-17. Product roadmap — Phase 2 / Phase 3
+17. Product roadmap — Phase 2 / Phase 3 / host push
 
 Full technical plans live in separate files (schema, API, UI, philosophy risks, open questions):
 
@@ -990,8 +996,9 @@ Full technical plans live in separate files (schema, API, UI, philosophy risks, 
 | **DNS (P0)** | [dns-todos.md](./dns-todos.md) | **HIGH PRIORITY** — `api.splitthewine.app` → Railway (API + claim UI); `www` stays marketing. |
 | **UI** | [ui-enhance.guide.md](./ui-enhance.guide.md) | Visual pass contract — denser claim/settle, paper+merlot, web↔native parity. |
 | **2** | [phase-2-venue.md](./phase-2-venue.md) | Host venue typeahead (proximity Places); structured `venue` on receipt. Near-term. |
-| **3** | [phase-3-voice.md](./phase-3-voice.md) | Guest opt-in voice order drafts; reconcile to host claim link by time/place. Later; depends on Phase 2. |
+| **2.5 Host push** | this file §4 | Notify the host when a guest claims (or unclaims) while the host app is backgrounded. Native only; required product feature for dinner-table flow. |
+| **3** | [phase-3-voice.md](./phase-3-voice.md) | Guest opt-in voice order drafts; reconcile to host claim link by time/place. Later; depends on Phase 2. Arrival/unclear pushes there are **separate** from host claim pushes. |
 
-**Build order:** Cut over to `api.splitthewine.app` ([dns-todos.md](./dns-todos.md)) → App Store / TestFlight for current v0 → Phase 2 → friend-test venue accuracy → Phase 3 (on-device drafts first).
+**Build order:** Cut over to `api.splitthewine.app` ([dns-todos.md](./dns-todos.md)) → App Store / TestFlight for current v0 → **host claim push (2.5)** on a store/dev-client build → Phase 2 polish → friend-test venue accuracy → Phase 3 (on-device drafts first).
 
-Do not scaffold Phase 3 until Phase 2 is live and privacy copy covers venue storage. Philosophy risks are spelled out in each plan file — Phase 2 is compatible if venue dies with the receipt; Phase 3 only as optional guest assist.
+Do not scaffold Phase 3 until Phase 2 is live and privacy copy covers venue storage. Philosophy risks are spelled out in each plan file — Phase 2 is compatible if venue dies with the receipt; Phase 3 only as optional guest assist. Host claim push does not require venue or voice; it only needs a durable host device token per open receipt.
