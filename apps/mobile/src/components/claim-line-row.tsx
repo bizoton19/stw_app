@@ -13,8 +13,8 @@ import { colors } from "@/lib/theme";
 import type { Item } from "@/lib/types";
 
 const PAPER = colors.paper;
-const SELECTED_BG = "rgba(110, 46, 53, 0.12)";
-const SELECTED_BORDER = colors.merlot;
+const SELECTED_BG = colors.selectWash;
+const SELECTED_BORDER = colors.select;
 const IDLE_BORDER = "transparent";
 
 export function ClaimLineRow({
@@ -96,11 +96,11 @@ const styles = StyleSheet.create({
     bottom: 10,
     width: 4,
     borderRadius: 2,
-    backgroundColor: colors.merlot,
+    backgroundColor: colors.select,
   },
   copy: { flex: 1, minWidth: 0 },
   name: { fontSize: 16, fontWeight: "600", color: colors.ink, letterSpacing: -0.2 },
-  nameOn: { color: colors.merlot, fontWeight: "700" },
+  nameOn: { color: colors.select, fontWeight: "700" },
   meta: { marginTop: 3, fontSize: 13, color: colors.muted },
   tabular: { fontVariant: ["tabular-nums"] },
   left: {
@@ -109,5 +109,5 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     fontVariant: ["tabular-nums"],
   },
-  leftOn: { color: colors.merlot, fontWeight: "700" },
+  leftOn: { color: colors.select, fontWeight: "700" },
 });

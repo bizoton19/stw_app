@@ -6,6 +6,9 @@ export const colors = {
   border: "#E6E0D8",
   merlot: "#6E2E35",
   merlotFg: "#FBF8F5",
+  /** Selected claim lines — bottle green, contrasts merlot CTAs on warm paper. */
+  select: "#2F5D50",
+  selectWash: "rgba(47, 93, 80, 0.14)",
   danger: "#A33B32",
 };
 
