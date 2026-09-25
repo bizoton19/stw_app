@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Share, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import { Banknote } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
+import { IconActionButton } from "@/components/icon-action-button";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
+import { publicClaimUrl } from "@/lib/config";
 import { hostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
@@ -21,6 +24,7 @@ export default function SettleScreen() {
   const totals = useMemo(() => (receipt ? computeTotals(receipt) : null), [receipt]);
   const payments = hostPayments(receipt?.hostInfo);
   const [paying, setPaying] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   if (!receipt || !totals) {
     return (
@@ -33,6 +37,7 @@ export default function SettleScreen() {
   }
 
   const receiptId = receipt.id;
+  const claimUrl = publicClaimUrl(receiptId);
   const closed = receipt.status === "finalized";
   const leftover = totals.unclaimedItemCents > 0 && !closed;
   const remainingLines = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
@@ -44,11 +49,29 @@ export default function SettleScreen() {
     ? totals.people.find((p) => p.personName === flow.guest?.name)
     : undefined;
   const restaurant = receipt.restaurant || "the check";
+  const place = receipt.restaurant?.trim() || "Tonight’s check";
   const hostName =
     flow.isHost && flow.guest?.name.trim() ? flow.guest.name.trim() : "the host";
   const claimParams = flow.isHost
     ? ({ id: receiptId, host: "1" } as const)
     : ({ id: receiptId } as const);
+
+  async function copyLink() {
+    await Clipboard.setStringAsync(claimUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function shareLink() {
+    try {
+      await Share.share({
+        message: `Claim what you ordered on ${place}: ${claimUrl}`,
+        url: claimUrl,
+      });
+    } catch {
+      await copyLink();
+    }
+  }
 
   async function payWith(payment: HostPayment, amountCents: number) {
     if (!payMethodIsOpenable(payment.method)) return;
@@ -115,6 +138,31 @@ export default function SettleScreen() {
             : "Drinks plus a share of tax and tip. Tapping a payment method opens the host's app when possible — nothing is charged from Split the Wine."}
         </Text>
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
+
+        {flow.isHost && !closed ? (
+          <View style={styles.shareCard}>
+            <Text style={styles.shareLabel}>Claim link</Text>
+            <Text selectable style={styles.shareUrl} numberOfLines={2}>
+              {claimUrl}
+            </Text>
+            <View style={styles.shareRow}>
+              <View style={{ flex: 1 }}>
+                <IconActionButton
+                  icon="copy"
+                  label={copied ? "Copied" : "Copy"}
+                  onPress={() => void copyLink()}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <IconActionButton
+                  icon="share"
+                  label="Share again"
+                  onPress={() => void shareLink()}
+                />
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {flow.isHost ? (
           <View style={styles.statusCard}>
@@ -301,6 +349,18 @@ const styles = StyleSheet.create({
   lead: { fontSize: 14, lineHeight: 20, color: colors.muted, marginBottom: 12 },
   muted: { fontSize: 12, color: colors.muted, marginTop: 2 },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
+  shareCard: {
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.paper,
+    gap: 8,
+  },
+  shareLabel: { fontSize: 12, fontWeight: "700", color: colors.inkSoft, letterSpacing: 0.2 },
+  shareUrl: { fontFamily: "monospace", fontSize: 13, lineHeight: 18, color: colors.ink },
+  shareRow: { flexDirection: "row", gap: 8, marginTop: 4 },
   statusCard: {
     marginBottom: 16,
     padding: 14,
