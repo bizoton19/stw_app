@@ -11,6 +11,12 @@
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.splitthewine.app",
       "supportsTablet": false,
+      "entitlements": {
+        "aps-environment": "production",
+        "com.apple.security.application-groups": [
+          "group.com.splitthewine.app"
+        ]
+      },
       "infoPlist": {
         "NSCameraUsageDescription": "Split the Wine photographs the check so the server can read the lines. You still review every item.",
         "NSPhotoLibraryUsageDescription": "Split the Wine reads a receipt photo from your library so the server can extract the tab.",
@@ -84,8 +90,7 @@
           "iosActivationRules": {
             "NSExtensionActivationSupportsImageWithMaxCount": 1
           },
-          "androidIntentFilters": ["image/*"],
-          "iosShareExtensionName": "Split the Wine"
+          "androidIntentFilters": ["image/*"]
         }
       ],
       [
