@@ -10,7 +10,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
-import { AppShell, PrimaryButton } from "@/components/chrome";
+import { AppShell } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import {
   getActiveHostReceiptId,
@@ -157,15 +157,12 @@ export default function HomeScreen() {
           ListFooterComponent={
             <View style={styles.apiWrap}>
               <ApiBar />
+              {!active ? (
+                <Text style={styles.createHint}>Tap Create below to start a new receipt.</Text>
+              ) : null}
             </View>
           }
         />
-
-        <View style={styles.footer}>
-          <PrimaryButton onPress={() => router.push("/host")}>
-            {active ? "Start a new receipt" : "Start with the receipt"}
-          </PrimaryButton>
-        </View>
       </SafeAreaView>
     </AppShell>
   );
@@ -269,12 +266,11 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   apiWrap: { marginTop: 28, paddingBottom: 8 },
-  footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.paper,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 4,
+  createHint: {
+    marginTop: 16,
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.inkSoft,
   },
 });
