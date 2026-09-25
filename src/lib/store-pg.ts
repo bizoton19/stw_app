@@ -525,7 +525,11 @@ export async function addClaims(
   });
 }
 
-export async function removeClaim(claimId: string, ownerToken: string | null) {
+export async function removeClaim(
+  claimId: string,
+  ownerToken: string | null,
+  hostToken: string | null = null,
+) {
   await ensureSchema();
   return withTransaction(async (client) => {
     const lookup = await client.query<{ receipt_id: string }>(
@@ -544,7 +548,9 @@ export async function removeClaim(claimId: string, ownerToken: string | null) {
     if (!claim) {
       throw Object.assign(new Error("not_found"), { code: "not_found" });
     }
-    if (!ownerToken || ownerToken !== claim.ownerToken) {
+    const asOwner = Boolean(ownerToken && ownerToken === claim.ownerToken);
+    const asHost = Boolean(hostToken && hostToken === receipt.hostToken);
+    if (!asOwner && !asHost) {
       throw Object.assign(new Error("forbidden"), { code: "forbidden" });
     }
     receipt.claims = receipt.claims.filter((row) => row.id !== claimId);

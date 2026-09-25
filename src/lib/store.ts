@@ -77,8 +77,14 @@ export async function addClaims(
   return usingDatabase() ? pg.addClaims(id, input) : memory.addClaims(id, input);
 }
 
-export async function removeClaim(claimId: string, ownerToken: string | null) {
-  return usingDatabase() ? pg.removeClaim(claimId, ownerToken) : memory.removeClaim(claimId, ownerToken);
+export async function removeClaim(
+  claimId: string,
+  ownerToken: string | null,
+  hostToken?: string | null,
+) {
+  return usingDatabase()
+    ? pg.removeClaim(claimId, ownerToken, hostToken)
+    : memory.removeClaim(claimId, ownerToken, hostToken);
 }
 
 export async function setHostInfo(id: string, hostToken: string | null, info: HostInfo) {

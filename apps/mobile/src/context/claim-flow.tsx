@@ -8,7 +8,9 @@ import {
   getHostToken,
   hydrateSession,
   saveClaimToken,
+  clearClaimToken,
   saveGuest,
+  getClaimToken,
 } from "@/lib/session";
 import { api, type ApiError } from "@/lib/api";
 import type { GuestIdentity, PublicReceipt } from "@/lib/types";
@@ -183,15 +185,34 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
 
   const unclaim = useCallback(
     async (claimId: string) => {
-      const { getClaimToken } = await import("@/lib/session");
-      const token = getClaimToken(id, claimId);
-      if (!token) return;
+      const claimToken = getClaimToken(id, claimId);
+      const hostToken = getHostToken(id);
+      if (!claimToken && !hostToken) return;
       setBusy(true);
+      setMessage(null);
       try {
-        await api(`/api/claims/${claimId}`, { method: "DELETE", claimToken: token });
+        await api(`/api/claims/${claimId}`, {
+          method: "DELETE",
+          claimToken,
+          hostToken,
+        });
+        await clearClaimToken(id, claimId);
         await refresh();
-      } catch {
-        setMessage("Couldn't drop that claim.");
+      } catch (err) {
+        const e = err as ApiError;
+        // Already gone (double-tap / live race) — treat as success.
+        if (e.code === "not_found" || e.status === 404) {
+          await clearClaimToken(id, claimId);
+          await refresh();
+          return;
+        }
+        if (e.code === "conflict") {
+          setMessage("Claiming is closed — reopen to change claims.");
+        } else if (e.code === "forbidden") {
+          setMessage("Only the person who claimed that (or the host) can drop it.");
+        } else {
+          setMessage("Couldn't drop that claim. Check the server and try again.");
+        }
       } finally {
         setBusy(false);
       }

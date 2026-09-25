@@ -83,3 +83,10 @@ export async function saveClaimToken(receiptId: string, claimId: string, token: 
 export function getClaimToken(receiptId: string, claimId: string): string | null {
   return tokens.get(receiptId)?.[claimId] ?? null;
 }
+
+export async function clearClaimToken(receiptId: string, claimId: string) {
+  const current = { ...(tokens.get(receiptId) ?? {}) };
+  if (!(claimId in current)) return;
+  delete current[claimId];
+  await persistTokens(receiptId, current);
+}

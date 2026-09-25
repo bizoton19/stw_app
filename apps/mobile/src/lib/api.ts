@@ -20,16 +20,17 @@ export async function api<T>(
   path: string,
   init?: RequestInit & { hostToken?: string | null; claimToken?: string | null },
 ): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (init?.hostToken) headers.set("x-host-token", init.hostToken);
-  if (init?.claimToken) headers.set("x-claim-token", init.claimToken);
-  const body = init?.body;
+  const { hostToken, claimToken, headers: initHeaders, ...rest } = init ?? {};
+  const headers = new Headers(initHeaders);
+  if (hostToken) headers.set("x-host-token", hostToken);
+  if (claimToken) headers.set("x-claim-token", claimToken);
+  const body = rest.body;
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   if (body && !isForm && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   const url = path.startsWith("http") ? path : `${getApiUrl()}${path}`;
-  const res = await fetch(url, { ...init, headers });
+  const res = await fetch(url, { ...rest, headers });
   const data = (await res.json().catch(() => ({}))) as T & {
     error?: string;
     remaining?: number;

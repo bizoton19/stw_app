@@ -10,7 +10,7 @@ import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { centsToLabel } from "@/lib/money";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
-import { api, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
+import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
 import type { PublicReceipt } from "@/lib/types";
 
@@ -159,17 +159,31 @@ export function ClaimBoard({
   }
 
   async function unclaim(claimId: string) {
-    const token = getClaimToken(receipt.id, claimId);
-    if (!token) return;
+    const claimToken = getClaimToken(receipt.id, claimId);
+    const hostToken = getHostToken(receipt.id);
+    if (!claimToken && !hostToken) return;
     setBusy(true);
     try {
       await api(`/api/claims/${claimId}`, {
         method: "DELETE",
-        claimToken: token,
+        claimToken,
+        hostToken,
       });
+      clearClaimToken(receipt.id, claimId);
       await onChange();
-    } catch {
-      setMessage("Couldn't drop that claim.");
+    } catch (err) {
+      const code = (err as { code?: string; status?: number }).code;
+      const status = (err as { status?: number }).status;
+      if (code === "not_found" || status === 404) {
+        clearClaimToken(receipt.id, claimId);
+        await onChange();
+        return;
+      }
+      setMessage(
+        code === "forbidden"
+          ? "Only the person who claimed that (or the host) can drop it."
+          : "Couldn't drop that claim.",
+      );
     } finally {
       setBusy(false);
     }
@@ -223,6 +237,7 @@ export function ClaimBoard({
           goneItems={goneItems}
           busy={busy}
           closed
+          isHost={isHost}
           onUnclaim={unclaim}
         />
         <div className="mt-auto space-y-1">
@@ -450,6 +465,7 @@ export function ClaimBoard({
         goneItems={goneItems}
         busy={busy}
         closed={false}
+        isHost={isHost}
         onUnclaim={unclaim}
       />
     </InterviewChrome>
@@ -504,12 +520,14 @@ function History({
   goneItems,
   busy,
   closed,
+  isHost,
   onUnclaim,
 }: {
   receipt: PublicReceipt;
   goneItems: PublicReceipt["items"];
   busy: boolean;
   closed: boolean;
+  isHost?: boolean;
   onUnclaim: (claimId: string) => void;
 }) {
   const hasClaims = receipt.claims.length > 0;
@@ -545,7 +563,9 @@ function History({
                 </p>
                 <ul className="mt-1 space-y-2">
                   {claims.map((claim) => {
-                    const mineToDrop = getClaimToken(receipt.id, claim.id) && !closed;
+                    const mineToDrop =
+                      !closed &&
+                      (Boolean(getClaimToken(receipt.id, claim.id)) || Boolean(isHost));
                     return (
                       <li
                         key={claim.id}
@@ -563,7 +583,10 @@ function History({
                             type="button"
                             className="pressable h-9 shrink-0 px-2 text-[12px] font-medium text-foreground"
                             disabled={busy}
-                            onClick={() => onUnclaim(claim.id)}
+                            onClick={() => {
+                              if (busy) return;
+                              onUnclaim(claim.id);
+                            }}
                           >
                             Unclaim
                           </button>

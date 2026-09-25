@@ -41,6 +41,14 @@ export function getClaimToken(receiptId: string, claimId: string): string | null
   return readTokens(receiptId)[claimId] ?? null;
 }
 
+export function clearClaimToken(receiptId: string, claimId: string) {
+  const key = `${TOKEN_PREFIX}${receiptId}`;
+  const current = readTokens(receiptId);
+  if (!(claimId in current)) return;
+  delete current[claimId];
+  sessionStorage.setItem(key, JSON.stringify(current));
+}
+
 function readTokens(receiptId: string): Record<string, string> {
   const raw = sessionStorage.getItem(`${TOKEN_PREFIX}${receiptId}`);
   if (!raw) return {};
@@ -55,13 +63,14 @@ export async function api<T>(
   path: string,
   init?: RequestInit & { hostToken?: string | null; claimToken?: string | null },
 ): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (init?.hostToken) headers.set("x-host-token", init.hostToken);
-  if (init?.claimToken) headers.set("x-claim-token", init.claimToken);
-  if (init?.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+  const { hostToken, claimToken, headers: initHeaders, ...rest } = init ?? {};
+  const headers = new Headers(initHeaders);
+  if (hostToken) headers.set("x-host-token", hostToken);
+  if (claimToken) headers.set("x-claim-token", claimToken);
+  if (rest.body && !(rest.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const res = await fetch(path, { ...init, headers });
+  const res = await fetch(path, { ...rest, headers });
   const data = (await res.json().catch(() => ({}))) as T & {
     error?: string;
     remaining?: number;

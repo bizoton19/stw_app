@@ -346,7 +346,9 @@ function History() {
               <Text style={styles.itemName}>{item.name}</Text>
             </View>
             {claims.map((claim) => {
-              const mineToDrop = getClaimToken(receipt.id, claim.id) && !closed;
+              const mineToDrop =
+                !closed &&
+                (Boolean(getClaimToken(receipt.id, claim.id)) || flow.isHost);
               return (
                 <View key={claim.id} style={styles.claimRow}>
                   <ClaimerAvatar name={claim.personName} size={26} />
@@ -359,6 +361,7 @@ function History() {
                       disabled={flow.busy}
                       haptic="medium"
                       onPress={() => {
+                        if (flow.busy) return;
                         void hapticNotify("warning");
                         void flow.unclaim(claim.id);
                       }}
