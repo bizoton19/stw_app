@@ -389,6 +389,7 @@ const styles = StyleSheet.create({
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 20, paddingBottom: 24 },
+  itemName: { fontSize: 15, fontWeight: "600", color: colors.ink },
   section: { fontSize: 12, fontWeight: "600", color: colors.muted },
   sectionRow: {
     flexDirection: "row",
