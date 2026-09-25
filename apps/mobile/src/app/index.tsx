@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   kicker: { fontSize: 12, fontWeight: "700", color: colors.inkSoft, letterSpacing: 0.2 },
   title: {
     marginTop: 2,
