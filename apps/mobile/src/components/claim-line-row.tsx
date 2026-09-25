@@ -45,11 +45,6 @@ export function ClaimLineRow({
     transform: [{ scale: bump.value }],
   }));
 
-  const accent = useAnimatedStyle(() => ({
-    opacity: on.value,
-    transform: [{ scaleY: 0.35 + on.value * 0.65 }],
-  }));
-
   return (
     <PressScale
       accessibilityRole="button"
@@ -60,7 +55,6 @@ export function ClaimLineRow({
       style={styles.hit}
     >
       <Animated.View style={[styles.row, shell]}>
-        <Animated.View style={[styles.accent, accent]} />
         <View style={styles.copy}>
           <Text style={[styles.name, selected && styles.nameOn]} numberOfLines={2}>
             {item.name}
@@ -84,19 +78,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    paddingLeft: 16,
     borderRadius: 14,
     borderWidth: 1.5,
     overflow: "hidden",
-  },
-  accent: {
-    position: "absolute",
-    left: 0,
-    top: 10,
-    bottom: 10,
-    width: 4,
-    borderRadius: 2,
-    backgroundColor: colors.select,
   },
   copy: { flex: 1, minWidth: 0 },
   name: { fontSize: 16, fontWeight: "600", color: colors.ink, letterSpacing: -0.2 },
