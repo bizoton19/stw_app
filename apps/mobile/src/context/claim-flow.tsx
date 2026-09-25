@@ -56,7 +56,9 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       await hydrateSession();
       await ensureDemoHost(hostQuery);
       setGuest(getGuest(id));
-      setIsHost(Boolean(getHostToken(id)) || hostQuery);
+      // Privileged host UI (close claiming, etc.) only when this device holds the host token —
+      // not merely because ?host=1 is in the URL.
+      setIsHost(Boolean(getHostToken(id)));
     })();
   }, [hostQuery, id]);
 

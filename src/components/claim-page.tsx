@@ -21,7 +21,7 @@ export function ClaimPage({
   useEffect(() => {
     ensureDemoHost(hostQuery);
     const identity = getGuest(receiptId);
-    const host = Boolean(getHostToken(receiptId)) || hostQuery;
+    const host = Boolean(getHostToken(receiptId));
     queueMicrotask(() => {
       setGuest(identity);
       setIsHost(host);
