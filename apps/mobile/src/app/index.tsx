@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
 import { AppShell, PrimaryButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
-import { WineMark } from "@/components/wine-mark";
 import {
   getActiveHostReceiptId,
   listHostedReceipts,
@@ -80,15 +79,10 @@ export default function HomeScreen() {
     <AppShell>
       <SafeAreaView edges={["bottom"]} style={styles.main}>
         <View style={styles.top}>
-          <View style={styles.brandRow}>
-            <WineMark size={28} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.kicker}>Host desk</Text>
-              <Text style={styles.title} numberOfLines={1}>
-                {active ? "Your open tabs" : "Ready when you are"}
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.kicker}>Host desk</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {active ? "Your open tabs" : "Ready when you are"}
+          </Text>
         </View>
 
         <FlatList
