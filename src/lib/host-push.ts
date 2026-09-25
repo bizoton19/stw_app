@@ -62,7 +62,7 @@ function boardStatus(payload: HostPushPayload): string | null {
   const left = payload.unitsLeft;
   const cents = payload.unclaimedCents;
   if (typeof left === "number" && left <= 0 && typeof cents === "number" && cents <= 0) {
-    return "all claimed";
+    return "all claimed — ready to close";
   }
   if (typeof left === "number" && left > 0 && typeof cents === "number") {
     const noun = left === 1 ? "item" : "items";
@@ -75,7 +75,7 @@ function boardStatus(payload: HostPushPayload): string | null {
     return `${centsToLabel(cents)} still unclaimed`;
   }
   if (typeof cents === "number" && cents === 0) {
-    return "all claimed";
+    return "all claimed — ready to close";
   }
   return null;
 }
@@ -86,6 +86,19 @@ export function formatHostPushBody(payload: HostPushPayload): string {
   return status ? `${action} · ${status}` : action;
 }
 
+/** True when nothing remains to claim — show Close tab action on the push. */
+export function hostPushTabFullyClaimed(payload: HostPushPayload): boolean {
+  if (typeof payload.unitsLeft === "number" && payload.unitsLeft > 0) return false;
+  if (typeof payload.unclaimedCents === "number" && payload.unclaimedCents > 0) return false;
+  if (typeof payload.unitsLeft === "number" && payload.unitsLeft <= 0) return true;
+  if (typeof payload.unclaimedCents === "number" && payload.unclaimedCents <= 0) return true;
+  return false;
+}
+
+/** Expo / APNs notification category with a Close tab action. */
+export const HOST_PUSH_DONE_CATEGORY = "stw-tab-done";
+export const HOST_PUSH_CLOSE_ACTION = "close-tab";
+
 export async function sendExpoPushMessages(
   tokens: string[],
   payload: HostPushPayload,
@@ -95,15 +108,18 @@ export async function sendExpoPushMessages(
 
   const title = formatHostPushTitle(payload);
   const body = formatHostPushBody(payload);
+  const done = hostPushTabFullyClaimed(payload);
   const messages = unique.map((to) => ({
     to,
     sound: "default" as const,
     title,
     body,
+    ...(done ? { categoryId: HOST_PUSH_DONE_CATEGORY } : {}),
     data: {
       receiptId: payload.receiptId,
       kind: payload.kind,
       screen: "settle",
+      tabDone: done,
     },
   }));
 

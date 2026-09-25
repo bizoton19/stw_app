@@ -5,6 +5,9 @@ import * as Notifications from "expo-notifications";
 import { api } from "@/lib/api";
 import { getHostToken } from "@/lib/session";
 
+export const HOST_PUSH_DONE_CATEGORY = "stw-tab-done";
+export const HOST_PUSH_CLOSE_ACTION = "close-tab";
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -14,6 +17,25 @@ Notifications.setNotificationHandler({
   }),
 });
 
+let categoriesReady: Promise<void> | null = null;
+
+export function ensureHostPushCategories(): Promise<void> {
+  if (!categoriesReady) {
+    categoriesReady = Notifications.setNotificationCategoryAsync(HOST_PUSH_DONE_CATEGORY, [
+      {
+        identifier: HOST_PUSH_CLOSE_ACTION,
+        buttonTitle: "Close tab",
+        options: {
+          opensAppToForeground: true,
+          isDestructive: false,
+          isAuthenticationRequired: false,
+        },
+      },
+    ]).then(() => undefined);
+  }
+  return categoriesReady;
+}
+
 function easProjectId(): string | undefined {
   return (
     Constants.easConfig?.projectId ??
@@ -22,10 +44,14 @@ function easProjectId(): string | undefined {
 }
 
 /** Request permission + Expo push token; register with API for this receipt (host only). */
-export async function registerHostClaimPush(receiptId: string): Promise<"ok" | "denied" | "skip" | "error"> {
+export async function registerHostClaimPush(
+  receiptId: string,
+): Promise<"ok" | "denied" | "skip" | "error"> {
   if (!Device.isDevice) return "skip";
   const hostToken = getHostToken(receiptId);
   if (!hostToken) return "skip";
+
+  await ensureHostPushCategories();
 
   const current = await Notifications.getPermissionsAsync();
   let status = current.status;
@@ -61,10 +87,25 @@ export async function registerHostClaimPush(receiptId: string): Promise<"ok" | "
   }
 }
 
+export async function finalizeTabFromPush(receiptId: string): Promise<boolean> {
+  const hostToken = getHostToken(receiptId);
+  if (!hostToken) return false;
+  try {
+    await api(`/api/receipts/${receiptId}/finalize`, {
+      method: "POST",
+      hostToken,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type ClaimPushData = {
   receiptId?: string;
   screen?: string;
   kind?: string;
+  tabDone?: boolean;
 };
 
 export function parseClaimPushData(data: unknown): ClaimPushData {
@@ -74,5 +115,6 @@ export function parseClaimPushData(data: unknown): ClaimPushData {
     receiptId: typeof row.receiptId === "string" ? row.receiptId : undefined,
     screen: typeof row.screen === "string" ? row.screen : undefined,
     kind: typeof row.kind === "string" ? row.kind : undefined,
+    tabDone: row.tabDone === true,
   };
 }

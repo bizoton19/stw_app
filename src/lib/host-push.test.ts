@@ -59,7 +59,7 @@ describe("host push copy", () => {
         unclaimedCents: 0,
         unitsLeft: 0,
       }),
-      "Alex claimed 1× Latte · all claimed",
+      "Alex claimed 1× Latte · all claimed — ready to close",
     );
   });
 
