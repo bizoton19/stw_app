@@ -1,8 +1,9 @@
 import { FlatList, Platform, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Check, Receipt, Users } from "lucide-react-native";
+import { Receipt, Users } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
+import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
@@ -296,25 +297,12 @@ function PickBoard() {
           const left = receipt.remaining[item.id] ?? 0;
           const selected = activeQueued.includes(item.id);
           return (
-            <PressScale
-              accessibilityState={{ selected }}
-              haptic="select"
-              onPress={() => flow.toggle(item.id)}
-              style={styles.item}
-            >
-              <View style={styles.checkHit}>
-                <View style={[styles.check, selected && styles.checkOn]}>
-                  {selected ? <Check size={12} color={colors.merlotFg} strokeWidth={3} /> : null}
-                </View>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={[styles.muted, styles.tabular]}>
-                  {centsToLabel(item.totalCents)} for {item.qty}
-                </Text>
-              </View>
-              <Text style={[styles.left, selected && { color: colors.merlot }]}>{left} left</Text>
-            </PressScale>
+            <ClaimLineRow
+              item={item}
+              left={left}
+              selected={selected}
+              onToggle={() => flow.toggle(item.id)}
+            />
           );
         }}
         ListFooterComponent={
@@ -401,32 +389,6 @@ const styles = StyleSheet.create({
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 20, paddingBottom: 24 },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  checkHit: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  check: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkOn: { backgroundColor: colors.merlot, borderColor: colors.merlot },
-  itemName: { fontSize: 15, fontWeight: "600", color: colors.ink },
-  left: { fontSize: 12, fontWeight: "600", color: colors.inkSoft, fontVariant: ["tabular-nums"] },
   section: { fontSize: 12, fontWeight: "600", color: colors.muted },
   sectionRow: {
     flexDirection: "row",
