@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ShareIntentProvider } from "expo-share-intent";
 import { ShareIntentGate } from "@/components/share-intent-gate";
+import { useClaimPushNavigation } from "@/hooks/use-claim-push-navigation";
 import { colors } from "@/lib/theme";
 import { hydrateApiUrl } from "@/lib/config";
 import { refreshLocaleFromDevice } from "@/lib/i18n";
@@ -16,6 +17,8 @@ import { useEffect } from "react";
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  useClaimPushNavigation();
+
   useEffect(() => {
     void (async () => {
       refreshLocaleFromDevice();

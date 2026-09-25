@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Share, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import { Share } from "react-native";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { IconActionButton } from "@/components/icon-action-button";
 import { useHostDraft } from "@/context/host-draft";
+import { registerHostClaimPush } from "@/lib/host-push";
 import { centsToLabel } from "@/lib/money";
 import { colors } from "@/lib/theme";
 
@@ -13,12 +13,25 @@ export default function HostShare() {
   const router = useRouter();
   const draft = useHostDraft();
   const [copied, setCopied] = useState(false);
+  const [pushHint, setPushHint] = useState<string | null>(null);
   const activeItems = draft.items.filter((i) => !i.removed);
   const total =
     activeItems.reduce((s, i) => s + i.totalCents, 0) +
     draft.fees.reduce((s, f) => s + f.amountCents, 0);
   const place = draft.venue?.name?.trim() || draft.restaurant.trim() || "Tonight’s check";
   const receiptId = draft.receiptId ?? "demo";
+
+  useEffect(() => {
+    if (!draft.receiptId) return;
+    void (async () => {
+      const result = await registerHostClaimPush(draft.receiptId!);
+      if (result === "ok") {
+        setPushHint("You’ll get a ping when someone claims.");
+      } else if (result === "denied") {
+        setPushHint("Notifications are off — you can still watch the live board.");
+      }
+    })();
+  }, [draft.receiptId]);
 
   return (
     <AppShell>
@@ -49,6 +62,7 @@ export default function HostShare() {
         {draft.venue?.formattedAddress ? (
           <Text style={styles.address}>{draft.venue.formattedAddress}</Text>
         ) : null}
+        {pushHint ? <Text style={styles.pushHint}>{pushHint}</Text> : null}
 
         <View style={styles.totalBlock}>
           <Text style={styles.muted}>Check total</Text>
@@ -109,6 +123,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.inkSoft,
+  },
+  pushHint: {
+    marginTop: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.merlot,
+    fontWeight: "600",
   },
   totalBlock: {
     marginTop: 28,

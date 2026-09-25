@@ -16,6 +16,7 @@
         "NSPhotoLibraryUsageDescription": "Split the Wine reads a receipt photo from your library so the server can extract the tab.",
         "NSPhotoLibraryAddUsageDescription": "Split the Wine only reads photos; it does not save to your library.",
         "NSLocationWhenInUseUsageDescription": "Split the Wine uses your location to suggest nearby restaurants when naming the venue on the check.",
+        "UIBackgroundModes": ["remote-notification"],
         "LSApplicationQueriesSchemes": [
           "venmo",
           "cashme",
@@ -43,7 +44,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -52,6 +54,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6E2E35",
+          "defaultChannel": "claims"
+        }
+      ],
       [
         "expo-splash-screen",
         {

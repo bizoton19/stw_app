@@ -95,6 +95,11 @@ From `apps/mobile`:
 - [ ] Don’t post the Railway URL publicly
 - [ ] Cap / alert OpenRouter spend in the OpenRouter dashboard
 - [ ] **Host claim push** (Phase 1 — `plans/requirements.md` §4 / §17) — ship with TestFlight/dev-client; not Expo Go
+  - [x] Server: register token + Expo push on claim/unclaim
+  - [x] Mobile: permission + register on share/live board; tap opens settle
+  - [ ] Redeploy Railway API so `host_push_tokens` exists
+  - [ ] EAS iOS build with push entitlement / APNs key in Expo
+  - [ ] Friend-test: host locks phone → guest claims → host gets ping
 
 ---
 

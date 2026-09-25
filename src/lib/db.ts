@@ -53,12 +53,35 @@ export async function ensureSchema(): Promise<void> {
           receipt_id text NOT NULL REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.host_push_tokens (
+          receipt_id text NOT NULL REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
+          token text NOT NULL,
+          platform text,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (receipt_id, token)
+        );
+
+        CREATE INDEX IF NOT EXISTS host_push_tokens_receipt_idx
+          ON ${DB_SCHEMA}.host_push_tokens (receipt_id);
+
         CREATE INDEX IF NOT EXISTS receipts_updated_at_idx
           ON ${DB_SCHEMA}.receipts (updated_at DESC);
       `);
     })();
   }
   await globalForDb.__splitTheWineMigrated;
+  // Additive: safe if an older in-process migrate already completed without this table.
+  await getPool().query(`
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.host_push_tokens (
+      receipt_id text NOT NULL REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
+      token text NOT NULL,
+      platform text,
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (receipt_id, token)
+    );
+    CREATE INDEX IF NOT EXISTS host_push_tokens_receipt_idx
+      ON ${DB_SCHEMA}.host_push_tokens (receipt_id);
+  `);
 }
 
 export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {

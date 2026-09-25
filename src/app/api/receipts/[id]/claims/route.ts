@@ -1,5 +1,6 @@
 import { jsonError } from "@/lib/http";
-import { addClaim, addClaims } from "@/lib/store";
+import { notifyHostClaimEvent } from "@/lib/notify-host";
+import { addClaim, addClaims, getPublicReceipt } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,23 @@ export async function POST(
           units: Number(row.units),
         })),
       });
+      void (async () => {
+        try {
+          const receipt = await getPublicReceipt(id);
+          const lines = result.claims.map((claim) => ({
+            name: receipt.items.find((item) => item.id === claim.itemId)?.name ?? "an item",
+            units: claim.units,
+          }));
+          await notifyHostClaimEvent({
+            receiptId: id,
+            kind: "claim",
+            personName,
+            lines,
+          });
+        } catch {
+          /* push is best-effort */
+        }
+      })();
       return Response.json(result);
     }
 
@@ -37,6 +55,21 @@ export async function POST(
       personContact,
       units: Number(body.units),
     });
+    void (async () => {
+      try {
+        const receipt = await getPublicReceipt(id);
+        const name =
+          receipt.items.find((item) => item.id === result.claim.itemId)?.name ?? "an item";
+        await notifyHostClaimEvent({
+          receiptId: id,
+          kind: "claim",
+          personName,
+          lines: [{ name, units: result.claim.units }],
+        });
+      } catch {
+        /* push is best-effort */
+      }
+    })();
     return Response.json(result);
   } catch (err) {
     return jsonError(err);

@@ -87,6 +87,21 @@ export async function removeClaim(
     : memory.removeClaim(claimId, ownerToken, hostToken);
 }
 
+export async function registerHostPushToken(
+  id: string,
+  hostToken: string | null,
+  token: string,
+  platform?: string | null,
+) {
+  return usingDatabase()
+    ? pg.registerHostPushToken(id, hostToken, token, platform)
+    : memory.registerHostPushToken(id, hostToken, token, platform);
+}
+
+export async function listHostPushTokens(id: string) {
+  return usingDatabase() ? pg.listHostPushTokens(id) : memory.listHostPushTokens(id);
+}
+
 export async function setHostInfo(id: string, hostToken: string | null, info: HostInfo) {
   return usingDatabase() ? pg.setHostInfo(id, hostToken, info) : memory.setHostInfo(id, hostToken, info);
 }

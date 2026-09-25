@@ -553,11 +553,56 @@ export async function removeClaim(
     if (!asOwner && !asHost) {
       throw Object.assign(new Error("forbidden"), { code: "forbidden" });
     }
+    const item = receipt.items.find((row) => row.id === claim.itemId);
+    const removed = {
+      personName: claim.personName,
+      itemId: claim.itemId,
+      itemName: item?.name ?? "an item",
+      units: claim.units,
+    };
     receipt.claims = receipt.claims.filter((row) => row.id !== claimId);
     await upsertReceipt(client, receipt);
     emit(receipt, "unclaim");
-    return toPublic(receipt);
+    return { receipt: toPublic(receipt), removed };
   });
+}
+
+export async function registerHostPushToken(
+  id: string,
+  hostToken: string | null,
+  token: string,
+  platform?: string | null,
+) {
+  await ensureSchema();
+  return withTransaction(async (client) => {
+    assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
+    const trimmed = token.trim();
+    if (!trimmed) {
+      throw Object.assign(new Error("token_required"), { code: "invalid" });
+    }
+    await client.query(
+      `INSERT INTO ${DB_SCHEMA}.host_push_tokens (receipt_id, token, platform, updated_at)
+       VALUES ($1, $2, $3, now())
+       ON CONFLICT (receipt_id, token) DO UPDATE SET
+         platform = EXCLUDED.platform,
+         updated_at = now()`,
+      [id, trimmed, platform?.trim() || null],
+    );
+    const { rows } = await client.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM ${DB_SCHEMA}.host_push_tokens WHERE receipt_id = $1`,
+      [id],
+    );
+    return { ok: true as const, count: Number(rows[0]?.count ?? 0) };
+  });
+}
+
+export async function listHostPushTokens(id: string): Promise<string[]> {
+  await ensureSchema();
+  const { rows } = await getPool().query<{ token: string }>(
+    `SELECT token FROM ${DB_SCHEMA}.host_push_tokens WHERE receipt_id = $1`,
+    [id],
+  );
+  return rows.map((row) => row.token);
 }
 
 export async function setHostInfo(id: string, hostToken: string | null, info: HostInfo) {

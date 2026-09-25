@@ -30,6 +30,8 @@ type StoreState = {
   claimsById: Map<string, string>;
   locks: Map<string, Promise<void>>;
   listeners: Map<string, Set<Listener>>;
+  /** receiptId → Expo push tokens for the host device(s). */
+  hostPushTokens: Map<string, Set<string>>;
 };
 
 const globalForStore = globalThis as typeof globalThis & {
@@ -43,6 +45,7 @@ function state(): StoreState {
       claimsById: new Map(),
       locks: new Map(),
       listeners: new Map(),
+      hostPushTokens: new Map(),
     };
     if (demoEnabled()) {
       seedDemo(globalForStore.__splitTheWine);
@@ -484,11 +487,39 @@ export async function removeClaim(
     if (!asOwner && !asHost) {
       throw Object.assign(new Error("forbidden"), { code: "forbidden" });
     }
+    const item = receipt.items.find((row) => row.id === claim.itemId);
+    const removed = {
+      personName: claim.personName,
+      itemId: claim.itemId,
+      itemName: item?.name ?? "an item",
+      units: claim.units,
+    };
     receipt.claims = receipt.claims.filter((row) => row.id !== claimId);
     state().claimsById.delete(claimId);
     emit(receipt, "unclaim");
-    return toPublic(receipt);
+    return { receipt: toPublic(receipt), removed };
   });
+}
+
+export async function registerHostPushToken(
+  id: string,
+  hostToken: string | null,
+  token: string,
+  _platform?: string | null,
+) {
+  assertHost(id, hostToken);
+  const trimmed = token.trim();
+  if (!trimmed) {
+    throw Object.assign(new Error("token_required"), { code: "invalid" });
+  }
+  const set = state().hostPushTokens.get(id) ?? new Set<string>();
+  set.add(trimmed);
+  state().hostPushTokens.set(id, set);
+  return { ok: true as const, count: set.size };
+}
+
+export async function listHostPushTokens(id: string): Promise<string[]> {
+  return [...(state().hostPushTokens.get(id) ?? [])];
 }
 
 export async function setHostInfo(id: string, hostToken: string | null, info: HostInfo) {
@@ -580,6 +611,7 @@ export function resetStoreForTests() {
     claimsById: new Map(),
     locks: new Map(),
     listeners: new Map(),
+    hostPushTokens: new Map(),
   };
   seedDemo(globalForStore.__splitTheWine);
 }

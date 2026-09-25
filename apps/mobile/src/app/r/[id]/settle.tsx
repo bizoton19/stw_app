@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Share, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -10,6 +10,7 @@ import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
 import { publicClaimUrl } from "@/lib/config";
+import { registerHostClaimPush } from "@/lib/host-push";
 import { hostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
@@ -25,6 +26,11 @@ export default function SettleScreen() {
   const payments = hostPayments(receipt?.hostInfo);
   const [paying, setPaying] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!flow.isHost || !receipt?.id || receipt.status === "finalized") return;
+    void registerHostClaimPush(receipt.id);
+  }, [flow.isHost, receipt?.id, receipt?.status]);
 
   if (!receipt || !totals) {
     return (
