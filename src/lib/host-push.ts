@@ -54,28 +54,30 @@ function claimAction(payload: HostPushPayload): string {
     const line = lines[0]!;
     return `${who} claimed ${line.units}× ${line.name}`;
   }
-  if (lines.length <= 3) {
-    const bits = lines.map((l) => `${l.units}× ${l.name}`).join(", ");
-    return `${who} claimed ${bits}`;
-  }
   const totalUnits = lines.reduce((s, l) => s + l.units, 0);
   return `${who} claimed ${totalUnits} items`;
 }
 
 function boardStatus(payload: HostPushPayload): string | null {
-  const parts: string[] = [];
-  if (typeof payload.unclaimedCents === "number" && payload.unclaimedCents > 0) {
-    parts.push(`${centsToLabel(payload.unclaimedCents)} still unclaimed`);
-  } else if (typeof payload.unclaimedCents === "number" && payload.unclaimedCents === 0) {
-    parts.push("all items claimed");
+  const left = payload.unitsLeft;
+  const cents = payload.unclaimedCents;
+  if (typeof left === "number" && left <= 0 && typeof cents === "number" && cents <= 0) {
+    return "all claimed";
   }
-  if (typeof payload.unitsLeft === "number" && payload.unitsLeft > 0) {
-    parts.push(
-      payload.unitsLeft === 1 ? "1 left to claim" : `${payload.unitsLeft} left to claim`,
-    );
+  if (typeof left === "number" && left > 0 && typeof cents === "number") {
+    const noun = left === 1 ? "item" : "items";
+    return `${left} ${noun} (${centsToLabel(cents)}) still unclaimed`;
   }
-  if (parts.length === 0) return null;
-  return parts.join(" · ");
+  if (typeof left === "number" && left > 0) {
+    return left === 1 ? "1 item still unclaimed" : `${left} items still unclaimed`;
+  }
+  if (typeof cents === "number" && cents > 0) {
+    return `${centsToLabel(cents)} still unclaimed`;
+  }
+  if (typeof cents === "number" && cents === 0) {
+    return "all claimed";
+  }
+  return null;
 }
 
 export function formatHostPushBody(payload: HostPushPayload): string {

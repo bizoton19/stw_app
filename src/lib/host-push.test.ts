@@ -18,7 +18,7 @@ describe("host push copy", () => {
     );
   });
 
-  it("formats a single claim with unclaimed + left", () => {
+  it("formats a single claim compactly", () => {
     assert.equal(
       formatHostPushBody({
         receiptId: "r1",
@@ -28,11 +28,11 @@ describe("host push copy", () => {
         unclaimedCents: 4800,
         unitsLeft: 3,
       }),
-      "Alex claimed 2× Josephine Old Fashioned · $48.00 still unclaimed · 3 left to claim",
+      "Alex claimed 2× Josephine Old Fashioned · 3 items ($48.00) still unclaimed",
     );
   });
 
-  it("lists a few claimed items", () => {
+  it("formats multi-item claims compactly", () => {
     assert.equal(
       formatHostPushBody({
         receiptId: "r1",
@@ -45,7 +45,7 @@ describe("host push copy", () => {
         unclaimedCents: 1200,
         unitsLeft: 1,
       }),
-      "Sam claimed 1× Wine, 2× Fries · $12.00 still unclaimed · 1 left to claim",
+      "Sam claimed 3 items · 1 item ($12.00) still unclaimed",
     );
   });
 
@@ -59,11 +59,11 @@ describe("host push copy", () => {
         unclaimedCents: 0,
         unitsLeft: 0,
       }),
-      "Alex claimed 1× Latte · all items claimed",
+      "Alex claimed 1× Latte · all claimed",
     );
   });
 
-  it("formats an unclaim with remaining", () => {
+  it("formats an unclaim compactly", () => {
     assert.equal(
       formatHostPushBody({
         receiptId: "r1",
@@ -73,7 +73,7 @@ describe("host push copy", () => {
         unclaimedCents: 900,
         unitsLeft: 2,
       }),
-      "Alex dropped Latte · $9.00 still unclaimed · 2 left to claim",
+      "Alex dropped Latte · 2 items ($9.00) still unclaimed",
     );
   });
 });
