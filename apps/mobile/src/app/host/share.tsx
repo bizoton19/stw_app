@@ -26,7 +26,7 @@ export default function HostShare() {
         step={8}
         total={8}
         kicker="Share"
-        title="Send this. They claim what they drank."
+        title="Send this. They claim what they consumed."
         sparse
         footer={
           <View>
@@ -34,7 +34,7 @@ export default function HostShare() {
             <PrimaryButton
               onPress={() =>
                 router.replace({
-                  pathname: "/r/[id]",
+                  pathname: "/r/[id]/settle",
                   params: { id: receiptId, host: "1" },
                 })
               }

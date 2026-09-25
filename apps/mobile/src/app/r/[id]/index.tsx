@@ -132,7 +132,12 @@ function PickBoard() {
           <View>
             <PrimaryButton
               onPress={() =>
-                router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })
+                router.push({
+                  pathname: "/r/[id]/settle",
+                  params: flow.isHost
+                    ? { id: receipt.id, host: "1" }
+                    : { id: receipt.id },
+                })
               }
             >
               See who owes what
@@ -166,7 +171,12 @@ function PickBoard() {
     remainingItems.length === 0 ? (
       <View>
         <PrimaryButton
-          onPress={() => router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })}
+          onPress={() =>
+            router.push({
+              pathname: "/r/[id]/settle",
+              params: flow.isHost ? { id: receipt.id, host: "1" } : { id: receipt.id },
+            })
+          }
         >
           See who owes what
         </PrimaryButton>
@@ -176,7 +186,10 @@ function PickBoard() {
             onPress={() =>
               void flow.closeOut().then((ok) => {
                 if (ok)
-                  router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } });
+                  router.push({
+                    pathname: "/r/[id]/settle",
+                    params: { id: receipt.id, host: "1" },
+                  });
               })
             }
           >
@@ -217,7 +230,10 @@ function PickBoard() {
             onPress={() =>
               void flow.closeOut().then((ok) => {
                 if (ok)
-                  router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } });
+                  router.push({
+                    pathname: "/r/[id]/settle",
+                    params: { id: receipt.id, host: "1" },
+                  });
               })
             }
           >

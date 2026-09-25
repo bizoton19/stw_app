@@ -69,7 +69,11 @@ export default function HomeScreen() {
   );
 
   function openBoard(id: string) {
-    router.push({ pathname: "/r/[id]", params: { id, host: "1" } });
+    // Host desk opens the balances board — not the guest claim join flow.
+    router.push({
+      pathname: "/r/[id]/settle",
+      params: { id, host: "1" },
+    });
   }
 
   return (
@@ -118,7 +122,7 @@ export default function HomeScreen() {
                       <Text style={styles.liveText}>Live board</Text>
                     </View>
                   </View>
-                  <Text style={styles.heroCta}>Tap to open · claim with guests</Text>
+                  <Text style={styles.heroCta}>Tap for who owes what · claimed & remaining</Text>
                 </PressScale>
               ) : (
                 <View style={styles.emptyCard}>
@@ -147,7 +151,7 @@ export default function HomeScreen() {
                 </Text>
                 <Text style={styles.rowMeta}>{dayLabel(item.receiptDay, item.updatedAt)}</Text>
               </View>
-              <Text style={styles.rowAction}>Open</Text>
+              <Text style={styles.rowAction}>Board</Text>
               <ChevronRight size={18} color={colors.inkSoft} strokeWidth={2.25} />
             </PressScale>
           )}

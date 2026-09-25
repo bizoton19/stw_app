@@ -32,13 +32,23 @@ export default function SettleScreen() {
     );
   }
 
-  const leftover = totals.unclaimedItemCents > 0 && receipt.status !== "finalized";
+  const receiptId = receipt.id;
+  const closed = receipt.status === "finalized";
+  const leftover = totals.unclaimedItemCents > 0 && !closed;
+  const remainingLines = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
+  const remainingUnits = remainingLines.reduce(
+    (sum, item) => sum + (receipt.remaining[item.id] ?? 0),
+    0,
+  );
   const mine = flow.guest
     ? totals.people.find((p) => p.personName === flow.guest?.name)
     : undefined;
   const restaurant = receipt.restaurant || "the check";
   const hostName =
     flow.isHost && flow.guest?.name.trim() ? flow.guest.name.trim() : "the host";
+  const claimParams = flow.isHost
+    ? ({ id: receiptId, host: "1" } as const)
+    : ({ id: receiptId } as const);
 
   async function payWith(payment: HostPayment, amountCents: number) {
     if (!payMethodIsOpenable(payment.method)) return;
@@ -55,47 +65,92 @@ export default function SettleScreen() {
     }
   }
 
+  const footer = flow.isHost ? (
+    <View>
+      <PrimaryButton onPress={() => router.replace("/")}>Back to host desk</PrimaryButton>
+      <QuietButton
+        onPress={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
+      >
+        Claim my drinks
+      </QuietButton>
+      {!closed ? (
+        <QuietButton
+          disabled={flow.busy}
+          onPress={() => void flow.closeOut()}
+        >
+          Close claiming — leftovers on me
+        </QuietButton>
+      ) : (
+        <QuietButton
+          disabled={flow.busy}
+          onPress={() => void flow.reopen()}
+        >
+          Reopen claiming
+        </QuietButton>
+      )}
+    </View>
+  ) : (
+    <View>
+      <PrimaryButton
+        onPress={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
+      >
+        Back to the claim board
+      </PrimaryButton>
+    </View>
+  );
+
   return (
     <AppShell>
       <InterviewChrome
         step={3}
         total={3}
         kicker={receipt.restaurant || "The check"}
-        title="Who owes what"
-        onBack={() => router.back()}
-        footer={
-          <View>
-            <PrimaryButton
-              onPress={() => router.replace({ pathname: "/r/[id]", params: { id: receipt.id } })}
-            >
-              Back to the claim board
-            </PrimaryButton>
-            {flow.isHost && receipt.status === "finalized" ? (
-              <QuietButton
-                disabled={flow.busy}
-                onPress={() =>
-                  void flow.reopen().then((ok) => {
-                    if (ok) router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
-                  })
-                }
-              >
-                Reopen claiming
-              </QuietButton>
-            ) : null}
-          </View>
-        }
+        title={flow.isHost ? "Live board" : "Who owes what"}
+        onBack={() => (flow.isHost ? router.replace("/") : router.back())}
+        footer={footer}
       >
         <Text style={styles.lead}>
-          Drinks plus a share of tax and tip. Tapping a payment method opens the host's app when
-          possible — nothing is charged from Split the Wine.
+          {flow.isHost
+            ? "Guests claim on their phones. Watch balances fill in here — tax and tip follow what people ordered."
+            : "Drinks plus a share of tax and tip. Tapping a payment method opens the host's app when possible — nothing is charged from Split the Wine."}
         </Text>
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
-        {leftover ? (
+
+        {flow.isHost ? (
+          <View style={styles.statusCard}>
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Status</Text>
+              <Text style={[styles.statusValue, closed && { color: colors.inkSoft }]}>
+                {closed ? "Claiming closed" : "Open for claims"}
+              </Text>
+            </View>
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Guests claimed</Text>
+              <Text style={styles.statusValue}>{totals.people.length}</Text>
+            </View>
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Still unclaimed</Text>
+              <Text
+                style={[
+                  styles.statusValue,
+                  leftover ? { color: colors.merlot } : null,
+                ]}
+              >
+                {leftover
+                  ? `${centsToLabel(totals.unclaimedItemCents)} · ${remainingUnits} left`
+                  : closed
+                    ? "None — assigned"
+                    : "All claimed"}
+              </Text>
+            </View>
+          </View>
+        ) : leftover ? (
           <Text style={styles.muted}>
             {centsToLabel(totals.unclaimedItemCents)} still unclaimed. The host can close claiming
             to take leftovers.
           </Text>
         ) : null}
+
         <View style={styles.totals}>
           <View style={styles.totalsHead}>
             <Banknote size={14} color={colors.muted} strokeWidth={2} />
@@ -106,7 +161,7 @@ export default function SettleScreen() {
           <Row label="Grand" value={centsToLabel(totals.grandTotalCents)} strong />
         </View>
 
-        {mine && mine.totalCents > 0 ? (
+        {!flow.isHost && mine && mine.totalCents > 0 ? (
           <View style={styles.youCard}>
             <Text style={styles.youLabel}>You owe</Text>
             <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
@@ -159,13 +214,31 @@ export default function SettleScreen() {
           </View>
         ) : null}
 
+        {flow.isHost && leftover && remainingLines.length > 0 ? (
+          <View style={styles.remainBlock}>
+            <Text style={styles.peopleTitle}>Still on the table</Text>
+            {remainingLines.map((item) => (
+              <View key={item.id} style={styles.remainRow}>
+                <Text style={styles.remainName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text style={styles.remainLeft}>{receipt.remaining[item.id]} left</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.peopleHead}>
           <Banknote size={14} color={colors.muted} strokeWidth={2} />
-          <Text style={styles.peopleTitle}>Everyone’s share</Text>
+          <Text style={styles.peopleTitle}>
+            {flow.isHost ? "Who owes what" : "Everyone’s share"}
+          </Text>
         </View>
         {totals.people.length === 0 ? (
           <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
-            Nobody has claimed yet.
+            {flow.isHost
+              ? "Nobody has claimed yet. Share the claim link and watch this fill in."
+              : "Nobody has claimed yet."}
           </Text>
         ) : (
           totals.people.map((person) => {
@@ -199,6 +272,17 @@ export default function SettleScreen() {
             );
           })
         )}
+
+        {flow.isHost && payments.length > 0 ? (
+          <View style={styles.payHostNote}>
+            <Text style={styles.peopleTitle}>Your pay handles</Text>
+            {payments.map((payment) => (
+              <Text key={payment.method} style={styles.muted}>
+                {PAY_METHOD_META[payment.method].label} · {payment.handle}
+              </Text>
+            ))}
+          </View>
+        ) : null}
       </InterviewChrome>
     </AppShell>
   );
@@ -217,6 +301,30 @@ const styles = StyleSheet.create({
   lead: { fontSize: 14, lineHeight: 20, color: colors.muted, marginBottom: 12 },
   muted: { fontSize: 12, color: colors.muted, marginTop: 2 },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
+  statusCard: {
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: "#FFFcf8",
+    gap: 10,
+  },
+  statusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 12,
+  },
+  statusLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
+  statusValue: {
+    flexShrink: 1,
+    textAlign: "right",
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.ink,
+    fontVariant: ["tabular-nums"],
+  },
   totals: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -265,16 +373,31 @@ const styles = StyleSheet.create({
   },
   payLabel: { fontSize: 15, fontWeight: "600", color: colors.ink },
   payCta: { fontSize: 12, fontWeight: "700", color: colors.merlot },
+  remainBlock: { marginBottom: 20, gap: 8 },
+  remainRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  remainName: { flex: 1, fontSize: 14, fontWeight: "600", color: colors.ink },
+  remainLeft: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.merlot,
+    fontVariant: ["tabular-nums"],
+  },
   peopleHead: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginBottom: 12,
   },
-  peopleTitle: { fontSize: 12, fontWeight: "600", color: colors.muted },
+  peopleTitle: { fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 4 },
   person: { marginBottom: 28 },
   personHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
   personId: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   name: { fontSize: 15, fontWeight: "600", color: colors.ink },
   amount: { fontSize: 22, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  payHostNote: { marginTop: 8, marginBottom: 16, gap: 4 },
 });
