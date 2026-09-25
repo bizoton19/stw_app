@@ -267,7 +267,7 @@ export function VenueTypeahead({
       ) : (
         <>
           <Field
-            label="Restaurant or bar"
+            label="Pick a different restaurant or bar"
             value={value}
             onChangeText={onChangeText}
             placeholder="Start typing the place"
