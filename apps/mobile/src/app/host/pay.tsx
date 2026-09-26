@@ -32,12 +32,30 @@ export default function HostPay() {
     return null;
   }, []);
 
-  const unused = useMemo(() => {
-    const used = new Set(draft.payments.map((p) => p.method));
-    return methods.filter((m) => !used.has(m));
-  }, [draft.payments, methods]);
+  const selected = useMemo(
+    () => new Set(draft.payments.map((p) => p.method)),
+    [draft.payments],
+  );
+
+  /** Keep handle fields in catalog order. */
+  const handleRows = useMemo(
+    () => methods.map((m) => draft.payments.find((p) => p.method === m)).filter(Boolean) as {
+      method: PayMethod;
+      handle: string;
+    }[],
+    [draft.payments, methods],
+  );
+
+  function toggleMethod(method: PayMethod) {
+    setError(null);
+    draft.togglePaymentMethod(method);
+  }
 
   function goConfirm() {
+    if (draft.payments.length === 0) {
+      setError("Tap at least one way people can pay you.");
+      return;
+    }
     const result = validateHostPayments(draft.payments);
     if (!result.ok) {
       setError(result.message);
@@ -132,58 +150,71 @@ export default function HostPay() {
         title="How should people pay you?"
         onBack={() => router.back()}
         keyboard
-        footer={<PrimaryButton onPress={goConfirm}>Review payment info</PrimaryButton>}
+        footer={
+          <PrimaryButton onPress={goConfirm} disabled={draft.payments.length === 0}>
+            {handleRows.length === 0 ? "Select a payment method" : "Review payment info"}
+          </PrimaryButton>
+        }
       >
         {error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
         ) : null}
         <Text style={styles.lead}>
-          Add every app you accept. We check the format for typos, then you confirm before
-          publishing.
+          Tap every app you accept. Then add your handle for each.
           {regionHint ? `\n${regionHint}` : ""}
         </Text>
-        {draft.payments.map((payment, index) => (
-          <View key={`${payment.method}-${index}`} style={styles.card}>
-            <View style={styles.methodRow}>
-              {methods.map((method) => {
-                const taken = draft.payments.some((p, i) => i !== index && p.method === method);
-                const on = payment.method === method;
-                if (taken) return null;
-                return (
-                  <PressScale
-                    key={method}
-                    onPress={() => draft.setPayment(index, { method })}
-                    style={[styles.methodChip, on && styles.methodChipOn]}
-                  >
-                    <PayMethodIcon method={method} size={44} />
-                  </PressScale>
-                );
-              })}
-            </View>
-            <Field
-              label={`Your ${PAY_METHOD_META[payment.method].hint}`}
-              value={payment.handle}
-              onChangeText={(handle) => {
-                setError(null);
-                draft.setPayment(index, { handle });
-              }}
-              placeholder={placeholderFor(payment.method)}
-              autoCapitalize="none"
-              keyboardType={
-                payment.method === "moncash" || payment.method === "natcash"
-                  ? "phone-pad"
-                  : payment.method === "zelle" || payment.method === "paypal"
-                    ? "email-address"
-                    : "default"
-              }
-            />
-            {draft.payments.length > 1 ? (
-              <QuietButton onPress={() => draft.removePayment(index)}>Remove</QuietButton>
-            ) : null}
+
+        <View style={styles.methodGrid}>
+          {methods.map((method) => {
+            const on = selected.has(method);
+            return (
+              <PressScale
+                key={method}
+                haptic="select"
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`${PAY_METHOD_META[method].label}${on ? ", selected" : ""}`}
+                onPress={() => toggleMethod(method)}
+                style={[styles.methodTile, on && styles.methodTileOn]}
+              >
+                <PayMethodIcon method={method} size={48} />
+                <Text style={[styles.methodLabel, on && styles.methodLabelOn]} numberOfLines={1}>
+                  {PAY_METHOD_META[method].label}
+                </Text>
+              </PressScale>
+            );
+          })}
+        </View>
+
+        {handleRows.length > 0 ? (
+          <View style={styles.handlesBlock}>
+            <Text style={styles.handlesTitle}>Your handles</Text>
+            {handleRows.map((payment) => (
+              <View key={payment.method} style={styles.handleCard}>
+                <View style={styles.handleHead}>
+                  <PayMethodIcon method={payment.method} size={40} />
+                  <Text style={styles.handleMethod}>{PAY_METHOD_META[payment.method].label}</Text>
+                </View>
+                <Field
+                  label={`Your ${PAY_METHOD_META[payment.method].hint}`}
+                  value={payment.handle}
+                  onChangeText={(handle) => {
+                    setError(null);
+                    draft.setPaymentHandle(payment.method, handle);
+                  }}
+                  placeholder={placeholderFor(payment.method)}
+                  autoCapitalize="none"
+                  keyboardType={
+                    payment.method === "moncash" || payment.method === "natcash"
+                      ? "phone-pad"
+                      : payment.method === "zelle" || payment.method === "paypal"
+                        ? "email-address"
+                        : "default"
+                  }
+                />
+              </View>
+            ))}
           </View>
-        ))}
-        {unused.length > 0 ? (
-          <QuietButton onPress={() => draft.addPayment(unused[0])}>Add another way to pay</QuietButton>
         ) : null}
       </InterviewChrome>
     </AppShell>
@@ -230,22 +261,58 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.inkSoft,
   },
-  card: {
-    marginBottom: 14,
-    padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    borderRadius: 12,
+  methodGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
+    marginBottom: 8,
   },
-  methodRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 10 },
-  methodChip: {
-    padding: 6,
+  methodTile: {
+    width: "30%",
+    flexGrow: 1,
+    minWidth: 96,
+    maxWidth: "48%",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.paper,
+  },
+  methodTileOn: {
+    borderColor: colors.select,
+    backgroundColor: colors.selectWash,
+  },
+  methodLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.inkSoft,
+    textAlign: "center",
+  },
+  methodLabelOn: {
+    color: colors.select,
+    fontWeight: "700",
+  },
+  handlesBlock: { marginTop: 18, gap: 12 },
+  handlesTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.inkSoft,
+    letterSpacing: 0.2,
+    marginBottom: 2,
+  },
+  handleCard: {
+    padding: 12,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+    gap: 10,
+    backgroundColor: "#FFFcf8",
   },
-  methodChipOn: { borderColor: colors.merlot, backgroundColor: "#FBFAF8" },
+  handleHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  handleMethod: { fontSize: 15, fontWeight: "700", color: colors.ink },
   confirmRow: {
     flexDirection: "row",
     alignItems: "flex-start",

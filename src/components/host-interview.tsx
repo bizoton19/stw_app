@@ -4,6 +4,7 @@ import { Camera, ChevronDown, Copy, ImageIcon, Share2, Trash2 } from "lucide-rea
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
+import { PayMethodIcon } from "@/components/pay-method-icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { VenueTypeahead } from "@/components/venue-typeahead";
@@ -140,9 +141,7 @@ export function HostInterview() {
   const [receiptDate, setReceiptDate] = useState<string | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
-  const [payments, setPayments] = useState<{ method: PayMethod; handle: string }[]>([
-    { method: "venmo", handle: "" },
-  ]);
+  const [payments, setPayments] = useState<{ method: PayMethod; handle: string }[]>([]);
   const [claimUrl, setClaimUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [payConfirming, setPayConfirming] = useState(false);
@@ -711,8 +710,6 @@ export function HostInterview() {
   } else if (step === "pay") {
     const regionMethods = new Set(payMethodsForRegion());
     const payOptions = PAY_OPTIONS.filter((o) => regionMethods.has(o.method));
-    const used = new Set(payments.map((p) => p.method));
-    const unused = payOptions.filter((o) => !used.has(o.method));
     if (payConfirming) {
       const checked = validateHostPayments(payments);
       const rows = checked.ok ? checked.payments : hostInfo.payments;
@@ -736,6 +733,7 @@ export function HostInterview() {
                   key={payment.method}
                   className="flex items-start gap-3 rounded-xl border border-border px-3 py-3"
                 >
+                  <PayMethodIcon method={payment.method} size={48} />
                   <div className="min-w-0 flex-1">
                     <span className="text-[13px] font-semibold text-ink-soft">{label}</span>
                     <div className="text-[17px] font-semibold tracking-tight">{payment.handle}</div>
@@ -768,82 +766,110 @@ export function HostInterview() {
         </div>
       );
     } else {
+      const selected = new Set(payments.map((p) => p.method));
+      const handleRows = payOptions
+        .map((o) => payments.find((p) => p.method === o.method))
+        .filter((p): p is { method: PayMethod; handle: string } => Boolean(p));
+
+      function toggleMethod(method: PayMethod) {
+        setError(null);
+        setPayments((prev) => {
+          const idx = prev.findIndex((p) => p.method === method);
+          if (idx >= 0) return prev.filter((_, i) => i !== idx);
+          return [...prev, { method, handle: "" }];
+        });
+      }
+
       body = (
         <>
           {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
           <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
-            Add every app you accept. We check the format for typos, then you confirm before
-            publishing.
+            Tap every app you accept. Then add your handle for each.
           </p>
-          {payments.map((payment, index) => (
-            <div
-              key={`${payment.method}-${index}`}
-              className="mb-4 rounded-xl border border-border p-3"
-            >
-              <div className="mb-3 flex flex-wrap gap-2">
-                {payOptions.map((option) => {
-                  const taken = payments.some((p, i) => i !== index && p.method === option.method);
-                  if (taken) return null;
-                  const on = payment.method === option.method;
-                  return (
-                    <button
-                      key={option.method}
-                      type="button"
-                      onClick={() =>
-                        setPayments((prev) =>
-                          prev.map((row, i) =>
-                            i === index ? { ...row, method: option.method } : row,
-                          ),
-                        )
-                      }
-                      className={`pressable rounded-lg border px-2.5 py-1.5 text-[13px] font-medium ${
-                        on
-                          ? "border-primary text-foreground"
-                          : "border-border text-muted-foreground"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-                {payments.length > 1 ? (
-                  <QuietButton
-                    onClick={() => setPayments((prev) => prev.filter((_, i) => i !== index))}
+          <div className="mb-2 flex flex-wrap gap-2.5">
+            {payOptions.map((option) => {
+              const on = selected.has(option.method);
+              return (
+                <button
+                  key={option.method}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggleMethod(option.method)}
+                  className={`pressable flex min-w-[96px] flex-1 flex-col items-center gap-2 rounded-[14px] border-[1.5px] px-2.5 py-3.5 ${
+                    on
+                      ? "border-[#2F5D50] bg-[rgba(47,93,80,0.14)]"
+                      : "border-border bg-transparent"
+                  }`}
+                >
+                  <PayMethodIcon method={option.method} size={48} />
+                  <span
+                    className={`text-[13px] font-semibold ${
+                      on ? "font-bold text-[#2F5D50]" : "text-ink-soft"
+                    }`}
                   >
-                    Remove
-                  </QuietButton>
-                ) : null}
-              </div>
-              <Label className="mb-2 text-[13px] font-medium">
-                Your {PAY_OPTIONS.find((o) => o.method === payment.method)?.hint}
-              </Label>
-              <Input
-                value={payment.handle}
-                onChange={(e) => {
-                  setError(null);
-                  setPayments((prev) =>
-                    prev.map((row, i) => (i === index ? { ...row, handle: e.target.value } : row)),
-                  );
-                }}
-                placeholder="@alex"
-                className={fieldClass}
-              />
+                    {option.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {handleRows.length > 0 ? (
+            <div className="mt-5 space-y-3">
+              <p className="text-[13px] font-bold tracking-wide text-ink-soft">Your handles</p>
+              {handleRows.map((payment) => {
+                const meta = payOptions.find((o) => o.method === payment.method);
+                return (
+                  <div
+                    key={payment.method}
+                    className="rounded-xl border border-border bg-[#FFFcf8] p-3"
+                  >
+                    <div className="mb-2.5 flex items-center gap-2.5">
+                      <PayMethodIcon method={payment.method} size={40} />
+                      <span className="text-[15px] font-bold">{meta?.label ?? payment.method}</span>
+                    </div>
+                    <Label className="mb-2 text-[13px] font-medium">Your {meta?.hint}</Label>
+                    <Input
+                      value={payment.handle}
+                      onChange={(e) => {
+                        setError(null);
+                        const handle = e.target.value;
+                        setPayments((prev) =>
+                          prev.map((row) =>
+                            row.method === payment.method ? { ...row, handle } : row,
+                          ),
+                        );
+                      }}
+                      placeholder={
+                        payment.method === "cashapp"
+                          ? "$alex"
+                          : payment.method === "venmo"
+                            ? "@alex"
+                            : payment.method === "paypal"
+                              ? "paypal.me/alex"
+                              : payment.method === "zelle"
+                                ? "alex@email.com"
+                                : payment.method === "moncash" || payment.method === "natcash"
+                                  ? "+509 3XXX XXXX"
+                                  : "how to pay you"
+                      }
+                      className={fieldClass}
+                      autoCapitalize="none"
+                    />
+                  </div>
+                );
+              })}
             </div>
-          ))}
-          {unused.length > 0 ? (
-            <QuietButton
-              onClick={() =>
-                setPayments((prev) => [...prev, { method: unused[0].method, handle: "" }])
-              }
-            >
-              Add another way to pay
-            </QuietButton>
           ) : null}
         </>
       );
       footer = (
         <ContinueButton
+          disabled={payments.length === 0}
           onClick={() => {
+            if (payments.length === 0) {
+              setError("Tap at least one way people can pay you.");
+              return;
+            }
             const result = validateHostPayments(payments);
             if (!result.ok) {
               setError(result.message);
@@ -853,7 +879,7 @@ export function HostInterview() {
             setPayConfirming(true);
           }}
         >
-          Review payment info
+          {handleRows.length === 0 ? "Select a payment method" : "Review payment info"}
         </ContinueButton>
       );
     }

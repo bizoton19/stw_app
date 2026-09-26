@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { api, createDraftReceipt, parseReceiptWithImage, submitParseReview } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
-import { nextUnusedPayMethod, preferredPayMethod } from "@/lib/pay-region";
+import { nextUnusedPayMethod } from "@/lib/pay-region";
 import { saveHostToken } from "@/lib/session";
 import type {
   Fee,
@@ -49,6 +49,8 @@ type HostDraft = {
   setPayment: (index: number, patch: Partial<HostPayment>) => void;
   addPayment: (method?: PayMethod) => void;
   removePayment: (index: number) => void;
+  togglePaymentMethod: (method: PayMethod) => void;
+  setPaymentHandle: (method: PayMethod, handle: string) => void;
   runParse: () => Promise<void>;
   recordParseReview: (choice: ParseReviewChoice) => Promise<void>;
   publish: () => Promise<void>;
@@ -65,9 +67,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [receiptDate, setReceiptDate] = useState<string | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
-  const [payments, setPayments] = useState<HostPayment[]>([
-    { method: preferredPayMethod(), handle: "" },
-  ]);
+  const [payments, setPayments] = useState<HostPayment[]>([]);
   const [claimUrl, setClaimUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -94,7 +94,21 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removePayment = useCallback((index: number) => {
-    setPayments((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+    setPayments((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const togglePaymentMethod = useCallback((method: PayMethod) => {
+    setPayments((prev) => {
+      const idx = prev.findIndex((p) => p.method === method);
+      if (idx >= 0) return prev.filter((_, i) => i !== idx);
+      return [...prev, { method, handle: "" }];
+    });
+  }, []);
+
+  const setPaymentHandle = useCallback((method: PayMethod, handle: string) => {
+    setPayments((prev) =>
+      prev.map((row) => (row.method === method ? { ...row, handle } : row)),
+    );
   }, []);
 
   const applyReceipt = useCallback((receipt: PublicReceipt) => {
@@ -254,6 +268,8 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       setPayment,
       addPayment,
       removePayment,
+      togglePaymentMethod,
+      setPaymentHandle,
       runParse,
       recordParseReview,
       publish,
@@ -276,7 +292,9 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       receiptDate,
       runParse,
       setPayment,
+      setPaymentHandle,
       setPick,
+      togglePaymentMethod,
     ],
   );
 
