@@ -50,6 +50,8 @@ The API is a **capability-URL** system: knowing a receipt id is enough to join a
 3. Simple rate limit: create ≤ N/min/IP, parse ≤ M/min/IP+host, claims ≤ K/min/IP  
 4. Share claim links only in private chats; tell friends data resets on redeploy  
 5. Optional: `PARSE_STUB_ONLY=1` kill-switch if credits spike  
+6. Put **Cloudflare** in front of `api.splitthewine.app` (see Edge checklist below)  
+7. Confirm Postgres is **private** — only the Railway API service can connect  
 
 ## Phase 2 — Wider beta / App Store
 
@@ -65,7 +67,7 @@ The API is a **capability-URL** system: knowing a receipt id is enough to join a
 ## Phase 3 — Real product
 
 1. Accounts / device binding for host tokens  
-2. Abuse detection, WAF / Railway edge limits  
+2. Stronger abuse detection (bot score rules, tighter CF rate limits, optional App Check)  
 3. Backups, multi-region strategy, SSE fan-out that works with >1 instance  
 4. Formal threat model for payment-handle handling  
 
@@ -81,6 +83,39 @@ Until cutover, mobile EAS still points at `https://api-production-72488.up.railw
 
 ---
 
+## Edge (Cloudflare) — DDoS / abuse
+
+Put Cloudflare **proxy** (orange cloud) on `api.splitthewine.app`. Free plan includes always-on L3/L4 + L7 DDoS. Edge stops floods; **app rate limits + OpenRouter caps** stop parse burn.
+
+- [ ] DNS for `api` points at Cloudflare; record is **proxied** (orange), not DNS-only (grey)
+- [ ] SSL/TLS mode **Full (strict)** once Railway cert is active (or Cloudflare origin cert)
+- [ ] Do **not** advertise `*.up.railway.app` — treat raw Railway URL as secret; prefer CF hostname only in apps + share links
+- [ ] **Rate limiting rules** (start conservative; tune after friend test):
+  - [ ] `POST /api/receipts` (create) — low per IP / min
+  - [ ] `POST /api/receipts/*/parse` — very low per IP / min (OpenRouter cost)
+  - [ ] claim / join POSTs — moderate per IP / min
+- [ ] Optional: Bot Fight Mode for **browser** claim pages only — avoid challenging native app API clients the same way
+- [ ] Optional: WAF managed ruleset (default CF Free is fine for friend test)
+- [ ] Still ship **in-app** rate limits (Phase 1 §3) — edge alone is not enough
+
+**Note:** Guests/hosts still have names, contacts, and pay handles on claim JSON — mild PII if a link leaks. DDoS ≠ privacy; share links stay private-chat only.
+
+---
+
+## Postgres lockdown — API only
+
+Goal: no public TCP to Postgres; only the Railway **api** service holds `DATABASE_URL`.
+
+- [ ] Postgres and API are in the **same Railway project**
+- [ ] Use Railway **private** / internal `DATABASE_URL` on the api service (not a public proxy URL)
+- [ ] **Disable public networking** on the Postgres plugin once local `psql` via public URL is no longer needed
+- [ ] Sanity check: from a random laptop, `psql "$DATABASE_URL"` must **fail** unless you’re on Railway private network / temporary public toggle
+- [ ] `DATABASE_URL` is set **only** on the api service — never in mobile, EAS `EXPO_PUBLIC_*`, git, or client bundles
+- [ ] Prefer an app DB role limited to schema `split_the_wine` (CONNECT + USAGE + table CRUD), not a project superuser for day-to-day
+- [ ] Phones talk **HTTPS to the API only** — never open a direct DB connection from the app
+
+---
+
 ## Railway checklist
 
 ```bash
@@ -90,9 +125,9 @@ railway login
 # from repo root
 railway init          # or link existing project
 railway variables set OPENROUTER_API_KEY=sk-or-...
-railway variables set OPENROUTER_HTTP_REFERER=https://YOUR-APP.up.railway.app
-railway variables set ALLOWED_ORIGINS=https://YOUR-APP.up.railway.app
-# Shared Postgres (reuse instance; this app uses schema `split_the_wine` only)
+railway variables set OPENROUTER_HTTP_REFERER=https://api.splitthewine.app
+railway variables set ALLOWED_ORIGINS=https://api.splitthewine.app,https://www.splitthewine.app
+# Private Postgres URL from Railway (internal host) — schema split_the_wine only
 railway variables set DATABASE_URL=postgresql://...
 # leave ALLOW_DEMO unset in production
 railway up
@@ -101,8 +136,8 @@ railway up
 Mobile (EAS / `.env` for builds):
 
 ```bash
-EXPO_PUBLIC_API_URL=https://YOUR-APP.up.railway.app
-EXPO_PUBLIC_SHARE_URL=https://YOUR-APP.up.railway.app
+EXPO_PUBLIC_API_URL=https://api.splitthewine.app
+EXPO_PUBLIC_SHARE_URL=https://api.splitthewine.app
 ```
 
 ---
@@ -114,3 +149,5 @@ EXPO_PUBLIC_SHARE_URL=https://YOUR-APP.up.railway.app
 - [ ] Demo routes absent unless `ALLOW_DEMO=1`  
 - [ ] Two phones can host + claim against the same Railway URL  
 - [ ] Friends understand: redeploy = empty tables; don’t post the API URL publicly  
+- [ ] `api.splitthewine.app` proxied via Cloudflare; raw Railway hostname not shared  
+- [ ] Postgres not publicly reachable; only api service has `DATABASE_URL`  
