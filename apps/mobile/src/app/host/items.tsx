@@ -17,6 +17,7 @@ import { PressScale } from "@/components/press-scale";
 import { useHostDraft, type DraftItem } from "@/context/host-draft";
 import { t } from "@/lib/i18n";
 import { centsToLabel } from "@/lib/money";
+import { pourCandidates } from "@/lib/pour";
 import type { ParseReviewChoice } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
@@ -237,6 +238,12 @@ export default function HostItems() {
     setToast(null);
   }
 
+  function goAfterItems() {
+    const next = pourCandidates(draft.items);
+    if (next.length > 0) router.push("/host/pour");
+    else router.push("/host/fees");
+  }
+
   async function applyChoice(next: ParseReviewChoice, opts?: { continue?: boolean }) {
     stopEditing();
     setMenu(null);
@@ -247,7 +254,7 @@ export default function HostItems() {
       if (next === "remove_items") setHint(t("items.tipRemove"));
       else if (next === "needs_edits") setHint(t("items.tipInaccuracies"));
       else setHint(null);
-      if (opts?.continue) router.push("/host/fees");
+      if (opts?.continue) goAfterItems();
     } finally {
       setBusy(false);
     }
@@ -262,7 +269,7 @@ export default function HostItems() {
     <AppShell>
       <InterviewChrome
         step={5}
-        total={8}
+        total={9}
         kicker={t("items.kicker")}
         title={t("items.title")}
         onBack={() => router.back()}
@@ -350,7 +357,7 @@ export default function HostItems() {
                 disabled={busy || !canContinue}
                 onPress={() => {
                   stopEditing();
-                  router.push("/host/fees");
+                  goAfterItems();
                 }}
                 style={[styles.continueBtn, (!canContinue || busy) && styles.continueDisabled]}
               >

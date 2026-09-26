@@ -19,8 +19,8 @@ export default function HostFees() {
   return (
     <AppShell>
       <InterviewChrome
-        step={6}
-        total={8}
+        step={7}
+        total={9}
         kicker={t("fees.kicker")}
         title={t("fees.title")}
         onBack={() => router.back()}

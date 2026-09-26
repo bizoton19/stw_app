@@ -15,7 +15,7 @@ export default function HostRestaurant() {
     <AppShell>
       <InterviewChrome
         step={4}
-        total={8}
+        total={9}
         kicker="The place"
         title="Confirm the place on the check"
         onBack={() => router.back()}

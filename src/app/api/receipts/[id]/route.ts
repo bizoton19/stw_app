@@ -32,6 +32,7 @@ export async function PUT(
         qty: number;
         totalCents: number;
         kind?: import("@/lib/types").ItemKind | null;
+        pour?: import("@/lib/types").ItemPour | null;
       }[];
       fees?: { id?: string; name: string; amountCents: number }[];
       hostInfo?: unknown;

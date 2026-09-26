@@ -1,9 +1,10 @@
 import { sumCents, unitCentsArray } from "./money";
+import { claimCapacity, isGlassesPour } from "./pour";
 import type { Claim, Item, PersonTotal, Receipt, Totals } from "./types";
 
 export function remainingForItem(item: Item, claims: Claim[]): number {
   const used = claims.filter((c) => c.itemId === item.id).reduce((s, c) => s + c.units, 0);
-  return item.qty - used;
+  return claimCapacity(item) - used;
 }
 
 export function latestClaimerForItem(
@@ -36,6 +37,11 @@ function ownersForItem(item: Item, claims: Claim[]): UnitOwner[] {
   return owners;
 }
 
+function lineItemName(item: Item): string {
+  if (isGlassesPour(item)) return `${item.name} (glass)`;
+  return item.name;
+}
+
 export function computeTotals(receipt: Receipt): Totals {
   const itemSubtotalCents = sumCents(receipt.items.map((i) => i.totalCents));
   const feeTotalCents = sumCents(receipt.fees.map((f) => f.amountCents));
@@ -61,7 +67,8 @@ export function computeTotals(receipt: Receipt): Totals {
 
   let claimedItemCents = 0;
   for (const item of receipt.items) {
-    const units = unitCentsArray(item.totalCents, item.qty);
+    const capacity = claimCapacity(item);
+    const units = unitCentsArray(item.totalCents, capacity);
     const owners = ownersForItem(item, receipt.claims);
     const byPerson = new Map<string, { units: number; cents: number; contact?: string }>();
     owners.forEach((owner, idx) => {
@@ -82,7 +89,7 @@ export function computeTotals(receipt: Receipt): Totals {
       row.itemCents += agg.cents;
       row.lines.push({
         itemId: item.id,
-        itemName: item.name,
+        itemName: lineItemName(item),
         units: agg.units,
         cents: agg.cents,
       });

@@ -11,6 +11,13 @@ export type PayMethod =
 
 export type ItemKind = "food" | "drink";
 
+/** How claimers count units for this printed check line. */
+export type ItemPour = {
+  mode: "as_printed" | "glasses";
+  /** When mode=glasses: claim capacity = qty × glassesPerPrintedUnit. */
+  glassesPerPrintedUnit: number;
+};
+
 export type Item = {
   id: string;
   name: string;
@@ -18,6 +25,8 @@ export type Item = {
   totalCents: number;
   /** Vision (or heuristic) food vs drink — optional for older receipts. */
   kind?: ItemKind | null;
+  /** Host-confirmed claim grain (bottle vs glasses). */
+  pour?: ItemPour | null;
 };
 
 export type Fee = {

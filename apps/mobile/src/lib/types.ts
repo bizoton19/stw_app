@@ -10,12 +10,18 @@ export type PayMethod =
 
 export type ItemKind = "food" | "drink";
 
+export type ItemPour = {
+  mode: "as_printed" | "glasses";
+  glassesPerPrintedUnit: number;
+};
+
 export type Item = {
   id: string;
   name: string;
   qty: number;
   totalCents: number;
   kind?: ItemKind | null;
+  pour?: ItemPour | null;
 };
 
 export type Fee = {

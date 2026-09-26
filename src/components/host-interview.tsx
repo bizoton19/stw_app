@@ -9,6 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { centsToLabel } from "@/lib/money";
+import {
+  DEFAULT_GLASSES_PER_BOTTLE,
+  MAX_GLASSES_PER_UNIT,
+  MIN_GLASSES_PER_UNIT,
+  pourAsGlasses,
+  pourAsPrinted,
+  pourCandidates,
+  type PourSuggestion,
+} from "@/lib/pour";
 import { validateHostPayments } from "@/lib/host-pay";
 import { payVerifyUrl } from "@/lib/pay";
 import { payMethodsForRegion } from "@/lib/pay-region";
@@ -18,6 +27,7 @@ import type {
   Fee,
   HostInfo,
   Item,
+  ItemPour,
   ParseReviewChoice,
   PayMethod,
   PublicReceipt,
@@ -30,6 +40,7 @@ type Step =
   | "parsing"
   | "restaurant"
   | "items"
+  | "pour"
   | "fees"
   | "pay"
   | "share";
@@ -40,6 +51,7 @@ const ORDER: Step[] = [
   "parsing",
   "restaurant",
   "items",
+  "pour",
   "fees",
   "pay",
   "share",
@@ -51,6 +63,7 @@ const COPY: Record<Step, { kicker: string; title: string }> = {
   parsing: { kicker: "Reading", title: "Looking over every pour…" },
   restaurant: { kicker: "The place", title: "What's the name on the check?" },
   items: { kicker: "The drinks", title: "Does this look right?" },
+  pour: { kicker: "Bottles", title: "How should people claim these?" },
   fees: { kicker: "Tax & tip", title: "These follow what people ordered." },
   pay: { kicker: "Getting paid", title: "How should people pay you?" },
   share: { kicker: "Share", title: "Send this. They claim what they drank." },
@@ -150,6 +163,8 @@ export function HostInterview() {
   const [itemsHint, setItemsHint] = useState<string | null>(null);
   const [parseReview, setParseReview] = useState<ParseReviewChoice | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [pourGlasses, setPourGlasses] = useState<Record<string, number>>({});
+  const [pourMode, setPourMode] = useState<Record<string, "glasses" | "as_printed">>({});
 
   const hostInfo: HostInfo = {
     payments: payments
@@ -159,10 +174,43 @@ export function HostInterview() {
   const itemSubtotal = items.reduce((s, i) => s + i.totalCents, 0);
   const feeTotal = fees.reduce((s, f) => s + f.amountCents, 0);
   const stepIndex = ORDER.indexOf(step) + 1;
+  const candidates = pourCandidates(items);
 
   function go(next: Step) {
     setDirection(ORDER.indexOf(next) >= ORDER.indexOf(step) ? 1 : -1);
     setStep(next);
+  }
+
+  function goAfterItems() {
+    const next = pourCandidates(items);
+    if (next.length === 0) {
+      go("fees");
+      return;
+    }
+    const glasses: Record<string, number> = {};
+    const modes: Record<string, "glasses" | "as_printed"> = {};
+    for (const row of next) {
+      glasses[row.itemId] = row.suggestGlasses;
+      modes[row.itemId] = "glasses";
+    }
+    setPourGlasses(glasses);
+    setPourMode(modes);
+    go("pour");
+  }
+
+  function applyPourAndContinue() {
+    setItems((prev) =>
+      prev.map((item) => {
+        const mode = pourMode[item.id];
+        if (!mode) return item;
+        const pour: ItemPour =
+          mode === "glasses"
+            ? pourAsGlasses(pourGlasses[item.id] ?? DEFAULT_GLASSES_PER_BOTTLE)
+            : pourAsPrinted();
+        return { ...item, pour };
+      }),
+    );
+    go("fees");
   }
 
   function applyReceipt(receipt: PublicReceipt) {
@@ -200,7 +248,7 @@ export function HostInterview() {
       } else {
         setItemsHint(null);
       }
-      if (opts?.continue) go("fees");
+      if (opts?.continue) goAfterItems();
     } finally {
       setReviewBusy(false);
     }
@@ -290,11 +338,13 @@ export function HostInterview() {
           restaurant: venueToSave.name,
           venue: venueToSave,
           receiptDate,
-          items: items.map(({ id, name, qty, totalCents }) => ({
+          items: items.map(({ id, name, qty, totalCents, kind, pour }) => ({
             id,
             name,
             qty,
             totalCents,
+            kind: kind ?? null,
+            pour: pour ?? null,
           })),
           fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
           hostInfo,
@@ -320,7 +370,8 @@ export function HostInterview() {
     parsing: () => go("capture"),
     restaurant: () => go("capture"),
     items: () => go("restaurant"),
-    fees: () => go("items"),
+    pour: () => go("items"),
+    fees: () => go(Object.keys(pourMode).length > 0 ? "pour" : "items"),
     pay: () => go("fees"),
   };
 
@@ -633,12 +684,116 @@ export function HostInterview() {
             type="button"
             disabled={reviewBusy || !itemsOk}
             className="pressable mt-2 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#6E2E35] text-[15px] font-bold text-white disabled:opacity-40"
-            onClick={() => go("fees")}
+            onClick={() => goAfterItems()}
           >
             Continue
           </button>
         ) : null}
       </div>
+    );
+  } else if (step === "pour") {
+    const pourOk =
+      candidates.length > 0 &&
+      candidates.every((row) => pourMode[row.itemId] === "glasses" || pourMode[row.itemId] === "as_printed");
+    body = (
+      <>
+        <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
+          Friends can take a glass each — tax still follows what they claim.
+        </p>
+        <ul className="space-y-3">
+          {candidates.map((row: PourSuggestion) => {
+            const mode = pourMode[row.itemId] ?? "glasses";
+            const glasses = pourGlasses[row.itemId] ?? row.suggestGlasses;
+            return (
+              <li
+                key={row.itemId}
+                className="rounded-2xl border border-border bg-[#FFFcf8] px-3.5 py-3.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold tracking-tight">{row.name}</p>
+                    <p className="mt-0.5 text-[12px] tabular-nums text-muted-foreground">
+                      {centsToLabel(row.totalCents)}
+                      {row.printedQty > 1 ? ` · qty ${row.printedQty}` : ""} · {row.label}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-[13px] font-medium text-foreground">
+                    {glasses} glasses in this bottle
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="pressable inline-flex size-9 items-center justify-center rounded-full border border-border text-[18px] font-bold"
+                      aria-label="Fewer glasses"
+                      disabled={glasses <= MIN_GLASSES_PER_UNIT}
+                      onClick={() =>
+                        setPourGlasses((prev) => ({
+                          ...prev,
+                          [row.itemId]: Math.max(MIN_GLASSES_PER_UNIT, glasses - 1),
+                        }))
+                      }
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-[15px] font-bold tabular-nums">
+                      {glasses}
+                    </span>
+                    <button
+                      type="button"
+                      className="pressable inline-flex size-9 items-center justify-center rounded-full border border-border text-[18px] font-bold"
+                      aria-label="More glasses"
+                      disabled={glasses >= MAX_GLASSES_PER_UNIT}
+                      onClick={() =>
+                        setPourGlasses((prev) => ({
+                          ...prev,
+                          [row.itemId]: Math.min(MAX_GLASSES_PER_UNIT, glasses + 1),
+                        }))
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    className={`pressable inline-flex h-10 flex-1 items-center justify-center rounded-full border px-3 text-[13px] font-bold ${
+                      mode === "as_printed"
+                        ? "border-[#6E2E35] bg-[rgba(110,46,53,0.08)] text-[#6E2E35]"
+                        : "border-border bg-background text-foreground"
+                    }`}
+                    onClick={() =>
+                      setPourMode((prev) => ({ ...prev, [row.itemId]: "as_printed" }))
+                    }
+                  >
+                    Keep as bottle
+                  </button>
+                  <button
+                    type="button"
+                    className={`pressable inline-flex h-10 flex-1 items-center justify-center rounded-full border px-3 text-[13px] font-bold ${
+                      mode === "glasses"
+                        ? "border-[#2F5D50] bg-[rgba(47,93,80,0.12)] text-[#2F5D50]"
+                        : "border-border bg-background text-foreground"
+                    }`}
+                    onClick={() =>
+                      setPourMode((prev) => ({ ...prev, [row.itemId]: "glasses" }))
+                    }
+                  >
+                    Split into glasses
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+    footer = (
+      <ContinueButton disabled={!pourOk} onClick={() => applyPourAndContinue()}>
+        Continue
+      </ContinueButton>
     );
   } else if (step === "fees") {
     body = (

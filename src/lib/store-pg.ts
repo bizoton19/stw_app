@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { DB_SCHEMA, ensureSchema, getPool, withTransaction } from "./db";
 import { dollarsToCents } from "./money";
+import { claimCapacity, normalizePour } from "./pour";
 import { SAMPLE_PARSE } from "./sample-tab";
 import { computeTotals, leftoverAssignments, remainingForItem, remainingMap, latestClaimerForItem } from "./totals";
 import { findVenueDayConflict, isValidatedVenue } from "./venue-day";
@@ -339,6 +340,7 @@ export async function saveReceipt(
       qty: number;
       totalCents: number;
       kind?: import("./types").ItemKind | null;
+      pour?: import("./types").ItemPour | null;
     }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;
@@ -367,30 +369,49 @@ export async function saveReceipt(
           if (!incoming.id) continue;
           const existing = receipt.items.find((item) => item.id === incoming.id);
           if (!existing) continue;
-          const claimed = existing.qty - remainingForItem(existing, receipt.claims);
-          if (incoming.qty < claimed) {
+          const claimed =
+            claimCapacity(existing) - remainingForItem(existing, receipt.claims);
+          const nextCapacity = claimCapacity({
+            qty: incoming.qty,
+            pour: normalizePour(incoming.pour) ?? existing.pour,
+          });
+          if (nextCapacity < claimed) {
             throw Object.assign(new Error("qty_below_claimed"), { code: "conflict" });
           }
         }
         const incomingIds = new Set(patch.items.map((item) => item.id).filter(Boolean));
         for (const item of receipt.items) {
-          if (!incomingIds.has(item.id) && remainingForItem(item, receipt.claims) < item.qty) {
+          if (
+            !incomingIds.has(item.id) &&
+            remainingForItem(item, receipt.claims) < claimCapacity(item)
+          ) {
             throw Object.assign(new Error("cannot_delete_claimed"), { code: "conflict" });
           }
         }
       }
-      receipt.items = patch.items.map((item) => ({
-        id: item.id && receipt.items.some((row) => row.id === item.id) ? item.id : `it_${shortId()}`,
-        name: item.name.trim(),
-        qty: item.qty,
-        totalCents: item.totalCents,
-        kind:
-          item.kind === "food" || item.kind === "drink"
-            ? item.kind
-            : item.kind === null
-              ? null
-              : receipt.items.find((row) => row.id === item.id)?.kind ?? null,
-      }));
+      receipt.items = patch.items.map((item) => {
+        const existing = receipt.items.find((row) => row.id === item.id);
+        const hasClaims =
+          existing != null &&
+          remainingForItem(existing, receipt.claims) < claimCapacity(existing);
+        const pour = hasClaims
+          ? existing.pour ?? null
+          : normalizePour(item.pour) ??
+            (item.pour === null ? null : existing?.pour ?? null);
+        return {
+          id: item.id && existing ? item.id : `it_${shortId()}`,
+          name: item.name.trim(),
+          qty: item.qty,
+          totalCents: item.totalCents,
+          kind:
+            item.kind === "food" || item.kind === "drink"
+              ? item.kind
+              : item.kind === null
+                ? null
+                : existing?.kind ?? null,
+          pour: pour ?? undefined,
+        };
+      });
     }
     if (patch.fees) {
       receipt.fees = patch.fees.map((fee) => ({

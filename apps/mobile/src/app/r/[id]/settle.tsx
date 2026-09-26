@@ -14,7 +14,8 @@ import { useClaimFlow } from "@/context/claim-flow";
 import { publicClaimUrl } from "@/lib/config";
 import { registerHostClaimPush } from "@/lib/host-push";
 import { hostPayments } from "@/lib/host-pay";
-import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
+import { centsToLabel } from "@/lib/money";
+import { claimMoneySlice } from "@/lib/pour";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment } from "@/lib/types";
@@ -290,8 +291,7 @@ export default function SettleScreen() {
             <Text style={styles.peopleTitle}>Still on the table</Text>
             {remainingLines.map((item) => {
               const left = receipt.remaining[item.id] ?? 0;
-              const unit = unitPriceCents(item.totalCents, item.qty);
-              const remainCents = remainingLineCents(item.totalCents, item.qty, left);
+              const money = claimMoneySlice(item, left);
               return (
               <View key={item.id} style={styles.remainRow}>
                 <View style={styles.remainNameRow}>
@@ -301,7 +301,9 @@ export default function SettleScreen() {
                   </Text>
                 </View>
                 <Text style={styles.remainLeft}>
-                  {centsToLabel(unit)} × {left} · {centsToLabel(remainCents)}
+                  {centsToLabel(money.unitCents)} × {left}
+                  {money.glasses ? (left === 1 ? " glass" : " glasses") : ""} ·{" "}
+                  {centsToLabel(money.remainingCents)}
                 </Text>
               </View>
               );

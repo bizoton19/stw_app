@@ -9,7 +9,8 @@ alwaysApply: false
 ## Server (source of truth)
 
 - Serialize claim writes per receipt: Postgres `FOR UPDATE` / in-memory mutex.
-- `remaining = item.qty - sum(claims.units)`. Reject overclaim with `409 not_enough_remaining`.
+- `remaining = claimCapacity(item) - sum(claims.units)` where capacity is `qty` (as printed) or `qty × glassesPerPrintedUnit` (glass pour). Reject overclaim with `409 not_enough_remaining`.
+- Claim `units` are always claim-grain integers (glasses or printed bottles), never fractional bottles.
 - No silent optimistic commits. Clients refresh after conflict and show what’s left.
 - Emit live updates (SSE + poll fallback) so other guests see decremented remaining.
 

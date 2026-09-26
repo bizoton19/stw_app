@@ -217,12 +217,13 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
           receiptDate,
           items: items
             .filter((row) => !row.removed)
-            .map(({ id, name, qty, totalCents, kind }) => ({
+            .map(({ id, name, qty, totalCents, kind, pour }) => ({
               id,
               name,
               qty,
               totalCents,
               kind: kind ?? null,
+              pour: pour ?? null,
             })),
           fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
           hostInfo: { payments: checked.payments },

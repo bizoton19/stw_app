@@ -9,7 +9,8 @@ import { QuietButton } from "@/components/interview-chrome";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { hostPayments } from "@/lib/host-pay";
-import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
+import { centsToLabel } from "@/lib/money";
+import { claimMoneySlice } from "@/lib/pour";
 import { openHostPayWeb, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { api, getGuest, getHostToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
@@ -133,8 +134,7 @@ export function SettleView({
           <li className="text-[12px] font-medium text-muted-foreground">Still on the table</li>
           {remainingLines.map((item) => {
             const left = receipt.remaining[item.id] ?? 0;
-            const unit = unitPriceCents(item.totalCents, item.qty);
-            const remainCents = remainingLineCents(item.totalCents, item.qty, left);
+            const money = claimMoneySlice(item, left);
             return (
               <li
                 key={item.id}
@@ -145,7 +145,9 @@ export function SettleView({
                   <span className="truncate font-medium">{item.name}</span>
                 </span>
                 <span className="shrink-0 text-muted-foreground">
-                  {centsToLabel(unit)} × {left} · {centsToLabel(remainCents)}
+                  {centsToLabel(money.unitCents)} × {left}
+                  {money.glasses ? (left === 1 ? " glass" : " glasses") : ""} ·{" "}
+                  {centsToLabel(money.remainingCents)}
                 </span>
               </li>
             );

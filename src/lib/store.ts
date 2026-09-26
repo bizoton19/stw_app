@@ -48,6 +48,7 @@ export async function saveReceipt(
       qty: number;
       totalCents: number;
       kind?: import("./types").ItemKind | null;
+      pour?: import("./types").ItemPour | null;
     }[];
     fees?: { id?: string; name: string; amountCents: number }[];
     hostInfo?: HostInfo;

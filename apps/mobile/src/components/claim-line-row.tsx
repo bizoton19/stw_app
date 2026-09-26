@@ -9,7 +9,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
-import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
+import { centsToLabel } from "@/lib/money";
+import { claimMoneySlice } from "@/lib/pour";
 import { colors } from "@/lib/theme";
 import type { Item } from "@/lib/types";
 
@@ -31,8 +32,9 @@ export function ClaimLineRow({
 }) {
   const on = useSharedValue(selected ? 1 : 0);
   const bump = useSharedValue(1);
-  const unit = unitPriceCents(item.totalCents, item.qty);
-  const remainingCents = remainingLineCents(item.totalCents, item.qty, left);
+  const money = claimMoneySlice(item, left);
+  const unit = money.unitCents;
+  const remainingCents = money.remainingCents;
 
   useEffect(() => {
     on.value = withTiming(selected ? 1 : 0, { duration: 180 });
@@ -64,12 +66,16 @@ export function ClaimLineRow({
             {item.name}
           </Text>
           <Text style={[styles.meta, styles.tabular]}>
-            {centsToLabel(unit)} each · {item.qty} on check
+            {centsToLabel(unit)} each
+            {money.glasses
+              ? ` · ${money.capacity} glasses · from ${item.qty} bottle${item.qty === 1 ? "" : "s"}`
+              : ` · ${item.qty} on check`}
           </Text>
         </View>
         <View style={styles.right}>
           <Text style={[styles.left, selected && styles.leftOn]}>
             {centsToLabel(unit)} × {left}
+            {money.glasses ? (left === 1 ? " glass" : " glasses") : ""}
           </Text>
           <Text style={[styles.remainTotal, selected && styles.leftOn]}>
             {centsToLabel(remainingCents)} left

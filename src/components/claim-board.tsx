@@ -9,7 +9,8 @@ import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { LineKindIcon } from "@/components/line-kind-icon";
-import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
+import { centsToLabel } from "@/lib/money";
+import { claimMoneySlice, isGlassesPour } from "@/lib/pour";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
 import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
@@ -340,7 +341,9 @@ export function ClaimBoard({
         }
       >
         <p className="mb-4 text-[15px] leading-relaxed text-muted-foreground">
-          Whole glasses only. We will not split a pour.
+          {queuedItems.every((item) => isGlassesPour(item))
+            ? "How many glasses? Whole pours only."
+            : "Whole glasses only. We will not split a pour."}
         </p>
         {message ? <p className="mb-3 text-sm text-destructive">{message}</p> : null}
         <ul className="divide-y divide-border border-y border-border">
@@ -348,6 +351,7 @@ export function ClaimBoard({
             const max = receipt.remaining[item.id] ?? 0;
             const value = Math.min(Math.max(1, units[item.id] ?? 1), Math.max(1, max));
             const labelId = `qty-${item.id}`;
+            const money = claimMoneySlice(item, max);
             return (
               <li key={item.id} className="py-3">
                 <div className="flex items-start justify-between gap-3">
@@ -358,8 +362,9 @@ export function ClaimBoard({
                         {item.name}
                       </p>
                       <p className="text-[12px] tabular-nums text-muted-foreground">
-                        {centsToLabel(unitPriceCents(item.totalCents, item.qty))} × {max} ·{" "}
-                        {centsToLabel(remainingLineCents(item.totalCents, item.qty, max))} left
+                        {centsToLabel(money.unitCents)} × {max}
+                        {money.glasses ? " glasses" : ""} ·{" "}
+                        {centsToLabel(money.remainingCents)} left
                       </p>
                     </div>
                   </div>
@@ -422,8 +427,7 @@ export function ClaimBoard({
           {remainingItems.map((item) => {
             const left = receipt.remaining[item.id] ?? 0;
             const selected = activeQueued.includes(item.id);
-            const unit = unitPriceCents(item.totalCents, item.qty);
-            const remainCents = remainingLineCents(item.totalCents, item.qty, left);
+            const money = claimMoneySlice(item, left);
             return (
               <li key={item.id}>
                 <button
@@ -446,11 +450,14 @@ export function ClaimBoard({
                       {item.name}
                     </span>
                     <span className="mt-0.5 block text-[13px] tabular-nums text-muted-foreground">
-                      {centsToLabel(unit)} each · {item.qty} on check
+                      {centsToLabel(money.unitCents)} each
+                      {money.glasses
+                        ? ` · ${money.capacity} glasses · from ${item.qty} bottle${item.qty === 1 ? "" : "s"}`
+                        : ` · ${item.qty} on check`}
                     </span>
                   </span>
                   <motion.span
-                    key={`${item.id}-${left}-${remainCents}`}
+                    key={`${item.id}-${left}-${money.remainingCents}`}
                     initial={{ opacity: 0.45, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`shrink-0 text-right text-[13px] font-semibold tabular-nums ${
@@ -458,10 +465,11 @@ export function ClaimBoard({
                     }`}
                   >
                     <span className="block">
-                      {centsToLabel(unit)} × {left}
+                      {centsToLabel(money.unitCents)} × {left}
+                      {money.glasses ? (left === 1 ? " glass" : " glasses") : ""}
                     </span>
                     <span className="mt-0.5 block text-[14px] font-extrabold text-foreground">
-                      {centsToLabel(remainCents)} left
+                      {centsToLabel(money.remainingCents)} left
                     </span>
                   </motion.span>
                 </button>

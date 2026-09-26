@@ -7,7 +7,8 @@ import { QtyStepper } from "@/components/qty-stepper";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
-import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
+import { centsToLabel } from "@/lib/money";
+import { claimMoneySlice, isGlassesPour } from "@/lib/pour";
 import { colors } from "@/lib/theme";
 
 export default function QtyScreen() {
@@ -89,11 +90,16 @@ export default function QtyScreen() {
           </PrimaryButton>
         }
       >
-        <Text style={styles.lead}>Whole glasses only. We will not split a pour.</Text>
+        <Text style={styles.lead}>
+          {queuedItems.every((item) => isGlassesPour(item))
+            ? "How many glasses? Whole pours only."
+            : "Whole glasses only. We will not split a pour."}
+        </Text>
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         {queuedItems.map((item) => {
           const max = receipt.remaining[item.id] ?? 0;
           const value = Math.min(Math.max(1, flow.units[item.id] ?? 1), Math.max(1, max));
+          const money = claimMoneySlice(item, max);
           return (
             <View key={item.id} style={styles.row}>
               <View style={styles.head}>
@@ -101,8 +107,8 @@ export default function QtyScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.meta}>
-                    {centsToLabel(unitPriceCents(item.totalCents, item.qty))} × {max} ·{" "}
-                    {centsToLabel(remainingLineCents(item.totalCents, item.qty, max))} left
+                    {centsToLabel(money.unitCents)} × {max}
+                    {money.glasses ? " glasses" : ""} · {centsToLabel(money.remainingCents)} left
                   </Text>
                 </View>
                 <QtyStepper

@@ -1,6 +1,6 @@
 # Bottle ↔ glass claiming (wine packages)
 
-**Status:** design plan — not building yet  
+**Status:** Phase A shipped (host confirm + glass inventory)  
 **Goal:** Let a table share a bottle (or champagne / wine package) fairly by **bottle or by glass**, without breaking the live claim board, money math, or the “one job per screen” feel.  
 **Related:** [requirements.md](./requirements.md) (whole-number claims, tax/tip follow items), money `unitCentsArray` / remaining.
 
