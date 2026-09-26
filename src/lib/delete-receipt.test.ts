@@ -30,7 +30,7 @@ describe("delete closed tab", () => {
     await finalizeReceipt("demo", "demo-host");
     assert.equal((await getPublicReceipt("demo")).status, "finalized");
     await deleteReceipt("demo", "demo-host");
-    await assert.rejects(
+    assert.throws(
       () => getPublicReceipt("demo"),
       (err: unknown) => (err as { code?: string }).code === "not_found",
     );
