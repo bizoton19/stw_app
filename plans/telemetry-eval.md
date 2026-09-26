@@ -87,6 +87,37 @@ Suggested fields (no photo bytes, no PII beyond receipt id):
 
 ---
 
+## Phase 1b — Friend-test usage funnel (product, not vision)
+
+Vision logs tell you if parse works. This tells you if **people finish a night**.
+
+**Practical minimum:** durable rows (or JSON lines you keep) for three events only:
+
+| Event | When | Fields |
+|---|---|---|
+| `tab.published` | Host publish succeeds | `tabId`, `client` (`ios` \| `android` \| `web`), `ts` |
+| `claim.created` | Each successful claim (single or batch → one event per batch ok) | `tabId`, `client`, `ts`, optional `claimCount` |
+| `tab.finalized` | Host closes claiming | `tabId`, `client`, `ts` |
+
+Optional later (same table): `tab.deleted`, `pour.glasses` / `pour.bottle`, `settle.opened`.
+
+**Store:** Postgres `usage_events (id, event, tab_id, client, ts, meta jsonb)` — survives Railway log retention. Or stdout JSON with the same shape until volume hurts (then copy into the table).
+
+**No PII:** no names, contacts, payment handles, item strings, or photos.
+
+**Questions this answers:**
+
+- Tabs published / week  
+- % of published tabs with ≥1 claim  
+- % of published tabs that finalize  
+- Rough publish → first claim / publish → finalize latency (from timestamps)
+
+**Not the same as** [b2b-venue-insights.md](./b2b-venue-insights.md) (`tab_facts` = anonymized venue economics). Finalize may write **both** a usage event and a tab fact; different tables.
+
+**Done when:** you can chart a friend-test funnel without PostHog/Amplitude.
+
+---
+
 ## Phase 2 — Product quality proxy (still not formal eval)
 
 When the host saves items after parse, record a lightweight signal:
@@ -141,7 +172,8 @@ Docs: [Railway logs](https://docs.railway.com/observability/logs), [CLI logs](ht
 
 1. **Today:** Use Railway HTTP logs/metrics for `/parse` (Phase 0).  
 2. **Next coding slice:** Phase 1 JSON vision log (~small PR).  
-3. **After a dozen friend tabs:** Phase 2 edit-rate if parse quality feels flaky.  
-4. **Before a model swap:** Phase 3 golden set.
+3. **Friend-test funnel:** Phase 1b `tab.published` / `claim.created` / `tab.finalized` (table or retained JSON).  
+4. **After a dozen friend tabs:** Phase 2 edit-rate if parse quality feels flaky.  
+5. **Before a model swap:** Phase 3 golden set.
 
 No infra vendor required until retention or multi-service tracing becomes painful.
