@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Banknote } from "lucide-react-native";
@@ -8,6 +8,7 @@ import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { IconActionButton } from "@/components/icon-action-button";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
+import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { useClaimFlow } from "@/context/claim-flow";
 import { publicClaimUrl } from "@/lib/config";
 import { registerHostClaimPush } from "@/lib/host-push";
@@ -81,17 +82,31 @@ export default function SettleScreen() {
 
   async function payWith(payment: HostPayment, amountCents: number) {
     if (!payMethodIsOpenable(payment.method)) return;
-    setPaying(payment.method);
-    try {
-      await openHostPay({
-        method: payment.method,
-        handle: payment.handle,
-        amountCents,
-        note: `${flow.guest?.name ?? "Guest"} · ${restaurant}`,
-      });
-    } finally {
-      setPaying(null);
-    }
+    Alert.alert(
+      "Leaving Split the Wine",
+      "You are now leaving Split the Wine to open your payment app.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Continue",
+          onPress: () => {
+            void (async () => {
+              setPaying(payment.method);
+              try {
+                await openHostPay({
+                  method: payment.method,
+                  handle: payment.handle,
+                  amountCents,
+                  note: `${flow.guest?.name ?? "Guest"} · ${restaurant}`,
+                });
+              } finally {
+                setPaying(null);
+              }
+            })();
+          },
+        },
+      ],
+    );
   }
 
   const footer = flow.isHost ? (
@@ -134,7 +149,7 @@ export default function SettleScreen() {
         step={3}
         total={3}
         kicker={receipt.restaurant || "The check"}
-        title={flow.isHost ? "Live board" : "Who owes what"}
+        title={flow.isHost ? "Live board" : "Settle Payment"}
         onBack={() => (flow.isHost ? router.replace("/") : router.back())}
         footer={footer}
       >
@@ -143,6 +158,7 @@ export default function SettleScreen() {
             ? "Guests claim on their phones. Watch balances fill in here — tax and tip follow what people ordered."
             : "Drinks plus a share of tax and tip. Tapping a payment method opens the host's app when possible — nothing is charged from Split the Wine."}
         </Text>
+        <ReceiptImageButton receiptId={receiptId} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
 
         {flow.isHost && !closed ? (
@@ -276,7 +292,9 @@ export default function SettleScreen() {
                 <Text style={styles.remainName} numberOfLines={1}>
                   {item.name}
                 </Text>
-                <Text style={styles.remainLeft}>{receipt.remaining[item.id]} left</Text>
+                <Text style={styles.remainLeft}>
+                  {centsToLabel(item.totalCents)} · {receipt.remaining[item.id]} left
+                </Text>
               </View>
             ))}
           </View>

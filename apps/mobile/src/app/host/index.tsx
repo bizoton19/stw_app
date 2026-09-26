@@ -1,7 +1,6 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
-import { WineMark } from "@/components/wine-mark";
 import { colors } from "@/lib/theme";
 
 const BEATS = [
@@ -18,7 +17,7 @@ export default function HostReady() {
         step={1}
         total={8}
         kicker="Fair split"
-        title="Got the check in front of you?"
+        title="Ready to split this check?"
         onBack={() => router.back()}
         sparse
         footer={
@@ -31,7 +30,11 @@ export default function HostReady() {
         }
       >
         <View style={styles.hero}>
-          <WineMark size={72} />
+          <Image
+            source={require("../../../assets/images/table-ready.jpg")}
+            style={styles.heroImage}
+            accessibilityLabel="Friends sharing a restaurant table"
+          />
           <Text style={styles.lead}>
             One photo, a short review, then a link for the table.
           </Text>
@@ -52,7 +55,13 @@ export default function HostReady() {
 }
 
 const styles = StyleSheet.create({
-  hero: { alignItems: "center", paddingTop: 12, gap: 28 },
+  hero: { alignItems: "center", paddingTop: 4, gap: 20 },
+  heroImage: {
+    width: "100%",
+    height: 168,
+    borderRadius: 16,
+    backgroundColor: colors.border,
+  },
   lead: {
     fontSize: 17,
     lineHeight: 26,
@@ -61,7 +70,7 @@ const styles = StyleSheet.create({
     maxWidth: 300,
     fontWeight: "500",
   },
-  beats: { width: "100%", gap: 14, marginTop: 8 },
+  beats: { width: "100%", gap: 14, marginTop: 4 },
   beat: {
     flexDirection: "row",
     alignItems: "center",

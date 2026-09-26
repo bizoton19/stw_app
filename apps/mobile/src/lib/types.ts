@@ -72,6 +72,7 @@ export type Receipt = {
   hostInfo?: HostInfo;
   createdAt: string;
   imageName?: string;
+  hasImage?: boolean;
   parseFlag?: string;
   parseReview?: ParseReviewChoice;
   parseReviewAt?: string;

@@ -17,6 +17,7 @@ import type {
   Receipt,
 } from "./types";
 import { parseReceiptImage, type ParseMeta, type ReceiptImage } from "./parse-receipt";
+import { putReceiptImage } from "./receipt-image";
 
 type InternalClaim = Claim & { ownerToken: string; autoLeftover?: boolean };
 
@@ -91,6 +92,7 @@ function toPublic(receipt: InternalReceipt): PublicReceipt {
     hostInfo: receipt.hostInfo,
     createdAt: receipt.createdAt,
     imageName: receipt.imageName,
+    hasImage: receipt.hasImage,
     parseFlag: receipt.parseFlag,
     parseReview: receipt.parseReview,
     parseReviewAt: receipt.parseReviewAt,
@@ -273,6 +275,10 @@ export async function parseReceipt(
     receipt.items = itemsFromParse(result);
     receipt.fees = feesFromParse(result);
     receipt.imageName = image?.name ?? receipt.imageName;
+    if (image?.bytes?.length) {
+      await putReceiptImage(id, image);
+      receipt.hasImage = true;
+    }
     receipt.parseFlag =
       parse.reason === "ok" || parse.reason === "no_image" ? undefined : parse.reason;
     await upsertReceipt(client, receipt);

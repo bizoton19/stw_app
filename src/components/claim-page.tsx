@@ -61,7 +61,7 @@ export function ClaimPage({
           receiptId={receipt.id}
           restaurant={receipt.restaurant}
           isHost={isHost}
-          defaultName={receipt.hostInfo?.payments[0]?.handle?.replace(/^[@$]/, "") ?? ""}
+          hasImage={Boolean(receipt.hasImage)}
           onJoined={setGuest}
         />
       </PhoneShell>

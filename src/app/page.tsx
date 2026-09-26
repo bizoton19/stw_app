@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { PhoneShell } from "@/components/phone-shell";
 
 export default function Home() {
@@ -9,6 +10,16 @@ export default function Home() {
         <h1 className="mt-2 text-[1.85rem] leading-[1.12] font-semibold tracking-tight">
           Ready to split this check?
         </h1>
+        <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-2xl bg-border">
+          <Image
+            src="/table-ready.jpg"
+            alt="Friends sharing a restaurant table"
+            fill
+            className="object-cover"
+            sizes="(max-width: 430px) 100vw, 390px"
+            priority
+          />
+        </div>
         <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
           Photograph the tab. Friends claim what they actually ordered. Tax and
           tip follow the drinks — not the headcount.

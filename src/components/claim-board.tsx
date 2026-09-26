@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Receipt, Users } from "lucide-react";
+import { Receipt, Users } from "lucide-react";
 import { motion } from "motion/react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QtyStepper } from "@/components/qty-stepper";
@@ -134,6 +134,7 @@ export function ClaimBoard({
       setDirection(-1);
       setPhase("pick");
       await onChange();
+      router.push(`/r/${receipt.id}/settle`);
     } catch (err) {
       const code = (err as { code?: string; remaining?: number; itemId?: string }).code;
       const remaining = (err as { remaining?: number }).remaining;
@@ -245,14 +246,13 @@ export function ClaimBoard({
             href={`/r/${receipt.id}/settle`}
             className="pressable inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
           >
-            See who owes what
+            Settle Payment
           </Link>
           {isHost ? (
             <QuietButton disabled={busy || !getHostToken(receipt.id)} onClick={() => void reopen()}>
               Reopen claiming
             </QuietButton>
           ) : null}
-          <QuietButton onClick={() => router.push("/")}>Home</QuietButton>
         </div>
       </div>
     );
@@ -265,7 +265,7 @@ export function ClaimBoard({
           href={`/r/${receipt.id}/settle`}
           className="pressable inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
         >
-          See who owes what
+          Settle Payment
         </Link>
         {isHost ? (
           <QuietButton
@@ -275,7 +275,6 @@ export function ClaimBoard({
             Close claiming
           </QuietButton>
         ) : null}
-        <QuietButton onClick={() => router.push("/")}>Home</QuietButton>
       </div>
     ) : (
     <div className="space-y-1">
@@ -300,15 +299,7 @@ export function ClaimBoard({
         >
           Close — leftovers on the host
         </QuietButton>
-      ) : (
-        <Link
-          href={`/r/${receipt.id}/settle`}
-          className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium"
-        >
-          Running totals
-        </Link>
-      )}
-      <QuietButton onClick={() => router.push("/")}>Home</QuietButton>
+      ) : null}
     </div>
     );
 
@@ -327,11 +318,7 @@ export function ClaimBoard({
             disabled={busy || !guest || totalUnits < 1}
             onClick={() => void claimQueued()}
           >
-            {busy
-              ? "Claiming…"
-              : totalUnits === 1
-                ? "Claim 1"
-                : `Claim ${totalUnits}`}
+            {busy ? "Claiming…" : "Finish"}
           </ContinueButton>
         }
       >
@@ -398,9 +385,6 @@ export function ClaimBoard({
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
       ) : null}
-      <p className="mb-3 text-[13px] font-medium tabular-nums">
-        Your running total · {centsToLabel(mine?.totalCents ?? 0)}
-      </p>
       {message ? <p className="mb-3 text-sm text-destructive">{message}</p> : null}
 
       {remainingItems.length === 0 ? (
@@ -408,7 +392,7 @@ export function ClaimBoard({
           Everything on this check is claimed.
         </p>
       ) : (
-        <ul className="divide-y divide-border border-y border-border">
+        <ul className="space-y-0">
           {remainingItems.map((item) => {
             const left = receipt.remaining[item.id] ?? 0;
             const selected = activeQueued.includes(item.id);
@@ -418,28 +402,21 @@ export function ClaimBoard({
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggle(item.id)}
-                  className="pressable flex w-full items-center gap-2 py-3 text-left"
+                  className={`pressable mb-2 flex w-full items-center gap-3 rounded-[14px] border-[1.5px] px-3.5 py-3.5 text-left ${
+                    selected
+                      ? "border-[#2F5D50] bg-[rgba(47,93,80,0.14)]"
+                      : "border-transparent bg-transparent"
+                  }`}
                 >
-                  <span className="flex size-11 shrink-0 items-center justify-center">
-                    <span
-                      className={`flex size-5 items-center justify-center rounded-full border ${
-                        selected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border"
-                      }`}
-                    >
-                      {selected ? <Check className="size-3" strokeWidth={3} /> : null}
-                    </span>
-                  </span>
                   <span className="min-w-0 flex-1">
                     <span
-                      className={`block text-[15px] font-medium ${
-                        selected ? "text-foreground" : ""
+                      className={`block text-[16px] font-semibold tracking-tight ${
+                        selected ? "font-bold text-[#2F5D50]" : "text-foreground"
                       }`}
                     >
                       {item.name}
                     </span>
-                    <span className="text-[12px] tabular-nums text-muted-foreground">
+                    <span className="mt-0.5 block text-[13px] tabular-nums text-muted-foreground">
                       {centsToLabel(item.totalCents)} for {item.qty}
                     </span>
                   </span>
@@ -447,11 +424,11 @@ export function ClaimBoard({
                     key={`${item.id}-${left}`}
                     initial={{ opacity: 0.45, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`text-[12px] font-medium tabular-nums ${
-                      selected ? "text-primary" : "text-ink-soft"
+                    className={`shrink-0 text-[13px] font-semibold tabular-nums ${
+                      selected ? "text-[#2F5D50]" : "text-ink-soft"
                     }`}
                   >
-                    {left} left
+                    {centsToLabel(item.totalCents)} · {left} left
                   </motion.span>
                 </button>
               </li>
@@ -475,7 +452,6 @@ export function ClaimBoard({
 function BoardHeader({
   receipt,
   title,
-  mine,
   guest,
   isHost,
 }: {
@@ -494,15 +470,6 @@ function BoardHeader({
         <h1 className="text-[1.65rem] leading-tight font-semibold tracking-tight">
           {title}
         </h1>
-        {mine != null ? (
-          <p className="pt-2 text-[13px] font-medium tabular-nums">
-            Your running total · {centsToLabel(mine)}
-          </p>
-        ) : (
-          <p className="pt-2 text-[13px] font-medium tabular-nums">
-            Your running total · {centsToLabel(0)}
-          </p>
-        )}
       </div>
       {guest ? (
         <p className="mb-3 text-[15px] leading-[22px] text-muted-foreground">
@@ -510,6 +477,16 @@ function BoardHeader({
           {isHost ? " (host)" : ""}
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
+      ) : null}
+      {receipt.hasImage ? (
+        <a
+          href={`/api/receipts/${receipt.id}/image`}
+          target="_blank"
+          rel="noreferrer"
+          className="mb-3 inline-flex rounded-full border border-border bg-[#FFFcf8] px-3 py-2 text-[13px] font-semibold text-primary"
+        >
+          View tab photo
+        </a>
       ) : null}
     </div>
   );

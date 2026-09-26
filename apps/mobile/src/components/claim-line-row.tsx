@@ -63,7 +63,9 @@ export function ClaimLineRow({
             {centsToLabel(item.totalCents)} for {item.qty}
           </Text>
         </View>
-        <Text style={[styles.left, selected && styles.leftOn]}>{left} left</Text>
+        <Text style={[styles.left, selected && styles.leftOn]}>
+          {centsToLabel(item.totalCents)} · {left} left
+        </Text>
       </Animated.View>
     </PressScale>
   );

@@ -6,6 +6,7 @@ import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
 import { PressScale } from "@/components/press-scale";
+import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
 import { centsToLabel } from "@/lib/money";
@@ -27,11 +28,8 @@ export default function ClaimScreen() {
         <View style={{ padding: 20, paddingTop: 40 }}>
           <Text style={styles.title}>That tab is gone</Text>
           <Text style={styles.muted}>
-            Links live in this server's memory. Start a new receipt from home.
+            Links live in this server's memory. Ask the host for a fresh claim link.
           </Text>
-          <View style={{ marginTop: 24 }}>
-            <PrimaryButton onPress={() => router.replace("/")}>Back home</PrimaryButton>
-          </View>
         </View>
       </AppShell>
     );
@@ -59,23 +57,22 @@ export default function ClaimScreen() {
 }
 
 function JoinScreen() {
-  const router = useRouter();
   const flow = useClaimFlow();
-  const [name, setName] = useState(
-    () =>
-      flow.guest?.name ||
-      flow.receipt?.hostInfo?.payments[0]?.handle?.replace(/^[@$]/, "") ||
-      "",
-  );
+  const restaurant = flow.receipt?.restaurant?.trim() || "tonight’s check";
+  const [name, setName] = useState(() => flow.guest?.name || "");
   const [contact, setContact] = useState(() => flow.guest?.contact || "");
+
   return (
     <AppShell>
       <InterviewChrome
         step={1}
         total={3}
-        kicker={flow.receipt?.restaurant || "At the table"}
-        title={flow.isHost ? "You're hosting — claim under what name?" : "What should we call you?"}
-        onBack={() => router.replace("/")}
+        kicker={restaurant}
+        title={
+          flow.isHost
+            ? "You're hosting — claim under what name?"
+            : `Here is the tab for ${restaurant}`
+        }
         keyboard
         footer={
           <PrimaryButton
@@ -89,8 +86,9 @@ function JoinScreen() {
         <Text style={styles.lead}>
           {flow.isHost
             ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
-            : "A name is enough. Add a handle so the host can reach you if something looks off."}
+            : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
         </Text>
+        <ReceiptImageButton receiptId={flow.receipt!.id} hasImage={flow.receipt?.hasImage} />
         <Field label="Name" value={name} onChangeText={setName} placeholder="Alex" autoComplete="name" />
         <Field
           label="Contact"
@@ -112,14 +110,17 @@ function PickBoard() {
   const receipt = flow.receipt!;
   const remainingItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
   const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
-  const totals = useMemo(() => computeTotals(receipt), [receipt]);
-  const mine = flow.guest
-    ? totals.people.find((p) => p.personName === flow.guest?.name)
-    : undefined;
   const closed = receipt.status === "finalized";
   const totalSteps = 3;
   const pickStep = 2;
   const activeQueued = flow.queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
+
+  function goSettle() {
+    router.push({
+      pathname: "/r/[id]/settle",
+      params: flow.isHost ? { id: receipt.id, host: "1" } : { id: receipt.id },
+    });
+  }
 
   if (closed) {
     return (
@@ -128,40 +129,18 @@ function PickBoard() {
         total={totalSteps}
         kicker={receipt.restaurant || "The check"}
         title="Claiming is closed"
-        onBack={() => router.replace("/")}
         footer={
           <View>
-            <PrimaryButton
-              onPress={() =>
-                router.push({
-                  pathname: "/r/[id]/settle",
-                  params: flow.isHost
-                    ? { id: receipt.id, host: "1" }
-                    : { id: receipt.id },
-                })
-              }
-            >
-              See who owes what
-            </PrimaryButton>
+            <PrimaryButton onPress={goSettle}>Settle Payment</PrimaryButton>
             {flow.isHost ? (
-              <QuietButton
-                disabled={flow.busy}
-                onPress={() => void flow.reopen()}
-              >
+              <QuietButton disabled={flow.busy} onPress={() => void flow.reopen()}>
                 Reopen claiming
               </QuietButton>
             ) : null}
-            <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
           </View>
         }
       >
-        {mine ? (
-          <Text style={styles.mine}>
-            Your running total · {centsToLabel(mine.totalCents)}
-          </Text>
-        ) : (
-          <Text style={styles.mine}>Your running total · {centsToLabel(0)}</Text>
-        )}
+        <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         <History />
       </InterviewChrome>
@@ -171,33 +150,19 @@ function PickBoard() {
   const footer =
     remainingItems.length === 0 ? (
       <View>
-        <PrimaryButton
-          onPress={() =>
-            router.push({
-              pathname: "/r/[id]/settle",
-              params: flow.isHost ? { id: receipt.id, host: "1" } : { id: receipt.id },
-            })
-          }
-        >
-          See who owes what
-        </PrimaryButton>
+        <PrimaryButton onPress={goSettle}>Settle Payment</PrimaryButton>
         {flow.isHost ? (
           <QuietButton
             disabled={flow.busy}
             onPress={() =>
               void flow.closeOut().then((ok) => {
-                if (ok)
-                  router.push({
-                    pathname: "/r/[id]/settle",
-                    params: { id: receipt.id, host: "1" },
-                  });
+                if (ok) goSettle();
               })
             }
           >
             Close claiming
           </QuietButton>
         ) : null}
-        <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
       </View>
     ) : (
       <View>
@@ -210,8 +175,12 @@ function PickBoard() {
               return;
             }
             void flow.claimQueued().then((ok) => {
-              if (ok) void hapticNotify("success");
-              else void hapticNotify("error");
+              if (ok) {
+                void hapticNotify("success");
+                goSettle();
+              } else {
+                void hapticNotify("error");
+              }
             });
           }}
         >
@@ -230,26 +199,13 @@ function PickBoard() {
             disabled={flow.busy}
             onPress={() =>
               void flow.closeOut().then((ok) => {
-                if (ok)
-                  router.push({
-                    pathname: "/r/[id]/settle",
-                    params: { id: receipt.id, host: "1" },
-                  });
+                if (ok) goSettle();
               })
             }
           >
             Close — leftovers on the host
           </QuietButton>
-        ) : (
-          <QuietButton
-            onPress={() =>
-              router.push({ pathname: "/r/[id]/settle", params: { id: receipt.id } })
-            }
-          >
-            Running totals
-          </QuietButton>
-        )}
-        <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
+        ) : null}
       </View>
     );
 
@@ -259,7 +215,7 @@ function PickBoard() {
       total={totalSteps}
       kicker={receipt.restaurant || "The check"}
       title="What did you have?"
-      onBack={() => router.replace("/")}
+      onBack={() => router.back()}
       footer={footer}
       scroll={false}
     >
@@ -282,9 +238,7 @@ function PickBoard() {
                 {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
               </Text>
             ) : null}
-            <Text style={styles.mine}>
-              Your running total · {centsToLabel(mine?.totalCents ?? 0)}
-            </Text>
+            <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
             {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
             {remainingItems.length === 0 ? (
               <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
@@ -428,9 +382,7 @@ function History() {
 const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: "700", color: colors.ink },
   muted: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  tabular: { fontVariant: ["tabular-nums"] },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 16 },
-  mine: { fontSize: 13, fontWeight: "600", fontVariant: ["tabular-nums"], marginBottom: 8 },
   as: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 12 },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   list: { flex: 1 },

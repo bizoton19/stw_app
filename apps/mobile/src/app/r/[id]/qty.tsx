@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
@@ -7,7 +7,6 @@ import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
 import { centsToLabel } from "@/lib/money";
-import { computeTotals } from "@/lib/totals";
 import { colors } from "@/lib/theme";
 
 export default function QtyScreen() {
@@ -26,12 +25,13 @@ export default function QtyScreen() {
     const value = flow.units[item.id] ?? 1;
     return sum + Math.min(Math.max(1, value), max);
   }, 0);
-  const mineCents = useMemo(() => {
-    if (!receipt || !flow.guest) return 0;
-    return (
-      computeTotals(receipt).people.find((p) => p.personName === flow.guest?.name)?.totalCents ?? 0
-    );
-  }, [flow.guest, receipt]);
+
+  function goSettle(id: string) {
+    router.replace({
+      pathname: "/r/[id]/settle",
+      params: flow.isHost ? { id, host: "1" } : { id },
+    });
+  }
 
   useEffect(() => {
     if (!receipt) return;
@@ -42,9 +42,13 @@ export default function QtyScreen() {
     if (flow.needsQty || flow.busy || autoClaimed.current) return;
     autoClaimed.current = true;
     void flow.claimQueued().then((ok) => {
-      if (ok) void hapticNotify("success");
-      else void hapticNotify("error");
-      router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
+      if (ok) {
+        void hapticNotify("success");
+        goSettle(receipt.id);
+      } else {
+        void hapticNotify("error");
+        router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
+      }
     });
   }, [flow, queuedItems.length, receipt, router]);
 
@@ -73,19 +77,18 @@ export default function QtyScreen() {
               void flow.claimQueued().then((ok) => {
                 if (ok) {
                   void hapticNotify("success");
-                  router.replace({ pathname: "/r/[id]", params: { id: receipt.id } });
+                  goSettle(receipt.id);
                 } else {
                   void hapticNotify("error");
                 }
               })
             }
           >
-            {totalUnits === 1 ? "Claim 1" : `Claim ${totalUnits}`}
+            Finish
           </PrimaryButton>
         }
       >
         <Text style={styles.lead}>Whole glasses only. We will not split a pour.</Text>
-        <Text style={styles.running}>Your running total · {centsToLabel(mineCents)}</Text>
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         {queuedItems.map((item) => {
           const max = receipt.remaining[item.id] ?? 0;
@@ -119,13 +122,6 @@ export default function QtyScreen() {
 
 const styles = StyleSheet.create({
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 8 },
-  running: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.ink,
-    fontVariant: ["tabular-nums"],
-    marginBottom: 16,
-  },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   row: {
     paddingVertical: 12,

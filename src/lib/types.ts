@@ -76,6 +76,8 @@ export type Receipt = {
   hostInfo?: HostInfo;
   createdAt: string;
   imageName?: string;
+  /** True when tab photo bytes are stored for claimants. */
+  hasImage?: boolean;
   parseFlag?: string;
   /** Host judgment of vision parse quality — used for model eval. */
   parseReview?: ParseReviewChoice;

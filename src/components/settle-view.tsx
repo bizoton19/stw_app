@@ -66,6 +66,10 @@ export function SettleView({
 
   async function payWith(payment: HostPayment, amountCents: number) {
     if (!payMethodIsOpenable(payment.method)) return;
+    const ok = window.confirm(
+      "You are now leaving Split the Wine to open your payment app. Continue?",
+    );
+    if (!ok) return;
     setPaying(payment.method);
     setPayHint(null);
     try {
@@ -99,7 +103,9 @@ export function SettleView({
       <p className="text-[13px] font-medium text-ink-soft">
         {receipt.restaurant || "The check"}
       </p>
-      <h1 className="text-[1.65rem] font-semibold tracking-tight">Who owes what</h1>
+      <h1 className="text-[1.65rem] font-semibold tracking-tight">
+        {isHost ? "Live board" : "Settle Payment"}
+      </h1>
       <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
         Drinks plus a share of tax and tip. Tapping a payment method opens the host&apos;s app when
         possible — nothing is charged from Split the Wine.

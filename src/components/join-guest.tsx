@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ContinueButton, InterviewChrome } from "@/components/interview-chrome";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,26 +11,25 @@ export function JoinGuest({
   restaurant,
   onJoined,
   isHost = false,
-  defaultName = "",
+  hasImage = false,
 }: {
   receiptId: string;
   restaurant: string;
   onJoined: (guest: GuestIdentity) => void;
   isHost?: boolean;
-  defaultName?: string;
+  hasImage?: boolean;
 }) {
-  const router = useRouter();
-  const [name, setName] = useState(defaultName);
+  const place = restaurant.trim() || "tonight’s check";
+  const [name, setName] = useState("");
   const [contact, setContact] = useState("");
 
   return (
     <InterviewChrome
       step={1}
       total={3}
-      kicker={restaurant || "At the table"}
-      title={isHost ? "You're hosting — claim under what name?" : "What should we call you?"}
+      kicker={place}
+      title={isHost ? "You're hosting — claim under what name?" : `Here is the tab for ${place}`}
       stepKey="join"
-      onBack={() => router.push("/")}
       footer={
         <ContinueButton
           disabled={!name.trim()}
@@ -48,8 +46,18 @@ export function JoinGuest({
       <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
         {isHost
           ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
-          : "A name is enough. Add a handle so the host can reach you if something looks off."}
+          : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
       </p>
+      {hasImage ? (
+        <a
+          href={`/api/receipts/${receiptId}/image`}
+          target="_blank"
+          rel="noreferrer"
+          className="mb-4 inline-flex rounded-full border border-border bg-[#FFFcf8] px-3 py-2 text-[13px] font-semibold text-primary"
+        >
+          View tab photo
+        </a>
+      ) : null}
       <Label htmlFor="guest-name" className="mb-2 text-[13px] font-medium">
         Name
       </Label>
