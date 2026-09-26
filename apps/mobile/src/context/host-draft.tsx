@@ -244,6 +244,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       updatedAt: new Date().toISOString(),
       placeKey: placeKey ?? undefined,
       receiptDay: day,
+      status: "open",
     });
   }, [fees, items, payments, receiptDate, receiptId, restaurant, venue]);
 

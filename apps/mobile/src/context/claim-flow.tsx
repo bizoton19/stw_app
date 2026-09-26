@@ -237,6 +237,8 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     setBusy(true);
     try {
       await api(`/api/receipts/${id}/finalize`, { method: "POST", hostToken: token });
+      const { patchHostedReceipt } = await import("@/lib/host-tabs");
+      await patchHostedReceipt(id, { status: "finalized" });
       await refresh();
       return true;
     } catch {
@@ -252,6 +254,8 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     setBusy(true);
     try {
       await api(`/api/receipts/${id}/reopen`, { method: "POST", hostToken: token });
+      const { patchHostedReceipt } = await import("@/lib/host-tabs");
+      await patchHostedReceipt(id, { status: "open" });
       await refresh();
       return true;
     } catch {

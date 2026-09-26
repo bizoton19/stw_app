@@ -95,6 +95,8 @@ export async function finalizeTabFromPush(receiptId: string): Promise<boolean> {
       method: "POST",
       hostToken,
     });
+    const { patchHostedReceipt } = await import("./host-tabs");
+    await patchHostedReceipt(receiptId, { status: "finalized" });
     return true;
   } catch {
     return false;

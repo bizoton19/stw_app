@@ -14,7 +14,8 @@ import { AppShell } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import {
   getActiveHostReceiptId,
-  listHostedReceipts,
+  hostedStatusLabel,
+  refreshHostedReceiptStatuses,
   type HostedReceiptSummary,
 } from "@/lib/host-tabs";
 import { colors } from "@/lib/theme";
@@ -46,7 +47,7 @@ export default function HomeScreen() {
   const refresh = useCallback(() => {
     void (async () => {
       setActiveId(await getActiveHostReceiptId());
-      setHosted(await listHostedReceipts());
+      setHosted(await refreshHostedReceiptStatuses());
     })();
   }, []);
 
@@ -103,15 +104,27 @@ export default function HomeScreen() {
                   haptic="select"
                   onPress={() => openBoard(active.id)}
                   style={styles.heroCard}
-                  accessibilityLabel={`Open live board for ${receiptDate(active.receiptDay, active.updatedAt)}`}
+                  accessibilityLabel={`${hostedStatusLabel(active.status)} tab for ${receiptDate(active.receiptDay, active.updatedAt)}`}
                 >
                   <View style={styles.heroMetaRow}>
                     <Text style={styles.heroEyebrow}>
-                      {isToday(active.receiptDay, active.updatedAt) ? "Tonight’s tab" : "Open tab"}
+                      {isToday(active.receiptDay, active.updatedAt) ? "Tonight’s tab" : "Recent tab"}
                     </Text>
-                    <View style={styles.livePill}>
-                      <View style={styles.liveDot} />
-                      <Text style={styles.liveText}>Live board</Text>
+                    <View
+                      style={[
+                        styles.statusPill,
+                        active.status === "finalized" ? styles.statusPillClosed : styles.statusPillOpen,
+                      ]}
+                    >
+                      {active.status !== "finalized" ? <View style={styles.liveDot} /> : null}
+                      <Text
+                        style={[
+                          styles.statusPillText,
+                          active.status === "finalized" && styles.statusPillTextClosed,
+                        ]}
+                      >
+                        {hostedStatusLabel(active.status)}
+                      </Text>
                     </View>
                   </View>
                   <Text style={styles.heroDate}>
@@ -136,25 +149,34 @@ export default function HomeScreen() {
               ) : null}
             </View>
           }
-          renderItem={({ item }) => (
-            <PressScale
-              haptic="select"
-              onPress={() => openBoard(item.id)}
-              style={styles.row}
-              accessibilityLabel={`Open ${receiptDate(item.receiptDay, item.updatedAt)}`}
-            >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.rowDate}>
-                  {receiptDate(item.receiptDay, item.updatedAt)}
-                </Text>
-                <Text style={styles.rowPlace} numberOfLines={1}>
-                  {item.restaurant || item.id}
-                </Text>
-              </View>
-              <Text style={styles.rowAction}>Board</Text>
-              <ChevronRight size={18} color={colors.inkSoft} strokeWidth={2.25} />
-            </PressScale>
-          )}
+          renderItem={({ item }) => {
+            const closed = item.status === "finalized";
+            const label = hostedStatusLabel(item.status);
+            return (
+              <PressScale
+                haptic="select"
+                onPress={() => openBoard(item.id)}
+                style={styles.row}
+                accessibilityLabel={`${label} · ${receiptDate(item.receiptDay, item.updatedAt)}`}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.rowTitleRow}>
+                    <Text style={styles.rowDate}>
+                      {receiptDate(item.receiptDay, item.updatedAt)}
+                    </Text>
+                    <Text style={[styles.rowStatus, closed && styles.rowStatusClosed]}>
+                      ({label})
+                    </Text>
+                  </View>
+                  <Text style={styles.rowPlace} numberOfLines={1}>
+                    {item.restaurant || item.id}
+                  </Text>
+                </View>
+                <Text style={styles.rowAction}>Board</Text>
+                <ChevronRight size={18} color={colors.inkSoft} strokeWidth={2.25} />
+              </PressScale>
+            );
+          }}
           ListEmptyComponent={
             active ? null : (
               <Text style={styles.hint}>Your hosted tabs will show up here.</Text>
@@ -223,22 +245,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  livePill: {
+  statusPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(110, 46, 53, 0.08)",
+  },
+  statusPillOpen: {
+    backgroundColor: "rgba(47, 93, 80, 0.12)",
+  },
+  statusPillClosed: {
+    backgroundColor: "rgba(42, 36, 28, 0.08)",
   },
   liveDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: colors.merlot,
+    backgroundColor: colors.select,
   },
-  liveText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
+  statusPillText: { fontSize: 12, fontWeight: "700", color: colors.select },
+  statusPillTextClosed: { color: colors.inkSoft },
   heroCta: { marginTop: 14, fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   emptyCard: {
     padding: 18,
@@ -267,7 +295,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
+  rowTitleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+    flexWrap: "wrap",
+  },
   rowDate: { fontSize: 20, fontWeight: "800", color: colors.ink, letterSpacing: -0.35 },
+  rowStatus: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.select,
+  },
+  rowStatusClosed: { color: colors.inkSoft },
   rowPlace: { marginTop: 2, fontSize: 14, fontWeight: "500", color: colors.inkSoft },
   rowAction: { fontSize: 14, fontWeight: "700", color: colors.merlot },
   hint: {
