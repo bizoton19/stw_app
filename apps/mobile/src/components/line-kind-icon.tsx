@@ -5,8 +5,8 @@ import { colors } from "@/lib/theme";
 import type { ItemKind } from "@/lib/types";
 
 const TINT: Record<LineKind, { bg: string; fg: string }> = {
-  drink: { bg: "rgba(110, 46, 53, 0.12)", fg: colors.merlot },
-  food: { bg: "rgba(184, 121, 58, 0.16)", fg: "#9A5F28" },
+  drink: { bg: colors.kindDrinkWash, fg: colors.kindDrink },
+  food: { bg: colors.kindFoodWash, fg: colors.kindFood },
 };
 
 export function LineKindIcon({

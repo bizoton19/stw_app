@@ -10,6 +10,11 @@ export const colors = {
   select: "#2F5D50",
   selectWash: "rgba(47, 93, 80, 0.14)",
   danger: "#A33B32",
+  /** Line-kind chips — distinct from CTA merlot + select green. */
+  kindDrink: "#9C1F3D",
+  kindDrinkWash: "rgba(156, 31, 61, 0.16)",
+  kindFood: "#C9892A",
+  kindFoodWash: "rgba(201, 137, 42, 0.22)",
 };
 
 export const space = {

@@ -2,9 +2,10 @@ import { GlassWater, UtensilsCrossed } from "lucide-react";
 import { classifyLineKind, type LineKind } from "@/lib/line-kind";
 import type { ItemKind } from "@/lib/types";
 
+/** Distinct from CTA merlot + bottle-green select — food vs drink must read at a glance. */
 const TINT: Record<LineKind, { bg: string; fg: string }> = {
-  drink: { bg: "rgba(110, 46, 53, 0.12)", fg: "#6E2E35" },
-  food: { bg: "rgba(184, 121, 58, 0.16)", fg: "#9A5F28" },
+  drink: { bg: "rgba(156, 31, 61, 0.16)", fg: "#9C1F3D" },
+  food: { bg: "rgba(201, 137, 42, 0.22)", fg: "#C9892A" },
 };
 
 export function LineKindIcon({
