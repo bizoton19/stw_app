@@ -6,7 +6,7 @@ import { Field } from "@/components/field";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
-import { validateHostPayments } from "@/lib/host-pay";
+import { validateHostPayments, HOST_NOTE_MAX } from "@/lib/host-pay";
 import { PAY_METHOD_META, payVerifyUrl } from "@/lib/pay";
 import { deviceRegionCode, payMethodsForRegion, payRegionBucket } from "@/lib/pay-region";
 import type { PayMethod } from "@/lib/types";
@@ -216,6 +216,23 @@ export default function HostPay() {
             ))}
           </View>
         ) : null}
+
+        <View style={styles.noteBlock}>
+          <Field
+            label="Note for the table"
+            hint="(optional)"
+            value={draft.note}
+            onChangeText={draft.setNote}
+            placeholder="e.g. Tip already on the card — just claim drinks"
+            multiline
+            maxLength={HOST_NOTE_MAX}
+            style={styles.noteInput}
+          />
+          <Text style={styles.noteMeta}>
+            Claimers see a Host message bell if you leave one. {draft.note.trim().length}/
+            {HOST_NOTE_MAX}
+          </Text>
+        </View>
       </InterviewChrome>
     </AppShell>
   );
@@ -325,4 +342,20 @@ const styles = StyleSheet.create({
   confirmHandle: { marginTop: 2, fontSize: 18, fontWeight: "700", color: colors.ink },
   checkLink: { marginTop: 8, alignSelf: "flex-start", minHeight: 32, justifyContent: "center" },
   checkLinkText: { fontSize: 13, fontWeight: "700", color: colors.merlot },
+  noteBlock: { marginTop: 22 },
+  noteInput: {
+    height: undefined,
+    minHeight: 88,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    fontSize: 16,
+    color: colors.ink,
+    backgroundColor: "transparent",
+    textAlignVertical: "top" as const,
+  },
+  noteMeta: { marginTop: -4, marginBottom: 8, fontSize: 12, color: colors.muted },
 });

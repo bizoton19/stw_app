@@ -18,7 +18,8 @@ import {
   pourCandidates,
   type PourSuggestion,
 } from "@/lib/pour";
-import { validateHostPayments } from "@/lib/host-pay";
+import { HOST_NOTE_MAX, normalizeHostNote, validateHostPayments } from "@/lib/host-pay";
+import { Textarea } from "@/components/ui/textarea";
 import { payVerifyUrl } from "@/lib/pay";
 import { payMethodsForRegion } from "@/lib/pay-region";
 import { api, getHostToken, saveHostToken } from "@/lib/session";
@@ -159,6 +160,7 @@ export function HostInterview() {
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
   const [payments, setPayments] = useState<{ method: PayMethod; handle: string }[]>([]);
+  const [note, setNote] = useState("");
   const [claimUrl, setClaimUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [payConfirming, setPayConfirming] = useState(false);
@@ -174,6 +176,7 @@ export function HostInterview() {
     payments: payments
       .map((p) => ({ method: p.method, handle: p.handle.trim() }))
       .filter((p) => p.handle),
+    ...(normalizeHostNote(note) ? { note: normalizeHostNote(note) } : {}),
   };
   const itemSubtotal = items.reduce((s, i) => s + i.totalCents, 0);
   const feeTotal = fees.reduce((s, f) => s + f.amountCents, 0);
@@ -1030,6 +1033,22 @@ export function HostInterview() {
               })}
             </div>
           ) : null}
+          <div className="mt-6">
+            <Label htmlFor="host-note" className="mb-2 text-[13px] font-medium">
+              Note for the table <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              id="host-note"
+              value={note}
+              maxLength={HOST_NOTE_MAX}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. Tip already on the card — just claim drinks"
+              className="min-h-[88px] rounded-xl border-border bg-transparent text-[15px]"
+            />
+            <p className="mt-1.5 text-[12px] text-muted-foreground">
+              Claimers see a Host message bell if you leave one. {note.trim().length}/{HOST_NOTE_MAX}
+            </p>
+          </div>
         </>
       );
       footer = (

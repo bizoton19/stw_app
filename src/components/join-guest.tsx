@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ContinueButton, InterviewChrome } from "@/components/interview-chrome";
+import { HostMessage } from "@/components/host-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { saveGuest, type GuestIdentity } from "@/lib/session";
@@ -12,12 +13,14 @@ export function JoinGuest({
   onJoined,
   isHost = false,
   hasImage = false,
+  hostNote = null,
 }: {
   receiptId: string;
   restaurant: string;
   onJoined: (guest: GuestIdentity) => void;
   isHost?: boolean;
   hasImage?: boolean;
+  hostNote?: string | null;
 }) {
   const place = restaurant.trim() || "tonight’s check";
   const [name, setName] = useState("");
@@ -43,6 +46,7 @@ export function JoinGuest({
         </ContinueButton>
       }
     >
+      <HostMessage note={hostNote} />
       <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
         {isHost
           ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."

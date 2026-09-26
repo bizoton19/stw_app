@@ -52,6 +52,8 @@ export type HostPayment = {
 export type HostInfo = {
   /** One or more ways people can pay the host. */
   payments: HostPayment[];
+  /** Optional note shown to claimers (expandable on the claim link). */
+  note?: string | null;
 };
 
 export type ParseReviewChoice = "looks_good" | "remove_items" | "needs_edits";

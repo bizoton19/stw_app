@@ -8,10 +8,12 @@ import { motion } from "motion/react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
+import { HostMessage } from "@/components/host-message";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice, isGlassesPour } from "@/lib/pour";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
+import { hostNoteText } from "@/lib/host-pay";
 import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
 import type { PublicReceipt } from "@/lib/types";
@@ -46,6 +48,7 @@ export function ClaimBoard({
   const qtyStep = 3;
   const activeQueued = queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
   const needsQty = needsQtyStep(receipt.remaining, activeQueued);
+  const note = hostNoteText(receipt.hostInfo);
 
   useEffect(() => {
     const pruned = pruneQueue(receipt.remaining, queued, units);
@@ -250,6 +253,7 @@ export function ClaimBoard({
           guest={guest}
           isHost={isHost}
         />
+        <HostMessage note={note} />
         {message ? <p className="mb-3 text-[14px] text-destructive">{message}</p> : null}
         <History
           receipt={receipt}
@@ -411,6 +415,7 @@ export function ClaimBoard({
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
       ) : null}
+      <HostMessage note={note} />
       {totals.unclaimedItemCents > 0 ? (
         <p className="mb-3 text-[14px] font-bold tabular-nums text-foreground">
           Still on the table · {centsToLabel(totals.unclaimedItemCents)}

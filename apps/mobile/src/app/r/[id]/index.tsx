@@ -5,10 +5,12 @@ import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/compone
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
+import { HostMessage } from "@/components/host-message";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
+import { hostNoteText } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
@@ -83,6 +85,7 @@ function JoinScreen() {
           </PrimaryButton>
         }
       >
+        <HostMessage note={hostNoteText(flow.receipt?.hostInfo)} />
         <Text style={styles.lead}>
           {flow.isHost
             ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
@@ -115,6 +118,7 @@ function PickBoard() {
   const totalSteps = 3;
   const pickStep = 2;
   const activeQueued = flow.queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
+  const note = hostNoteText(receipt.hostInfo);
 
   function goSettle() {
     router.push({
@@ -141,6 +145,7 @@ function PickBoard() {
           </View>
         }
       >
+        <HostMessage note={note} />
         <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
         <History />
@@ -239,6 +244,7 @@ function PickBoard() {
                 {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
               </Text>
             ) : null}
+            <HostMessage note={note} />
             <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
             {totals.unclaimedItemCents > 0 ? (
               <Text style={styles.remainBanner}>

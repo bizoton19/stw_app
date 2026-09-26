@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { api, createDraftReceipt, parseReceiptWithImage, submitParseReview } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
 import { nextUnusedPayMethod } from "@/lib/pay-region";
+import { normalizeHostNote } from "@/lib/host-pay";
 import { saveHostToken } from "@/lib/session";
 import type {
   Fee,
@@ -39,6 +40,8 @@ type HostDraft = {
   items: DraftItem[];
   fees: DraftFee[];
   payments: HostPayment[];
+  /** Optional note for claimers on the share link. */
+  note: string;
   claimUrl: string;
   error: string | null;
   setPick: (mode: PickMode, image?: PickedImage | null) => void;
@@ -51,6 +54,7 @@ type HostDraft = {
   removePayment: (index: number) => void;
   togglePaymentMethod: (method: PayMethod) => void;
   setPaymentHandle: (method: PayMethod, handle: string) => void;
+  setNote: (v: string) => void;
   runParse: () => Promise<void>;
   recordParseReview: (choice: ParseReviewChoice) => Promise<void>;
   publish: () => Promise<void>;
@@ -68,6 +72,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
   const [payments, setPayments] = useState<HostPayment[]>([]);
+  const [note, setNote] = useState("");
   const [claimUrl, setClaimUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -226,7 +231,10 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
               pour: pour ?? null,
             })),
           fees: fees.map(({ id, name, amountCents }) => ({ id, name, amountCents })),
-          hostInfo: { payments: checked.payments },
+          hostInfo: {
+            payments: checked.payments,
+            ...(normalizeHostNote(note) ? { note: normalizeHostNote(note) } : {}),
+          },
           publish: true,
         }),
       });
@@ -249,7 +257,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       receiptDay: day,
       status: "open",
     });
-  }, [fees, items, payments, receiptDate, receiptId, restaurant, venue]);
+  }, [fees, items, note, payments, receiptDate, receiptId, restaurant, venue]);
 
   const value = useMemo(
     () => ({
@@ -262,6 +270,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       items,
       fees,
       payments,
+      note,
       claimUrl,
       error,
       setPick,
@@ -274,6 +283,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       removePayment,
       togglePaymentMethod,
       setPaymentHandle,
+      setNote,
       runParse,
       recordParseReview,
       publish,
@@ -285,6 +295,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       fees,
       image,
       items,
+      note,
       payments,
       pickMode,
       publish,
@@ -297,6 +308,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       runParse,
       setPayment,
       setPaymentHandle,
+      setNote,
       setPick,
       togglePaymentMethod,
     ],

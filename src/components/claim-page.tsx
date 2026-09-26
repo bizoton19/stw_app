@@ -73,6 +73,7 @@ export function ClaimPage({
           restaurant={receipt.restaurant}
           isHost={isHost}
           hasImage={Boolean(receipt.hasImage)}
+          hostNote={receipt.hostInfo?.note}
           onJoined={setGuest}
         />
       </PhoneShell>

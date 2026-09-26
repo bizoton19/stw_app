@@ -14,18 +14,39 @@ const METHODS: PayMethod[] = [
   "other",
 ];
 
+/** Soft cap — short table note, not a novel. */
+export const HOST_NOTE_MAX = 280;
+
 function isMethod(value: unknown): value is PayMethod {
   return typeof value === "string" && (METHODS as string[]).includes(value);
 }
 
-/** Accepts `{ payments: [...] }` or legacy `{ method, handle }`. */
+export function normalizeHostNote(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const note = raw.trim().replace(/\s+/g, " ").slice(0, HOST_NOTE_MAX);
+  return note || undefined;
+}
+
+/** Non-empty host note for claim UI, or null when absent. */
+export function hostNoteText(info?: HostInfo | null): string | null {
+  const note = info?.note?.trim();
+  return note ? note : null;
+}
+
+function withNote(info: HostInfo, note: string | undefined): HostInfo {
+  return note ? { ...info, note } : info;
+}
+
+/** Accepts `{ payments: [...] }` or legacy `{ method, handle }`. Optional `note`. */
 export function normalizeHostInfo(input: unknown): HostInfo | null {
   if (!input || typeof input !== "object") return null;
   const body = input as {
     payments?: unknown;
     method?: unknown;
     handle?: unknown;
+    note?: unknown;
   };
+  const note = normalizeHostNote(body.note);
 
   if (Array.isArray(body.payments)) {
     const payments: HostPayment[] = [];
@@ -38,11 +59,14 @@ export function normalizeHostInfo(input: unknown): HostInfo | null {
       if (payments.some((p) => p.method === payment.method)) continue;
       payments.push({ method: payment.method, handle });
     }
-    return payments.length > 0 ? { payments } : null;
+    return payments.length > 0 ? withNote({ payments }, note) : null;
   }
 
   if (isMethod(body.method) && typeof body.handle === "string" && body.handle.trim()) {
-    return { payments: [{ method: body.method, handle: body.handle.trim() }] };
+    return withNote(
+      { payments: [{ method: body.method, handle: body.handle.trim() }] },
+      note,
+    );
   }
   return null;
 }
