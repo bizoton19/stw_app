@@ -327,9 +327,19 @@ export function HostInterview() {
 
   if (step === "ready") {
     body = (
-      <p className="text-[15px] leading-relaxed text-muted-foreground">
-        One photo, a short review, then a link. Whole glasses only — no splitting a pour in half.
-      </p>
+      <>
+        <div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-2xl bg-border">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/table-ready.jpg"
+            alt="Friends at a restaurant table staring at the check over wine and food"
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <p className="text-[15px] leading-relaxed text-muted-foreground">
+          One photo, a short review, then a link. Whole glasses only — no splitting a pour in half.
+        </p>
+      </>
     );
     footer = (
       <ContinueButton onClick={() => go("capture")}>Yes — start with the receipt</ContinueButton>
