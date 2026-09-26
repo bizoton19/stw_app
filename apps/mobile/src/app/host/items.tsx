@@ -16,7 +16,7 @@ import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft, type DraftItem } from "@/context/host-draft";
 import { t } from "@/lib/i18n";
-import { centsToLabel } from "@/lib/money";
+import { centsToLabel, unitPriceCents } from "@/lib/money";
 import { pourCandidates } from "@/lib/pour";
 import type { ParseReviewChoice } from "@/lib/types";
 import { colors } from "@/lib/theme";
@@ -142,18 +142,31 @@ function ItemRow({
       accessibilityLabel={
         removed
           ? item.name.trim() || t("items.line")
-          : `Edit ${item.name.trim() || t("items.line")}`
+          : (() => {
+              const name = item.name.trim() || t("items.itemName");
+              const total = centsToLabel(item.totalCents);
+              if (item.qty > 1) {
+                const unit = centsToLabel(unitPriceCents(item.totalCents, item.qty));
+                return `Edit ${name}, ${item.qty} times ${unit}, ${total}`;
+              }
+              return `Edit ${name}, ${total}`;
+            })()
       }
       accessibilityHint={removed ? undefined : "Tap to edit name, quantity, or amount"}
     >
       <LineKindIcon name={item.name} kind={item.kind} style={{ marginBottom: 2 }} />
       <View style={styles.nameCol}>
-        <Text style={[styles.readName, removed && styles.struck]} numberOfLines={2}>
-          {item.name.trim() || t("items.itemName")}
-        </Text>
-        <Text style={styles.readMeta}>
-          ×{item.qty} · {centsToLabel(item.totalCents)}
-        </Text>
+        <View style={styles.readTop}>
+          <Text style={[styles.readName, removed && styles.struck]} numberOfLines={2}>
+            {item.name.trim() || t("items.itemName")}
+          </Text>
+          <Text style={[styles.readTotal, removed && styles.struck]}>{centsToLabel(item.totalCents)}</Text>
+        </View>
+        {item.qty > 1 ? (
+          <Text style={styles.readMeta}>
+            {item.qty} × {centsToLabel(unitPriceCents(item.totalCents, item.qty))}
+          </Text>
+        ) : null}
       </View>
       {removed ? (
         <PressScale accessibilityLabel="Undo remove" onPress={onUndo} style={styles.undoBtn}>
@@ -471,10 +484,24 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     textAlign: "left",
   },
+  readTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
   readName: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 16,
     fontWeight: "600",
     color: colors.ink,
+    lineHeight: 22,
+  },
+  readTotal: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.ink,
+    fontVariant: ["tabular-nums"],
     lineHeight: 22,
   },
   readMeta: {
