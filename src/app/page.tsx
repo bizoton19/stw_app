@@ -12,10 +12,10 @@ export default function Home() {
         </h1>
         <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-2xl bg-border">
           <Image
-            src="/table-ready.jpg"
-            alt="Friends at a restaurant table staring at the check over wine and food"
+            src="/table-ready-wide.jpg"
+            alt="Illustrated long table of friends sharing wine — one person reading the check"
             fill
-            className="object-cover"
+            className="object-cover object-center"
             sizes="(max-width: 430px) 100vw, 390px"
             priority
           />

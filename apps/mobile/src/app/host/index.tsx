@@ -33,7 +33,7 @@ export default function HostReady() {
           <Image
             source={require("../../../assets/images/table-ready.jpg")}
             style={styles.heroImage}
-            accessibilityLabel="Friends at a restaurant table staring at the check over wine and food"
+            accessibilityLabel="Illustrated round table of friends — one person reading the check"
           />
           <Text style={styles.lead}>
             One photo, a short review, then a link for the table.

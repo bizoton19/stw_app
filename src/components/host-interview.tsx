@@ -388,8 +388,8 @@ export function HostInterview() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/table-ready.jpg"
-            alt="Friends at a restaurant table staring at the check over wine and food"
-            className="h-full w-full object-cover"
+            alt="Illustrated round table of friends — one person reading the check"
+            className="h-full w-full object-cover object-center"
           />
         </div>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
