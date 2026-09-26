@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "node scripts/start.cjs",
     "lint": "eslint",
-    "test": "tsx --test src/lib/money.test.ts src/lib/pour.test.ts src/lib/store.test.ts src/lib/vision-stub.test.ts"
+    "test": "tsx --test src/lib/money.test.ts src/lib/pour.test.ts src/lib/store.test.ts src/lib/delete-receipt.test.ts src/lib/vision-stub.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1141.0",

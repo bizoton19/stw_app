@@ -18,7 +18,6 @@ import type {
   Receipt,
 } from "./types";
 import { parseReceiptImage, type ParseMeta, type ReceiptImage } from "./parse-receipt";
-import { putReceiptImage } from "./receipt-image";
 
 type InternalClaim = Claim & { ownerToken: string; autoLeftover?: boolean };
 
@@ -269,6 +268,7 @@ export async function parseReceipt(
   if (image?.bytes?.length) {
     const imageStarted = Date.now();
     try {
+      const { putReceiptImage } = await import("./receipt-image");
       await putReceiptImage(id, image);
       console.log(
         JSON.stringify({
