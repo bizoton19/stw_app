@@ -42,30 +42,65 @@
         </a>
     </nav>
 
-    <main class="flex-1 max-w-lg mx-auto w-full px-6 py-8 text-center">
-        <p class="text-[13px] font-medium text-inkSoft mb-2">Optional tip</p>
-        <h1 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Keep the lights on</h1>
-        <p class="text-[16px] leading-relaxed text-inkSoft mb-10">
-            Split the Wine is free for the table — no cut of your Venmo, no ads on the claim board.
-            If it saved an awkward end of dinner, a tip via PayPal helps cover hosting and receipt AI.
+    <main class="flex-1 max-w-lg mx-auto w-full px-6 py-8">
+        <p class="text-[13px] font-medium text-inkSoft mb-2 text-center">Optional tip</p>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-center">Keep the lights on</h1>
+        <p class="text-[16px] leading-relaxed text-inkSoft mb-10 text-center">
+            Split the Wine is free for the table — no cut of the check, no ads on the claim board.
+            If it helped tonight, tip however you already pay friends.
         </p>
 
         <!--
-          Set your real PayPal.me handle below.
-          Create one at https://www.paypal.com/paypalme/
+          Edit handles below before deploy:
+          - Venmo username (no @ in the URL path)
+          - Cash App $cashtag (keep $ in cash.app URL)
+          - Zelle: email or phone shown for copy (no deep link)
         -->
-        <a
-            href="https://paypal.me/SplitTheWine"
-            class="inline-flex h-12 w-full max-w-sm items-center justify-center rounded-full bg-merlot text-[15px] font-semibold text-white hover:opacity-90 transition-opacity"
-            rel="noopener noreferrer"
-        >
-            Tip with PayPal
-        </a>
-        <p class="mt-4 text-[13px] text-muted">
-            Opens PayPal.me — choose any amount. Thank you.
+        <div class="space-y-3">
+            <a
+                id="tip-venmo"
+                href="https://venmo.com/u/REPLACE_VENMO"
+                class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
+                rel="noopener noreferrer"
+            >
+                <span>
+                    <span class="block text-[15px] font-bold text-ink">Venmo</span>
+                    <span class="block text-[13px] text-inkSoft" id="venmo-label">@REPLACE_VENMO</span>
+                </span>
+                <span class="text-[13px] font-semibold text-merlot">Open</span>
+            </a>
+
+            <a
+                id="tip-cashapp"
+                href="https://cash.app/$REPLACE_CASHAPP"
+                class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
+                rel="noopener noreferrer"
+            >
+                <span>
+                    <span class="block text-[15px] font-bold text-ink">Cash App</span>
+                    <span class="block text-[13px] text-inkSoft" id="cashapp-label">$REPLACE_CASHAPP</span>
+                </span>
+                <span class="text-[13px] font-semibold text-merlot">Open</span>
+            </a>
+
+            <button
+                type="button"
+                id="tip-zelle"
+                class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
+            >
+                <span>
+                    <span class="block text-[15px] font-bold text-ink">Zelle</span>
+                    <span class="block text-[13px] text-inkSoft" id="zelle-label">REPLACE_ZELLE_EMAIL_OR_PHONE</span>
+                </span>
+                <span class="text-[13px] font-semibold text-merlot" id="zelle-action">Copy</span>
+            </button>
+        </div>
+
+        <p class="mt-6 text-center text-[13px] text-muted">
+            Pick any amount. Thank you — it keeps receipt AI and hosting running.
         </p>
 
-        <p class="mt-12 text-[14px] text-inkSoft">
+        <p class="mt-12 text-center text-[14px] text-inkSoft">
             Questions?
             <a href="mailto:support@splitthewine.app" class="font-medium text-merlot hover:underline">support@splitthewine.app</a>
         </p>
@@ -78,5 +113,21 @@
         </div>
         &copy; 2026 Split the Wine. Built for the table.
     </footer>
+
+    <script>
+        const zelle = document.getElementById('tip-zelle');
+        const zelleLabel = document.getElementById('zelle-label');
+        const zelleAction = document.getElementById('zelle-action');
+        zelle.addEventListener('click', async () => {
+            const value = zelleLabel.textContent.trim();
+            try {
+                await navigator.clipboard.writeText(value);
+                zelleAction.textContent = 'Copied';
+                setTimeout(() => { zelleAction.textContent = 'Copy'; }, 1500);
+            } catch (e) {
+                zelleAction.textContent = 'Select & copy';
+            }
+        });
+    </script>
 </body>
 </html>
