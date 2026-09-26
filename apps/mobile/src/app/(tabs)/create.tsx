@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
 
-/** Tab target; Create button routes to /host via the tab bar. */
+/** Old Create-tab deep link — host flow lives at /host. */
 export default function CreateTab() {
   return <Redirect href="/host" />;
 }

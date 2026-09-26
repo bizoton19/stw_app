@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   Platform,
   StyleSheet,
@@ -7,12 +8,13 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, Plus, Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
-import { AppShell } from "@/components/chrome";
+import { AppShell, PrimaryButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import {
+  clearHostedReceipt,
   getActiveHostReceiptId,
   hostedStatusLabel,
   refreshHostedReceiptStatuses,
@@ -71,21 +73,48 @@ export default function HomeScreen() {
   );
 
   function openBoard(id: string) {
-    // Host desk opens the balances board — not the guest claim join flow.
     router.push({
       pathname: "/r/[id]/settle",
       params: { id, host: "1" },
     });
   }
 
+  function confirmRemove(row: HostedReceiptSummary) {
+    Alert.alert(
+      "Remove from this phone?",
+      `${row.restaurant || "This tab"} leaves your list. The claim link still works for anyone who has it.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            void clearHostedReceipt(row.id).then(refresh);
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <AppShell>
       <SafeAreaView edges={["bottom"]} style={styles.main}>
         <View style={styles.top}>
-          <Text style={styles.kicker}>Host desk</Text>
-          <Text style={styles.title} numberOfLines={1}>
-            {active ? "Your receipts" : "Ready when you are"}
-          </Text>
+          <View style={styles.topText}>
+            <Text style={styles.kicker}>Host desk</Text>
+            <Text style={styles.title} numberOfLines={1}>
+              {active ? "Your tabs" : "Ready when you are"}
+            </Text>
+          </View>
+          <PressScale
+            haptic="select"
+            accessibilityLabel="Create a new tab"
+            onPress={() => router.push("/host")}
+            style={styles.newBtn}
+          >
+            <Plus size={18} color={colors.merlotFg} strokeWidth={2.5} />
+            <Text style={styles.newBtnText}>New</Text>
+          </PressScale>
         </View>
 
         <FlatList
@@ -100,41 +129,60 @@ export default function HomeScreen() {
           ListHeaderComponent={
             <View>
               {active ? (
-                <PressScale
-                  haptic="select"
-                  onPress={() => openBoard(active.id)}
-                  style={styles.heroCard}
-                  accessibilityLabel={`${hostedStatusLabel(active.status)} tab for ${receiptDate(active.receiptDay, active.updatedAt)}`}
-                >
-                  <View style={styles.heroMetaRow}>
-                    <Text style={styles.heroEyebrow}>
-                      {isToday(active.receiptDay, active.updatedAt) ? "Tonight’s tab" : "Recent tab"}
-                    </Text>
-                    <View
-                      style={[
-                        styles.statusPill,
-                        active.status === "finalized" ? styles.statusPillClosed : styles.statusPillOpen,
-                      ]}
-                    >
-                      {active.status !== "finalized" ? <View style={styles.liveDot} /> : null}
-                      <Text
+                <View style={styles.heroWrap}>
+                  <PressScale
+                    haptic="select"
+                    onPress={() => openBoard(active.id)}
+                    style={styles.heroCard}
+                    accessibilityLabel={`${hostedStatusLabel(active.status)} tab for ${receiptDate(active.receiptDay, active.updatedAt)}`}
+                  >
+                    <View style={styles.heroMetaRow}>
+                      <Text style={styles.heroEyebrow}>
+                        {isToday(active.receiptDay, active.updatedAt)
+                          ? "Tonight’s tab"
+                          : "Recent tab"}
+                      </Text>
+                      <View
                         style={[
-                          styles.statusPillText,
-                          active.status === "finalized" && styles.statusPillTextClosed,
+                          styles.statusPill,
+                          active.status === "finalized"
+                            ? styles.statusPillClosed
+                            : styles.statusPillOpen,
                         ]}
                       >
-                        {hostedStatusLabel(active.status)}
-                      </Text>
+                        {active.status !== "finalized" ? (
+                          <View style={styles.liveDot} />
+                        ) : null}
+                        <Text
+                          style={[
+                            styles.statusPillText,
+                            active.status === "finalized" && styles.statusPillTextClosed,
+                          ]}
+                        >
+                          {hostedStatusLabel(active.status)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text style={styles.heroDate}>
-                    {receiptDate(active.receiptDay, active.updatedAt)}
-                  </Text>
-                  <Text style={styles.heroPlace} numberOfLines={2}>
-                    {active.restaurant || "Open check"}
-                  </Text>
-                  <Text style={styles.heroCta}>Tap for who owes what · claimed & remaining</Text>
-                </PressScale>
+                    <Text style={styles.heroDate}>
+                      {receiptDate(active.receiptDay, active.updatedAt)}
+                    </Text>
+                    <Text style={styles.heroPlace} numberOfLines={2}>
+                      {active.restaurant || "Open check"}
+                    </Text>
+                    <Text style={styles.heroCta}>
+                      Tap for who owes what · claimed & remaining
+                    </Text>
+                  </PressScale>
+                  <PressScale
+                    haptic="select"
+                    accessibilityLabel="Remove tab from this phone"
+                    onPress={() => confirmRemove(active)}
+                    style={styles.heroRemove}
+                  >
+                    <Trash2 size={16} color={colors.inkSoft} strokeWidth={2} />
+                    <Text style={styles.heroRemoveText}>Remove from phone</Text>
+                  </PressScale>
+                </View>
               ) : (
                 <View style={styles.emptyCard}>
                   <Text style={styles.emptyTitle}>No open tab yet</Text>
@@ -142,6 +190,9 @@ export default function HomeScreen() {
                     Snap the check, confirm the lines, share a claim link. Tax and tip follow what
                     people ordered.
                   </Text>
+                  <PrimaryButton onPress={() => router.push("/host")}>
+                    Start a tab
+                  </PrimaryButton>
                 </View>
               )}
               {others.length > 0 ? (
@@ -153,28 +204,38 @@ export default function HomeScreen() {
             const closed = item.status === "finalized";
             const label = hostedStatusLabel(item.status);
             return (
-              <PressScale
-                haptic="select"
-                onPress={() => openBoard(item.id)}
-                style={styles.row}
-                accessibilityLabel={`${label} · ${receiptDate(item.receiptDay, item.updatedAt)}`}
-              >
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={styles.rowTitleRow}>
-                    <Text style={styles.rowDate}>
-                      {receiptDate(item.receiptDay, item.updatedAt)}
-                    </Text>
-                    <Text style={[styles.rowStatus, closed && styles.rowStatusClosed]}>
-                      ({label})
+              <View style={styles.row}>
+                <PressScale
+                  haptic="select"
+                  onPress={() => openBoard(item.id)}
+                  style={styles.rowMain}
+                  accessibilityLabel={`${label} · ${receiptDate(item.receiptDay, item.updatedAt)}`}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={styles.rowTitleRow}>
+                      <Text style={styles.rowDate}>
+                        {receiptDate(item.receiptDay, item.updatedAt)}
+                      </Text>
+                      <Text style={[styles.rowStatus, closed && styles.rowStatusClosed]}>
+                        ({label})
+                      </Text>
+                    </View>
+                    <Text style={styles.rowPlace} numberOfLines={1}>
+                      {item.restaurant || item.id}
                     </Text>
                   </View>
-                  <Text style={styles.rowPlace} numberOfLines={1}>
-                    {item.restaurant || item.id}
-                  </Text>
-                </View>
-                <Text style={styles.rowAction}>Board</Text>
-                <ChevronRight size={18} color={colors.inkSoft} strokeWidth={2.25} />
-              </PressScale>
+                  <Text style={styles.rowAction}>Board</Text>
+                  <ChevronRight size={18} color={colors.inkSoft} strokeWidth={2.25} />
+                </PressScale>
+                <PressScale
+                  haptic="select"
+                  accessibilityLabel="Remove from this phone"
+                  onPress={() => confirmRemove(item)}
+                  style={styles.rowTrash}
+                >
+                  <Trash2 size={18} color={colors.inkSoft} strokeWidth={2} />
+                </PressScale>
+              </View>
             );
           }}
           ListEmptyComponent={
@@ -185,9 +246,6 @@ export default function HomeScreen() {
           ListFooterComponent={
             <View style={styles.apiWrap}>
               <ApiBar />
-              {!active ? (
-                <Text style={styles.createHint}>Tap Create below to start a new receipt.</Text>
-              ) : null}
             </View>
           }
         />
@@ -199,12 +257,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   main: { flex: 1, minHeight: 0 },
   top: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
+  topText: { flex: 1, minWidth: 0 },
   kicker: { fontSize: 12, fontWeight: "700", color: colors.inkSoft, letterSpacing: 0.2 },
   title: {
     marginTop: 2,
@@ -213,16 +275,36 @@ const styles = StyleSheet.create({
     color: colors.ink,
     letterSpacing: -0.35,
   },
+  newBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.merlot,
+  },
+  newBtnText: { fontSize: 14, fontWeight: "700", color: colors.merlotFg },
   list: { flex: 1, minHeight: 0 },
   listContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, flexGrow: 1 },
+  heroWrap: { marginBottom: 8 },
   heroCard: {
     padding: 18,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: "#FFFcf8",
-    marginBottom: 8,
   },
+  heroRemove: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
+  heroRemoveText: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   heroEyebrow: { fontSize: 12, fontWeight: "700", color: colors.merlot },
   heroDate: {
     marginTop: 10,
@@ -275,9 +357,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: "#FFFcf8",
     marginBottom: 8,
+    gap: 12,
   },
   emptyTitle: { fontSize: 20, fontWeight: "700", color: colors.ink, letterSpacing: -0.3 },
-  emptyBody: { marginTop: 8, fontSize: 15, lineHeight: 22, color: colors.muted },
+  emptyBody: { fontSize: 15, lineHeight: 22, color: colors.muted },
   sectionLabel: {
     marginTop: 20,
     marginBottom: 4,
@@ -287,13 +370,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   row: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  rowMain: {
+    flex: 1,
+    minWidth: 0,
     minHeight: 64,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+  },
+  rowTrash: {
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    justifyContent: "center",
   },
   rowTitleRow: {
     flexDirection: "row",
@@ -317,11 +411,4 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   apiWrap: { marginTop: 28, paddingBottom: 8 },
-  createHint: {
-    marginTop: 16,
-    textAlign: "center",
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.inkSoft,
-  },
 });
