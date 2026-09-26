@@ -20,6 +20,8 @@ Track shippable UI polish. Mark items `[x]` when done in code.
 - [x] **UE-8 · View receipt image** — Claimants can open the tab photo in a contained viewer and download/share when the host uploaded one (`GET /api/receipts/:id/image`, `hasImage` on receipt).
 - [x] **UE-9 · Still-on-table price** — Live board “still on the table” / remaining rows show **item price before** the “N left” count.
 - [x] **UE-10 · Blank join name** — Do not autofill the guest name field from the host’s payment handle; leave name blank.
+- [x] **UE-11 · Remaining = unit × left** — Live board / settle show **unit price × units left** and a running **still on the table** dollar total that moves down on claim and up on unclaim (SSE/refresh).
+- [x] **UE-12 · Race claim copy** — On concurrent claim loss (`409 not_enough_remaining`), show **“{item} has already been claimed by {user}”** (or partial-left variant) using `claimedBy` from the API.
 
 ---
 
@@ -28,3 +30,4 @@ Track shippable UI polish. Mark items `[x]` when done in code.
 - Prefer mobile `apps/mobile` changes first; mirror web `src/components` when the same surface exists.
 - Host-facing live board titles stay “Live board” where useful; **Settle Payment** is the guest settle headline.
 - Receipt image requires persisting bytes at parse time and a public `GET` image route.
+- Remaining line dollars use `remainingLineCents` (slice of `unitCentsArray`) so pennies stay fair when qty does not divide evenly.

@@ -170,7 +170,19 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       const e = err as ApiError;
       if (e.code === "not_enough_remaining") {
-        setMessage(`Only ${e.remaining ?? 0} left on one of those lines — pick again.`);
+        if (e.message) {
+          setMessage(e.message);
+        } else if (e.claimedBy && e.itemName) {
+          setMessage(
+            e.remaining === 0
+              ? `${e.itemName} has already been claimed by ${e.claimedBy}`
+              : `Only ${e.remaining ?? 0} left on ${e.itemName} — ${e.claimedBy} already claimed some`,
+          );
+        } else {
+          setMessage(`Only ${e.remaining ?? 0} left on one of those lines — pick again.`);
+        }
+        setQueued([]);
+        setUnits({});
         await refresh();
       } else if (e.code === "conflict") {
         setMessage("This check is closed.");

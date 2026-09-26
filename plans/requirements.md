@@ -555,7 +555,7 @@ remaining = qty - sum(existing claims.units).
 
 
 
-Reject 409 { error: "not_enough_remaining", remaining: N } if requested > remaining.
+Reject 409 { error: "not_enough_remaining", remaining: N, itemId, itemName, claimedBy, message } if requested > remaining. When remaining is 0, message is "{item} has already been claimed by {claimedBy}".
 
 
 

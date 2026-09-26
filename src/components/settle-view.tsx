@@ -8,7 +8,7 @@ import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { hostPayments } from "@/lib/host-pay";
-import { centsToLabel } from "@/lib/money";
+import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
 import { openHostPayWeb, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { api, getGuest, getHostToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
@@ -42,6 +42,13 @@ export function SettleView({
   const closed = receipt.status === "finalized";
   const hostName = hostDisplayName(receipt, isHost);
   const restaurant = receipt.restaurant || "the check";
+  const remainingLines = leftover
+    ? receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0)
+    : [];
+  const remainingUnits = remainingLines.reduce(
+    (sum, item) => sum + (receipt.remaining[item.id] ?? 0),
+    0,
+  );
 
   const mine = guest
     ? totals.people.find((p) => p.personName === guest.name)
@@ -114,9 +121,31 @@ export function SettleView({
 
       {leftover ? (
         <p className="mt-4 text-[13px] text-muted-foreground">
-          {centsToLabel(totals.unclaimedItemCents)} still unclaimed. The host can close claiming
-          to take leftovers.
+          {centsToLabel(totals.unclaimedItemCents)} still on the table · {remainingUnits} left.
+          {isHost ? " Close claiming to take leftovers." : " The host can close claiming to take leftovers."}
         </p>
+      ) : null}
+
+      {isHost && leftover && remainingLines.length > 0 ? (
+        <ul className="mt-3 space-y-1.5 border-b border-border pb-4">
+          <li className="text-[12px] font-medium text-muted-foreground">Still on the table</li>
+          {remainingLines.map((item) => {
+            const left = receipt.remaining[item.id] ?? 0;
+            const unit = unitPriceCents(item.totalCents, item.qty);
+            const remainCents = remainingLineCents(item.totalCents, item.qty, left);
+            return (
+              <li
+                key={item.id}
+                className="flex items-center justify-between gap-3 text-[14px] tabular-nums"
+              >
+                <span className="min-w-0 truncate font-medium">{item.name}</span>
+                <span className="shrink-0 text-muted-foreground">
+                  {centsToLabel(unit)} × {left} · {centsToLabel(remainCents)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       ) : null}
 
       <div className="mt-5 space-y-1 border-y border-border py-3 text-[14px]">

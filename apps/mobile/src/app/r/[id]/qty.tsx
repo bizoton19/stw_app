@@ -6,7 +6,7 @@ import { QtyStepper } from "@/components/qty-stepper";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
-import { centsToLabel } from "@/lib/money";
+import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
 import { colors } from "@/lib/theme";
 
 export default function QtyScreen() {
@@ -99,7 +99,8 @@ export default function QtyScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.meta}>
-                    {centsToLabel(item.totalCents)} · {max} left
+                    {centsToLabel(unitPriceCents(item.totalCents, item.qty))} × {max} ·{" "}
+                    {centsToLabel(remainingLineCents(item.totalCents, item.qty, max))} left
                   </Text>
                 </View>
                 <QtyStepper

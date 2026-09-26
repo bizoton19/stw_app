@@ -30,6 +30,34 @@ describe("claiming", () => {
     assert.equal((await getPublicReceipt("demo")).remaining[wine.id], 0);
   });
 
+  it("names the winner when a late claim races a fully taken line", async () => {
+    resetStoreForTests();
+    const demo = await getPublicReceipt("demo");
+    const juice = demo.items.find((item) => item.name === "Apple Juice");
+    assert.ok(juice);
+    await addClaim("demo", {
+      itemId: juice.id,
+      personName: "Sam",
+      units: juice.qty,
+    });
+    await assert.rejects(
+      () =>
+        addClaim("demo", {
+          itemId: juice.id,
+          personName: "Alex",
+          units: 1,
+        }),
+      (err: unknown) => {
+        const e = err as { code?: string; claimedBy?: string; message?: string; remaining?: number };
+        assert.equal(e.code, "not_enough_remaining");
+        assert.equal(e.remaining, 0);
+        assert.equal(e.claimedBy, "Sam");
+        assert.match(String(e.message), /already been claimed by Sam/);
+        return true;
+      },
+    );
+  });
+
   it("computes proportional totals after a full claim of the sample tab", async () => {
     resetStoreForTests();
     const demo = await getPublicReceipt("demo");

@@ -3,7 +3,7 @@ import type { PoolClient } from "pg";
 import { DB_SCHEMA, ensureSchema, getPool, withTransaction } from "./db";
 import { dollarsToCents } from "./money";
 import { SAMPLE_PARSE } from "./sample-tab";
-import { computeTotals, leftoverAssignments, remainingForItem, remainingMap } from "./totals";
+import { computeTotals, leftoverAssignments, remainingForItem, remainingMap, latestClaimerForItem } from "./totals";
 import { findVenueDayConflict, isValidatedVenue } from "./venue-day";
 import type {
   Claim,
@@ -425,9 +425,20 @@ export async function addClaim(
     }
     const remaining = remainingForItem(item, receipt.claims);
     if (input.units > remaining) {
+      const claimedBy = latestClaimerForItem(receipt.claims, item.id, name);
       throw Object.assign(new Error("not_enough_remaining"), {
         code: "not_enough_remaining",
         remaining,
+        itemId: item.id,
+        itemName: item.name,
+        claimedBy,
+        message: claimedBy
+          ? remaining === 0
+            ? `${item.name} has already been claimed by ${claimedBy}`
+            : `Only ${remaining} left on ${item.name} — ${claimedBy} already claimed some`
+          : remaining === 0
+            ? `${item.name} has already been claimed`
+            : `Only ${remaining} left on ${item.name}`,
       });
     }
     const claim: InternalClaim = {
@@ -494,10 +505,20 @@ export async function addClaims(
       }
       const remaining = remainingForItem(item, receipt.claims);
       if (units > remaining) {
+        const claimedBy = latestClaimerForItem(receipt.claims, itemId, name);
         throw Object.assign(new Error("not_enough_remaining"), {
           code: "not_enough_remaining",
           remaining,
           itemId,
+          itemName: item.name,
+          claimedBy,
+          message: claimedBy
+            ? remaining === 0
+              ? `${item.name} has already been claimed by ${claimedBy}`
+              : `Only ${remaining} left on ${item.name} — ${claimedBy} already claimed some`
+            : remaining === 0
+              ? `${item.name} has already been claimed`
+              : `Only ${remaining} left on ${item.name}`,
         });
       }
     }

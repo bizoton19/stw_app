@@ -9,10 +9,12 @@ export function claimTokenOf(req: Request): string | null {
 }
 
 export function jsonError(err: unknown) {
-  const code = (err as { code?: string; remaining?: number; itemId?: string; existingId?: string; message?: string })
-    .code ?? "error";
+  const code =
+    (err as { code?: string }).code ?? "error";
   const remaining = (err as { remaining?: number }).remaining;
   const itemId = (err as { itemId?: string }).itemId;
+  const itemName = (err as { itemName?: string }).itemName;
+  const claimedBy = (err as { claimedBy?: string }).claimedBy;
   const existingId = (err as { existingId?: string }).existingId;
   const message = (err as { message?: string }).message;
   const status =
@@ -28,7 +30,7 @@ export function jsonError(err: unknown) {
               ? 502
               : 500;
   return NextResponse.json(
-    { error: code, remaining, itemId, existingId, message },
+    { error: code, remaining, itemId, itemName, claimedBy, existingId, message },
     { status },
   );
 }

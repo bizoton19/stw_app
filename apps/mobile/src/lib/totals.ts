@@ -6,6 +6,21 @@ export function remainingForItem(item: Item, claims: Claim[]): number {
   return item.qty - used;
 }
 
+export function latestClaimerForItem(
+  claims: Claim[],
+  itemId: string,
+  excludeName?: string,
+): string | undefined {
+  const rows = claims
+    .filter(
+      (c) =>
+        c.itemId === itemId &&
+        (!excludeName || c.personName.trim().toLowerCase() !== excludeName.trim().toLowerCase()),
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  return rows[0]?.personName;
+}
+
 type UnitOwner = { personName: string; personContact?: string };
 
 function ownersForItem(item: Item, claims: Claim[]): UnitOwner[] {

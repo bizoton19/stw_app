@@ -111,6 +111,7 @@ function PickBoard() {
   const remainingItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
   const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
   const closed = receipt.status === "finalized";
+  const totals = useMemo(() => computeTotals(receipt), [receipt]);
   const totalSteps = 3;
   const pickStep = 2;
   const activeQueued = flow.queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
@@ -239,6 +240,11 @@ function PickBoard() {
               </Text>
             ) : null}
             <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
+            {totals.unclaimedItemCents > 0 ? (
+              <Text style={styles.remainBanner}>
+                Still on the table · {centsToLabel(totals.unclaimedItemCents)}
+              </Text>
+            ) : null}
             {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
             {remainingItems.length === 0 ? (
               <Text style={[styles.muted, { textAlign: "center", paddingVertical: 32 }]}>
@@ -384,6 +390,13 @@ const styles = StyleSheet.create({
   muted: { fontSize: 13, color: colors.muted, marginTop: 2 },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 16 },
   as: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 12 },
+  remainBanner: {
+    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.ink,
+    fontVariant: ["tabular-nums"],
+  },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   list: { flex: 1 },
   listContent: { paddingHorizontal: 20, paddingBottom: 24 },

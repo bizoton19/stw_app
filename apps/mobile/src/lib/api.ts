@@ -7,6 +7,8 @@ export type ApiError = Error & {
   code?: string;
   remaining?: number;
   itemId?: string;
+  itemName?: string;
+  claimedBy?: string;
   existingId?: string;
   status?: number;
 };
@@ -35,6 +37,8 @@ export async function api<T>(
     error?: string;
     remaining?: number;
     itemId?: string;
+    itemName?: string;
+    claimedBy?: string;
     existingId?: string;
     message?: string;
   };
@@ -43,6 +47,8 @@ export async function api<T>(
     err.code = data.error;
     err.remaining = data.remaining;
     err.itemId = data.itemId;
+    err.itemName = data.itemName;
+    err.claimedBy = data.claimedBy;
     err.existingId = data.existingId;
     err.status = res.status;
     throw err;

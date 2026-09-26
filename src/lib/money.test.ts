@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { centsToLabel, dollarsToCents, sumCents, unitCentsArray } from "./money";
+import { centsToLabel, dollarsToCents, remainingLineCents, sumCents, unitCentsArray, unitPriceCents } from "./money";
 import {
   SAMPLE_FEE_TOTAL_CENTS,
   SAMPLE_GRAND_TOTAL_CENTS,
@@ -22,6 +22,14 @@ describe("money", () => {
     assert.equal(units.length, 8);
     assert.equal(sumCents(units), 12000);
     assert.deepEqual(units, [1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500]);
+  });
+
+  it("prices remaining as unit × left (penny-fair slice)", () => {
+    assert.equal(unitPriceCents(1001, 3), 333);
+    assert.equal(remainingLineCents(1001, 3, 3), 1001);
+    assert.equal(remainingLineCents(1001, 3, 2), 667);
+    assert.equal(remainingLineCents(1001, 3, 1), 333);
+    assert.equal(remainingLineCents(1001, 3, 0), 0);
   });
 });
 

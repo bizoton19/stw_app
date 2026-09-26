@@ -8,6 +8,24 @@ export function remainingForItem(item: Item, claims: Claim[]): number {
   return item.qty - used;
 }
 
+/** Most recent claimer on a line (for race-loss copy). */
+export function latestClaimerForItem(
+  claims: Claim[],
+  itemId: string,
+  excludeName?: string,
+): string | undefined {
+  const rows = claims
+    .filter(
+      (c) =>
+        c.itemId === itemId &&
+        (!excludeName || c.personName.trim().toLowerCase() !== excludeName.trim().toLowerCase()),
+    )
+    .sort(
+      (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id),
+    );
+  return rows[0]?.personName;
+}
+
 export function remainingMap(receipt: Pick<Receipt, "items" | "claims">): Record<string, number> {
   const map: Record<string, number> = {};
   for (const item of receipt.items) {

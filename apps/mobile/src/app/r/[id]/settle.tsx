@@ -13,7 +13,7 @@ import { useClaimFlow } from "@/context/claim-flow";
 import { publicClaimUrl } from "@/lib/config";
 import { registerHostClaimPush } from "@/lib/host-push";
 import { hostPayments } from "@/lib/host-pay";
-import { centsToLabel } from "@/lib/money";
+import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment } from "@/lib/types";
@@ -207,7 +207,7 @@ export default function SettleScreen() {
                 ]}
               >
                 {leftover
-                  ? `${centsToLabel(totals.unclaimedItemCents)} · ${remainingUnits} left`
+                  ? `${centsToLabel(totals.unclaimedItemCents)} still on the table · ${remainingUnits} left`
                   : closed
                     ? "None — assigned"
                     : "All claimed"}
@@ -287,16 +287,21 @@ export default function SettleScreen() {
         {flow.isHost && leftover && remainingLines.length > 0 ? (
           <View style={styles.remainBlock}>
             <Text style={styles.peopleTitle}>Still on the table</Text>
-            {remainingLines.map((item) => (
+            {remainingLines.map((item) => {
+              const left = receipt.remaining[item.id] ?? 0;
+              const unit = unitPriceCents(item.totalCents, item.qty);
+              const remainCents = remainingLineCents(item.totalCents, item.qty, left);
+              return (
               <View key={item.id} style={styles.remainRow}>
                 <Text style={styles.remainName} numberOfLines={1}>
                   {item.name}
                 </Text>
                 <Text style={styles.remainLeft}>
-                  {centsToLabel(item.totalCents)} · {receipt.remaining[item.id]} left
+                  {centsToLabel(unit)} × {left} · {centsToLabel(remainCents)}
                 </Text>
               </View>
-            ))}
+              );
+            })}
           </View>
         ) : null}
 

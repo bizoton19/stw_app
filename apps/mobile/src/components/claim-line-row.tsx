@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { PressScale } from "@/components/press-scale";
-import { centsToLabel } from "@/lib/money";
+import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
 import { colors } from "@/lib/theme";
 import type { Item } from "@/lib/types";
 
@@ -30,6 +30,8 @@ export function ClaimLineRow({
 }) {
   const on = useSharedValue(selected ? 1 : 0);
   const bump = useSharedValue(1);
+  const unit = unitPriceCents(item.totalCents, item.qty);
+  const remainingCents = remainingLineCents(item.totalCents, item.qty, left);
 
   useEffect(() => {
     on.value = withTiming(selected ? 1 : 0, { duration: 180 });
@@ -49,7 +51,7 @@ export function ClaimLineRow({
     <PressScale
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${item.name}, ${centsToLabel(item.totalCents)}, ${left} left`}
+      accessibilityLabel={`${item.name}, ${centsToLabel(unit)} each, ${left} left, ${centsToLabel(remainingCents)} remaining`}
       haptic="select"
       onPress={onToggle}
       style={styles.hit}
@@ -60,12 +62,17 @@ export function ClaimLineRow({
             {item.name}
           </Text>
           <Text style={[styles.meta, styles.tabular]}>
-            {centsToLabel(item.totalCents)} for {item.qty}
+            {centsToLabel(unit)} each · {item.qty} on check
           </Text>
         </View>
-        <Text style={[styles.left, selected && styles.leftOn]}>
-          {centsToLabel(item.totalCents)} · {left} left
-        </Text>
+        <View style={styles.right}>
+          <Text style={[styles.left, selected && styles.leftOn]}>
+            {centsToLabel(unit)} × {left}
+          </Text>
+          <Text style={[styles.remainTotal, selected && styles.leftOn]}>
+            {centsToLabel(remainingCents)} left
+          </Text>
+        </View>
       </Animated.View>
     </PressScale>
   );
@@ -89,10 +96,17 @@ const styles = StyleSheet.create({
   nameOn: { color: colors.select, fontWeight: "700" },
   meta: { marginTop: 3, fontSize: 13, color: colors.muted },
   tabular: { fontVariant: ["tabular-nums"] },
+  right: { alignItems: "flex-end", gap: 2 },
   left: {
     fontSize: 13,
     fontWeight: "600",
     color: colors.inkSoft,
+    fontVariant: ["tabular-nums"],
+  },
+  remainTotal: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.ink,
     fontVariant: ["tabular-nums"],
   },
   leftOn: { color: colors.select, fontWeight: "700" },

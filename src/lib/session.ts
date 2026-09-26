@@ -75,6 +75,8 @@ export async function api<T>(
     error?: string;
     remaining?: number;
     itemId?: string;
+    itemName?: string;
+    claimedBy?: string;
     existingId?: string;
     message?: string;
   };
@@ -83,12 +85,16 @@ export async function api<T>(
       code?: string;
       remaining?: number;
       itemId?: string;
+      itemName?: string;
+      claimedBy?: string;
       existingId?: string;
       status: number;
     };
     err.code = data.error;
     err.remaining = data.remaining;
     err.itemId = data.itemId;
+    err.itemName = data.itemName;
+    err.claimedBy = data.claimedBy;
     err.existingId = data.existingId;
     err.status = res.status;
     throw err;

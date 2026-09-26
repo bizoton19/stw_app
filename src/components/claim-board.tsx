@@ -8,7 +8,7 @@ import { motion } from "motion/react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
-import { centsToLabel } from "@/lib/money";
+import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
 import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
@@ -143,11 +143,27 @@ export function ClaimBoard({
         ? receipt.items.find((item) => item.id === itemId)?.name
         : null;
       if (code === "not_enough_remaining") {
-        setMessage(
-          itemName
-            ? `Only ${remaining ?? 0} left on ${itemName}.`
-            : `Only ${remaining ?? 0} left on one of those lines.`,
-        );
+        const claimedBy = (err as { claimedBy?: string }).claimedBy;
+        const itemNameFromErr = (err as { itemName?: string }).itemName;
+        const serverMessage = (err as { message?: string }).message;
+        if (serverMessage) {
+          setMessage(serverMessage);
+        } else if (claimedBy && (itemNameFromErr || itemName)) {
+          const label = itemNameFromErr || itemName;
+          setMessage(
+            remaining === 0
+              ? `${label} has already been claimed by ${claimedBy}`
+              : `Only ${remaining ?? 0} left on ${label} — ${claimedBy} already claimed some.`,
+          );
+        } else {
+          setMessage(
+            itemName
+              ? `Only ${remaining ?? 0} left on ${itemName}.`
+              : `Only ${remaining ?? 0} left on one of those lines.`,
+          );
+        }
+        setQueued([]);
+        setUnits({});
         await onChange();
       } else if (code === "conflict") {
         setMessage("This check is closed.");
@@ -338,8 +354,9 @@ export function ClaimBoard({
                     <p id={labelId} className="text-[15px] font-medium">
                       {item.name}
                     </p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {centsToLabel(item.totalCents)} · {max} left
+                    <p className="text-[12px] tabular-nums text-muted-foreground">
+                      {centsToLabel(unitPriceCents(item.totalCents, item.qty))} × {max} ·{" "}
+                      {centsToLabel(remainingLineCents(item.totalCents, item.qty, max))} left
                     </p>
                   </div>
                   <QtyStepper
@@ -385,6 +402,11 @@ export function ClaimBoard({
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
       ) : null}
+      {totals.unclaimedItemCents > 0 ? (
+        <p className="mb-3 text-[14px] font-bold tabular-nums text-foreground">
+          Still on the table · {centsToLabel(totals.unclaimedItemCents)}
+        </p>
+      ) : null}
       {message ? <p className="mb-3 text-sm text-destructive">{message}</p> : null}
 
       {remainingItems.length === 0 ? (
@@ -396,6 +418,8 @@ export function ClaimBoard({
           {remainingItems.map((item) => {
             const left = receipt.remaining[item.id] ?? 0;
             const selected = activeQueued.includes(item.id);
+            const unit = unitPriceCents(item.totalCents, item.qty);
+            const remainCents = remainingLineCents(item.totalCents, item.qty, left);
             return (
               <li key={item.id}>
                 <button
@@ -417,18 +441,23 @@ export function ClaimBoard({
                       {item.name}
                     </span>
                     <span className="mt-0.5 block text-[13px] tabular-nums text-muted-foreground">
-                      {centsToLabel(item.totalCents)} for {item.qty}
+                      {centsToLabel(unit)} each · {item.qty} on check
                     </span>
                   </span>
                   <motion.span
-                    key={`${item.id}-${left}`}
+                    key={`${item.id}-${left}-${remainCents}`}
                     initial={{ opacity: 0.45, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`shrink-0 text-[13px] font-semibold tabular-nums ${
+                    className={`shrink-0 text-right text-[13px] font-semibold tabular-nums ${
                       selected ? "text-[#2F5D50]" : "text-ink-soft"
                     }`}
                   >
-                    {centsToLabel(item.totalCents)} · {left} left
+                    <span className="block">
+                      {centsToLabel(unit)} × {left}
+                    </span>
+                    <span className="mt-0.5 block text-[14px] font-extrabold text-foreground">
+                      {centsToLabel(remainCents)} left
+                    </span>
                   </motion.span>
                 </button>
               </li>
