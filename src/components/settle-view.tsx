@@ -334,6 +334,19 @@ export function SettleView({
             </QuietButton>
           </>
         ) : null}
+        {isHost ? (
+          <p className="pt-1 text-center text-[13px] text-muted-foreground">
+            Thanks for hosting.{" "}
+            <a
+              href="https://www.splitthewine.app/support"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-primary"
+            >
+              Support Split the Wine
+            </a>
+          </p>
+        ) : null}
       </div>
     </div>
   );
