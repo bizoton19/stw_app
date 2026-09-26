@@ -59,26 +59,26 @@
         <div class="space-y-3">
             <a
                 id="tip-venmo"
-                href="https://venmo.com/u/REPLACE_VENMO"
+                href="https://venmo.com/u/asalomon19"
                 class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
                 rel="noopener noreferrer"
             >
                 <span>
                     <span class="block text-[15px] font-bold text-ink">Venmo</span>
-                    <span class="block text-[13px] text-inkSoft" id="venmo-label">@REPLACE_VENMO</span>
+                    <span class="block text-[13px] text-inkSoft" id="venmo-label">@asalomon19</span>
                 </span>
                 <span class="text-[13px] font-semibold text-merlot">Open</span>
             </a>
 
             <a
                 id="tip-cashapp"
-                href="https://cash.app/$REPLACE_CASHAPP"
+                href="https://cash.app/$afsalo"
                 class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
                 rel="noopener noreferrer"
             >
                 <span>
                     <span class="block text-[15px] font-bold text-ink">Cash App</span>
-                    <span class="block text-[13px] text-inkSoft" id="cashapp-label">$REPLACE_CASHAPP</span>
+                    <span class="block text-[13px] text-inkSoft" id="cashapp-label">$afsalo</span>
                 </span>
                 <span class="text-[13px] font-semibold text-merlot">Open</span>
             </a>
@@ -90,9 +90,21 @@
             >
                 <span>
                     <span class="block text-[15px] font-bold text-ink">Zelle</span>
-                    <span class="block text-[13px] text-inkSoft" id="zelle-label">REPLACE_ZELLE_EMAIL_OR_PHONE</span>
+                    <span class="block text-[13px] text-inkSoft" id="zelle-label">bizoton19@gmail.com</span>
                 </span>
                 <span class="text-[13px] font-semibold text-merlot" id="zelle-action">Copy</span>
+            </button>
+
+            <button
+                type="button"
+                id="tip-zelle-phone"
+                class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
+            >
+                <span>
+                    <span class="block text-[15px] font-bold text-ink">Zelle</span>
+                    <span class="block text-[13px] text-inkSoft" id="zelle-phone-label">4077013140</span>
+                </span>
+                <span class="text-[13px] font-semibold text-merlot" id="zelle-phone-action">Copy</span>
             </button>
         </div>
 
@@ -115,19 +127,23 @@
     </footer>
 
     <script>
-        const zelle = document.getElementById('tip-zelle');
-        const zelleLabel = document.getElementById('zelle-label');
-        const zelleAction = document.getElementById('zelle-action');
-        zelle.addEventListener('click', async () => {
-            const value = zelleLabel.textContent.trim();
-            try {
-                await navigator.clipboard.writeText(value);
-                zelleAction.textContent = 'Copied';
-                setTimeout(() => { zelleAction.textContent = 'Copy'; }, 1500);
-            } catch (e) {
-                zelleAction.textContent = 'Select & copy';
-            }
-        });
+        function wireCopy(buttonId, labelId, actionId) {
+            const btn = document.getElementById(buttonId);
+            const label = document.getElementById(labelId);
+            const action = document.getElementById(actionId);
+            btn.addEventListener('click', async () => {
+                const value = label.textContent.trim();
+                try {
+                    await navigator.clipboard.writeText(value);
+                    action.textContent = 'Copied';
+                    setTimeout(() => { action.textContent = 'Copy'; }, 1500);
+                } catch (e) {
+                    action.textContent = 'Select & copy';
+                }
+            });
+        }
+        wireCopy('tip-zelle', 'zelle-label', 'zelle-action');
+        wireCopy('tip-zelle-phone', 'zelle-phone-label', 'zelle-phone-action');
     </script>
 </body>
 </html>
