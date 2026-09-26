@@ -54,6 +54,41 @@ describe("pour heuristics", () => {
       null,
     );
   });
+
+  it("skips a single glass of champagne", () => {
+    assert.equal(
+      suggestPourForItem({
+        id: "it_1",
+        name: "Glass of Champagne",
+        qty: 1,
+        totalCents: 1800,
+        kind: "drink",
+      }),
+      null,
+    );
+    assert.equal(
+      suggestPourForItem({
+        id: "it_1",
+        name: "GL Champagne",
+        qty: 1,
+        totalCents: 1800,
+        kind: "drink",
+      }),
+      null,
+    );
+  });
+
+  it("still suggests for bottle champagne", () => {
+    const s = suggestPourForItem({
+      id: "it_1",
+      name: "Btl Champagne",
+      qty: 1,
+      totalCents: 9000,
+      kind: "drink",
+    });
+    assert.ok(s);
+    assert.equal(s!.suggestGlasses, 6);
+  });
 });
 
 describe("glass claim money", () => {

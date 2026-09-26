@@ -5,7 +5,7 @@ export const DEFAULT_GLASSES_PER_BOTTLE = 6;
 export const MIN_GLASSES_PER_UNIT = 2;
 export const MAX_GLASSES_PER_UNIT = 24;
 
-const ALREADY_GLASS = /\b(glasses?|gls|pours?|flutes?|cups?|shots?)\b/i;
+const ALREADY_GLASS = /\b(glasses?|gls|gl\.?|pours?|flutes?|cups?|shots?)\b/i;
 const MAGNUM = /\b(magnum|1\.5\s*l(?:itre|iter)?s?|1500\s*ml)\b/i;
 const BOTTLE =
   /\b(bottles?|btls?|btl\.?|750\s*ml|75\s*cl|wine\s*pkg|wine\s*package|bottle\s*package)\b/i;
@@ -68,7 +68,9 @@ export function suggestPourForItem(item: {
   const name = item.name.trim();
   if (!name) return null;
   if (kindOf(item) === "food") return null;
-  if (ALREADY_GLASS.test(name) && item.qty >= 4) return null;
+  if (ALREADY_GLASS.test(name) && !BOTTLE.test(name) && !MAGNUM.test(name)) {
+    return null;
+  }
   if (SKIP_DRINK.test(name) && !BOTTLE.test(name) && !SPARKLING.test(name) && !MAGNUM.test(name)) {
     return null;
   }
@@ -94,14 +96,14 @@ export function suggestPourForItem(item: {
       label: "Magnum — usually ~12 glasses",
     };
   }
-  if (SPARKLING.test(name) && (BOTTLE.test(name) || item.qty <= 2 || item.totalCents >= 4000)) {
+  if (SPARKLING.test(name) && (BOTTLE.test(name) || MAGNUM.test(name) || item.totalCents >= 6000)) {
     return {
       itemId: item.id,
       name,
       totalCents: item.totalCents,
       printedQty: item.qty,
       suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
-      confidence: BOTTLE.test(name) ? "high" : "med",
+      confidence: BOTTLE.test(name) || MAGNUM.test(name) ? "high" : "med",
       label: "Champagne / sparkling — often ~6 flutes",
     };
   }
