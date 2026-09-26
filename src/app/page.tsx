@@ -6,16 +6,15 @@ export default function Home() {
   return (
     <PhoneShell>
       <main className="flex flex-1 flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-8">
-        <p className="text-[13px] font-medium text-ink-soft">Fair split</p>
-        <h1 className="mt-2 text-[1.85rem] leading-[1.12] font-semibold tracking-tight">
+        <h1 className="text-[1.85rem] leading-[1.12] font-semibold tracking-tight">
           Ready to split this check?
         </h1>
         <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-2xl bg-border">
           <Image
-            src="/table-ready-wide.jpg"
-            alt="Illustrated long table of friends sharing wine — one person reading the check"
+            src="/table-ready.jpg"
+            alt="Illustrated round table of friends — one person reading the check"
             fill
-            className="object-cover object-center"
+            className="object-cover object-[center_18%]"
             sizes="(max-width: 430px) 100vw, 390px"
             priority
           />

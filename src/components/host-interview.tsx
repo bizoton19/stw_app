@@ -59,7 +59,7 @@ const ORDER: Step[] = [
 ];
 
 const COPY: Record<Step, { kicker: string; title: string }> = {
-  ready: { kicker: "Fair split", title: "Got the check in front of you?" },
+  ready: { kicker: "", title: "Ready to split this check?" },
   capture: { kicker: "The receipt", title: "How should we add the tab?" },
   parsing: { kicker: "Reading", title: "Looking over every pour…" },
   restaurant: { kicker: "The place", title: "What's the name on the check?" },
@@ -392,12 +392,29 @@ export function HostInterview() {
           <img
             src="/table-ready.jpg"
             alt="Illustrated round table of friends — one person reading the check"
-            className="h-full w-full object-cover object-center"
+            className="h-[118%] w-full max-w-none object-cover object-[center_18%]"
           />
         </div>
-        <p className="text-[15px] leading-relaxed text-muted-foreground">
-          One photo, a short review, then a link. Whole glasses only — no splitting a pour in half.
+        <p className="mb-4 text-[15px] leading-relaxed text-muted-foreground">
+          One photo, a short review, then a link for the table.
         </p>
+        <ol className="space-y-3">
+          {[
+            "Snap / upload the check",
+            "Confirm the items",
+            "Share the claim link",
+          ].map((label, i) => (
+            <li
+              key={label}
+              className="flex items-center gap-3.5 rounded-[14px] border border-border bg-[#FFFcf8] px-4 py-3.5"
+            >
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[rgba(110,46,53,0.1)] text-[14px] font-extrabold text-primary">
+                {i + 1}
+              </span>
+              <span className="text-[16px] font-semibold">{label}</span>
+            </li>
+          ))}
+        </ol>
       </>
     );
     footer = (

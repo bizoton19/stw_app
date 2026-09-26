@@ -1,11 +1,11 @@
 import { Image, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { colors } from "@/lib/theme";
 
 const BEATS = [
-  { n: "1", label: "Snap the check" },
-  { n: "2", label: "Confirm the lines" },
+  { n: "1", label: "Snap / upload the check" },
+  { n: "2", label: "Confirm the items" },
   { n: "3", label: "Share the claim link" },
 ];
 
@@ -16,25 +16,24 @@ export default function HostReady() {
       <InterviewChrome
         step={1}
         total={9}
-        kicker="Fair split"
         title="Ready to split this check?"
         onBack={() => router.back()}
         sparse
         footer={
-          <View>
-            <FooterHint>Whole glasses only — no splitting a pour in half.</FooterHint>
-            <PrimaryButton onPress={() => router.push("/host/capture")}>
-              Yes — start with the receipt
-            </PrimaryButton>
-          </View>
+          <PrimaryButton onPress={() => router.push("/host/capture")}>
+            Yes — start with the receipt
+          </PrimaryButton>
         }
       >
         <View style={styles.hero}>
-          <Image
-            source={require("../../../assets/images/table-ready.jpg")}
-            style={styles.heroImage}
-            accessibilityLabel="Illustrated round table of friends — one person reading the check"
-          />
+          <View style={styles.heroFrame}>
+            <Image
+              source={require("../../../assets/images/table-ready.jpg")}
+              style={styles.heroImage}
+              resizeMode="cover"
+              accessibilityLabel="Illustrated round table of friends — one person reading the check"
+            />
+          </View>
           <Text style={styles.lead}>
             One photo, a short review, then a link for the table.
           </Text>
@@ -55,12 +54,19 @@ export default function HostReady() {
 }
 
 const styles = StyleSheet.create({
-  hero: { alignItems: "center", paddingTop: 4, gap: 20 },
+  hero: { alignItems: "center", paddingTop: 4, gap: 18 },
+  /** Crop toward the top so the person with the receipt reads clearly. */
+  heroFrame: {
+    width: "100%",
+    height: 228,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: colors.border,
+  },
   heroImage: {
     width: "100%",
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: colors.border,
+    height: "118%",
+    marginTop: "-6%",
   },
   lead: {
     fontSize: 17,
