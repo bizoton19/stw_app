@@ -6,6 +6,11 @@
   to = "/privacy.html"
   status = 200
 
+[[redirects]]
+  from = "/support"
+  to = "/support.html"
+  status = 200
+
 # Force apex → www (also set www as primary domain in Netlify UI)
 [[redirects]]
   from = "https://splitthewine.app/*"

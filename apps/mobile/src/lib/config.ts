@@ -69,6 +69,13 @@ export function publicClaimUrl(receiptId: string): string {
   return `${base}/r/${receiptId}`;
 }
 
+/** Marketing tip / donation page (PayPal.me lives there — keep out of the App Store binary rules). */
+export function supportUrl(): string {
+  const env = process.env.EXPO_PUBLIC_SUPPORT_URL?.trim();
+  if (env) return stripSlash(env);
+  return "https://www.splitthewine.app/support";
+}
+
 export function apiUrlHint(): string {
   const lan = hostFromExpo();
   if (lan) return `Inferred from Expo (${lan})`;

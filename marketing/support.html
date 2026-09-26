@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support - Split the Wine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        merlot: '#6E2E35',
+                        paper: '#F6F4F1',
+                        ink: '#2A241C',
+                        inkSoft: '#7A7268',
+                        muted: '#8A847C',
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F6F4F1;
+            color: #2A241C;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col selection:bg-merlot selection:text-white">
+
+    <nav class="max-w-4xl mx-auto w-full px-6 py-8">
+        <a href="/" class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <svg width="42" height="42" style="transform: rotate(-15deg);" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 24 L21.5 26 L26.5 22 L31.5 24 V13.5 H26.6 V6.7 H25.8 V3.5 H22.2 V6.7 H21.4 V13.5 H16.5 Z" fill="#6E2E35" />
+                <path d="M31.5 25 V41.6 A3 3 0 0 1 28.5 44.6 H19.5 A3 3 0 0 1 16.5 41.6 V25 L21.5 27 L26.5 23 L31.5 25 Z" fill="#6E2E35" />
+            </svg>
+            <span class="font-bold text-2xl tracking-tight">Split the Wine</span>
+        </a>
+    </nav>
+
+    <main class="flex-1 max-w-lg mx-auto w-full px-6 py-8 text-center">
+        <p class="text-[13px] font-medium text-inkSoft mb-2">Optional tip</p>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Keep the lights on</h1>
+        <p class="text-[16px] leading-relaxed text-inkSoft mb-10">
+            Split the Wine is free for the table — no cut of your Venmo, no ads on the claim board.
+            If it saved an awkward end of dinner, a tip via PayPal helps cover hosting and receipt AI.
+        </p>
+
+        <!--
+          Set your real PayPal.me handle below.
+          Create one at https://www.paypal.com/paypalme/
+        -->
+        <a
+            href="https://paypal.me/SplitTheWine"
+            class="inline-flex h-12 w-full max-w-sm items-center justify-center rounded-full bg-merlot text-[15px] font-semibold text-white hover:opacity-90 transition-opacity"
+            rel="noopener noreferrer"
+        >
+            Tip with PayPal
+        </a>
+        <p class="mt-4 text-[13px] text-muted">
+            Opens PayPal.me — choose any amount. Thank you.
+        </p>
+
+        <p class="mt-12 text-[14px] text-inkSoft">
+            Questions?
+            <a href="mailto:support@splitthewine.app" class="font-medium text-merlot hover:underline">support@splitthewine.app</a>
+        </p>
+    </main>
+
+    <footer class="mt-auto py-8 px-6 border-t border-[#E6E0D8] text-center text-sm text-inkSoft">
+        <div class="flex justify-center gap-6 mb-4">
+            <a href="/" class="hover:text-merlot transition-colors">Home</a>
+            <a href="/privacy" class="hover:text-merlot transition-colors">Privacy</a>
+        </div>
+        &copy; 2026 Split the Wine. Built for the table.
+    </footer>
+</body>
+</html>
