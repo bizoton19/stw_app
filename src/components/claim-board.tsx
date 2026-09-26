@@ -401,7 +401,7 @@ export function ClaimBoard({
       title="What did you have?"
       stepKey="pick"
       direction={direction}
-      onBack={() => router.push("/")}
+      onBack={isHost ? () => router.push("/") : undefined}
       footer={pickFooter}
     >
       {guest ? (

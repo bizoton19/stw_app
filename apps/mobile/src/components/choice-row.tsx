@@ -10,6 +10,8 @@ export function ChoiceRow({
   onPress,
   /** Empty-state capture tiles — tall, large type, easy to hit with glasses on. */
   size = "default",
+  /** Radio/check mark — off for action cards like camera / library. */
+  showCheck = true,
 }: {
   title: string;
   hint: string;
@@ -17,21 +19,26 @@ export function ChoiceRow({
   icon: React.ReactNode;
   onPress: () => void;
   size?: "default" | "large";
+  showCheck?: boolean;
 }) {
   const large = size === "large";
+  const showSelected = Boolean(showCheck && selected);
   return (
     <PressScale
       onPress={onPress}
       haptic="select"
-      style={[styles.row, large && styles.rowLarge, selected && large && styles.rowLargeOn]}
-      accessibilityState={{ selected }}
+      style={[styles.row, large && styles.rowLarge, showSelected && large && styles.rowLargeOn]}
+      accessibilityRole="button"
+      accessibilityState={showCheck ? { selected: showSelected } : undefined}
     >
       <View style={[styles.icon, large && styles.iconLarge]}>{icon}</View>
       <View style={styles.copy}>
         <Text style={[styles.title, large && styles.titleLarge]}>{title}</Text>
         <Text style={[styles.hint, large && styles.hintLarge]}>{hint}</Text>
       </View>
-      <View style={[styles.dot, large && styles.dotLarge, selected && styles.dotOn]} />
+      {showCheck ? (
+        <View style={[styles.dot, large && styles.dotLarge, showSelected && styles.dotOn]} />
+      ) : null}
     </PressScale>
   );
 }

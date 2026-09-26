@@ -177,7 +177,15 @@ export default function SettleScreen() {
         total={3}
         kicker={receipt.restaurant || "The check"}
         title={flow.isHost ? "Live board" : "Settle Payment"}
-        onBack={() => (flow.isHost ? router.replace("/") : router.back())}
+        onBack={
+          flow.isHost
+            ? () => router.replace("/")
+            : () =>
+                router.replace({
+                  pathname: "/r/[id]",
+                  params: claimParams,
+                })
+        }
         footer={footer}
       >
         <Text style={styles.lead}>

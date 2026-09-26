@@ -28,6 +28,17 @@ export function ClaimPage({
     });
   }, [receiptId, hostQuery]);
 
+  // Guests: ignore browser back into the host desk / marketing home.
+  useEffect(() => {
+    if (isHost) return;
+    const onPopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [isHost, receiptId]);
+
   const meta =
     live === "live" ? "Live" : live === "offline" ? "Offline" : "Reconnecting";
 

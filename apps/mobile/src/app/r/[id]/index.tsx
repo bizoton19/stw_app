@@ -216,7 +216,7 @@ function PickBoard() {
       total={totalSteps}
       kicker={receipt.restaurant || "The check"}
       title="What did you have?"
-      onBack={() => router.back()}
+      onBack={flow.isHost ? () => router.replace("/") : undefined}
       footer={footer}
       scroll={false}
     >

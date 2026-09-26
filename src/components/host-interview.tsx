@@ -108,12 +108,14 @@ function Choice({
   hint,
   icon,
   onClick,
+  showCheck = true,
 }: {
   selected?: boolean;
   title: string;
   hint: string;
   icon: React.ReactNode;
   onClick: () => void;
+  showCheck?: boolean;
 }) {
   return (
     <button
@@ -128,11 +130,13 @@ function Choice({
         <span className="block text-[15px] font-medium">{title}</span>
         <span className="text-[13px] text-muted-foreground">{hint}</span>
       </span>
-      <span
-        className={`size-4 rounded-full border ${
-          selected ? "border-primary bg-primary" : "border-border"
-        }`}
-      />
+      {showCheck ? (
+        <span
+          className={`size-4 rounded-full border ${
+            selected ? "border-primary bg-primary" : "border-border"
+          }`}
+        />
+      ) : null}
     </button>
   );
 }
@@ -404,14 +408,14 @@ export function HostInterview() {
             icon={<Camera className="size-5" />}
             title="Take a photo"
             hint="Camera, when this device allows it"
-            selected={pickMode === "camera"}
+            showCheck={false}
             onClick={() => cameraRef.current?.click()}
           />
           <Choice
             icon={<ImageIcon className="size-5" />}
             title="Choose from library"
             hint="JPEG, PNG, or a screenshot"
-            selected={pickMode === "library"}
+            showCheck={false}
             onClick={() => libraryRef.current?.click()}
           />
         </div>

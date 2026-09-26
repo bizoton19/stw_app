@@ -135,6 +135,7 @@ export default function HostCapture() {
         <View style={[styles.list, !hasImage && styles.listEmpty]}>
           <ChoiceRow
             size={hasImage ? "default" : "large"}
+            showCheck={false}
             icon={<Camera size={iconSize} color={iconColor} strokeWidth={2.25} />}
             title="Take a photo"
             hint={
@@ -142,23 +143,22 @@ export default function HostCapture() {
                 ? "Uses the system picker here. Real camera on iOS and Android."
                 : "Opens the device camera"
             }
-            selected={draft.pickMode === "camera"}
             onPress={() => void takePhoto()}
           />
           <ChoiceRow
             size={hasImage ? "default" : "large"}
+            showCheck={false}
             icon={<ImageIcon size={iconSize} color={iconColor} strokeWidth={2.25} />}
             title="Choose from library"
             hint="JPEG, PNG, or a screenshot"
-            selected={draft.pickMode === "library"}
             onPress={() => void pickLibrary()}
           />
           {draft.pickMode === "share" && draft.image ? (
             <ChoiceRow
+              showCheck={false}
               icon={<Share2 size={20} color={colors.ink} />}
               title="Shared from Photos"
               hint="Opened from the system share sheet"
-              selected
               onPress={() => undefined}
             />
           ) : null}
