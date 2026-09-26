@@ -263,7 +263,36 @@ export async function parseReceipt(
     }
   });
   const { result, parse } = await parseReceiptImage(image, { ...opts, receiptId: id });
-  return withTransaction(async (client) => {
+  // Persist image OUTSIDE the receipt FOR UPDATE lock — putReceiptImage uses a
+  // separate pool client; doing it under lock deadlocks on the FK to receipts.
+  if (image?.bytes?.length) {
+    const imageStarted = Date.now();
+    try {
+      await putReceiptImage(id, image);
+      console.log(
+        JSON.stringify({
+          event: "parse.image_saved",
+          ts: new Date().toISOString(),
+          receiptId: id,
+          ms: Date.now() - imageStarted,
+          imageBytes: image.bytes.length,
+        }),
+      );
+    } catch (err) {
+      console.log(
+        JSON.stringify({
+          event: "parse.image_failed",
+          ts: new Date().toISOString(),
+          receiptId: id,
+          ms: Date.now() - imageStarted,
+          detail: err instanceof Error ? err.message.slice(0, 200) : String(err),
+        }),
+      );
+      // Still publish items even if image storage fails.
+    }
+  }
+  const persistStarted = Date.now();
+  const out = await withTransaction(async (client) => {
     const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
     if (receipt.status !== "draft") {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
@@ -276,7 +305,6 @@ export async function parseReceipt(
     receipt.fees = feesFromParse(result);
     receipt.imageName = image?.name ?? receipt.imageName;
     if (image?.bytes?.length) {
-      await putReceiptImage(id, image);
       receipt.hasImage = true;
     }
     receipt.parseFlag =
@@ -285,6 +313,17 @@ export async function parseReceipt(
     emit(receipt, "updated");
     return { receipt: toPublic(receipt), parse };
   });
+  console.log(
+    JSON.stringify({
+      event: "parse.persist",
+      ts: new Date().toISOString(),
+      receiptId: id,
+      ms: Date.now() - persistStarted,
+      reason: parse.reason,
+      itemCount: out.receipt.items.length,
+    }),
+  );
+  return out;
 }
 
 export async function saveReceipt(
