@@ -89,6 +89,45 @@ describe("pour heuristics", () => {
     assert.ok(s);
     assert.equal(s!.suggestGlasses, 6);
   });
+
+  it("asks the host when a drink is pricey but unnamed as a bottle", () => {
+    const s = suggestPourForItem({
+      id: "it_1",
+      name: "Opus One 2019",
+      qty: 1,
+      totalCents: 8500,
+      kind: "drink",
+    });
+    assert.ok(s);
+    assert.equal(s!.suggestGlasses, 6);
+    assert.equal(s!.confidence, "low");
+  });
+
+  it("uses per-unit price so cheap multi-qty drinks skip the pour screen", () => {
+    assert.equal(
+      suggestPourForItem({
+        id: "it_1",
+        name: "House Red",
+        qty: 3,
+        totalCents: 5400, // $18 each
+        kind: "drink",
+      }),
+      null,
+    );
+  });
+
+  it("skips pricey cocktails by name", () => {
+    assert.equal(
+      suggestPourForItem({
+        id: "it_1",
+        name: "Tableside Cocktail",
+        qty: 1,
+        totalCents: 7500,
+        kind: "drink",
+      }),
+      null,
+    );
+  });
 });
 
 describe("glass claim money", () => {

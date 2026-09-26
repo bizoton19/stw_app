@@ -5,6 +5,12 @@ export const DEFAULT_GLASSES_PER_BOTTLE = 6;
 export const MIN_GLASSES_PER_UNIT = 2;
 export const MAX_GLASSES_PER_UNIT = 24;
 
+/**
+ * Per printed unit — above this, ask the host if a drink line is a bottle
+ * even when the name doesn’t say “bottle” / wine.
+ */
+export const BOTTLE_PRICE_HINT_CENTS = 4500;
+
 /** Printed check units that already look like glasses — don't offer bottle split. */
 const ALREADY_GLASS =
   /\b(glasses?|gls|gl\.?|pours?|flutes?|cups?|shots?)\b/i;
@@ -152,6 +158,20 @@ export function suggestPourForItem(item: {
       suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
       confidence: "med",
       label: "Wine package — often 1 bottle ≈ 6 glasses",
+    };
+  }
+
+  // Expensive beverage with no clear bottle/glass wording — let the host decide.
+  const unitCents = Math.round(item.totalCents / Math.max(1, item.qty));
+  if (kindOf(item) === "drink" && item.qty <= 3 && unitCents >= BOTTLE_PRICE_HINT_CENTS) {
+    return {
+      itemId: item.id,
+      name,
+      totalCents: item.totalCents,
+      printedQty: item.qty,
+      suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
+      confidence: "low",
+      label: `Over $${(BOTTLE_PRICE_HINT_CENTS / 100).toFixed(0)} — bottle or keep as printed?`,
     };
   }
 
