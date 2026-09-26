@@ -9,6 +9,7 @@ import { IconActionButton } from "@/components/icon-action-button";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
+import { LineKindIcon } from "@/components/line-kind-icon";
 import { useClaimFlow } from "@/context/claim-flow";
 import { publicClaimUrl } from "@/lib/config";
 import { registerHostClaimPush } from "@/lib/host-push";
@@ -227,8 +228,8 @@ export default function SettleScreen() {
             <Text style={styles.totalsLabel}>The tab</Text>
           </View>
           <Row label="Items" value={centsToLabel(totals.itemSubtotalCents)} />
-          <Row label="Fees" value={centsToLabel(totals.feeTotalCents)} />
-          <Row label="Grand" value={centsToLabel(totals.grandTotalCents)} strong />
+          <FeesRow value={centsToLabel(totals.feeTotalCents)} />
+          <Row label="Grand Total" value={centsToLabel(totals.grandTotalCents)} strong />
         </View>
 
         {!flow.isHost && mine && mine.totalCents > 0 ? (
@@ -293,9 +294,12 @@ export default function SettleScreen() {
               const remainCents = remainingLineCents(item.totalCents, item.qty, left);
               return (
               <View key={item.id} style={styles.remainRow}>
-                <Text style={styles.remainName} numberOfLines={1}>
-                  {item.name}
-                </Text>
+                <View style={styles.remainNameRow}>
+                  <LineKindIcon name={item.name} kind={item.kind} size={12} />
+                  <Text style={styles.remainName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                </View>
                 <Text style={styles.remainLeft}>
                   {centsToLabel(unit)} × {left} · {centsToLabel(remainCents)}
                 </Text>
@@ -385,9 +389,22 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
   );
 }
 
+function FeesRow({ value }: { value: string }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.muted}>
+        Fees{" "}
+        <Text style={styles.feesHint}>(taxes, tips, etc)</Text>
+      </Text>
+      <Text style={styles.value}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   lead: { fontSize: 14, lineHeight: 20, color: colors.muted, marginBottom: 12 },
   muted: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  feesHint: { fontWeight: "700", color: colors.ink },
   err: { color: colors.danger, fontSize: 14, marginBottom: 12 },
   shareCard: {
     marginBottom: 16,
@@ -479,6 +496,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     gap: 12,
+  },
+  remainNameRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   remainName: { flex: 1, fontSize: 14, fontWeight: "600", color: colors.ink },
   remainLeft: {

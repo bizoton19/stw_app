@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { LineKindIcon } from "@/components/line-kind-icon";
 import { QtyStepper } from "@/components/qty-stepper";
 import { PressScale } from "@/components/press-scale";
 import { useClaimFlow } from "@/context/claim-flow";
@@ -96,6 +97,7 @@ export default function QtyScreen() {
           return (
             <View key={item.id} style={styles.row}>
               <View style={styles.head}>
+                <LineKindIcon name={item.name} kind={item.kind} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.meta}>

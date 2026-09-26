@@ -7,6 +7,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
 import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
 import { colors } from "@/lib/theme";
@@ -57,6 +58,7 @@ export function ClaimLineRow({
       style={styles.hit}
     >
       <Animated.View style={[styles.row, shell]}>
+        <LineKindIcon name={item.name} kind={item.kind} />
         <View style={styles.copy}>
           <Text style={[styles.name, selected && styles.nameOn]} numberOfLines={2}>
             {item.name}

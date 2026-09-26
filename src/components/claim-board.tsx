@@ -8,6 +8,7 @@ import { motion } from "motion/react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
+import { LineKindIcon } from "@/components/line-kind-icon";
 import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
 import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
@@ -350,14 +351,17 @@ export function ClaimBoard({
             return (
               <li key={item.id} className="py-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p id={labelId} className="text-[15px] font-medium">
-                      {item.name}
-                    </p>
-                    <p className="text-[12px] tabular-nums text-muted-foreground">
-                      {centsToLabel(unitPriceCents(item.totalCents, item.qty))} × {max} ·{" "}
-                      {centsToLabel(remainingLineCents(item.totalCents, item.qty, max))} left
-                    </p>
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <LineKindIcon name={item.name} kind={item.kind} className="mt-0.5" />
+                    <div className="min-w-0">
+                      <p id={labelId} className="text-[15px] font-medium">
+                        {item.name}
+                      </p>
+                      <p className="text-[12px] tabular-nums text-muted-foreground">
+                        {centsToLabel(unitPriceCents(item.totalCents, item.qty))} × {max} ·{" "}
+                        {centsToLabel(remainingLineCents(item.totalCents, item.qty, max))} left
+                      </p>
+                    </div>
                   </div>
                   <QtyStepper
                     value={value}
@@ -432,6 +436,7 @@ export function ClaimBoard({
                       : "border-transparent bg-transparent"
                   }`}
                 >
+                  <LineKindIcon name={item.name} kind={item.kind} />
                   <span className="min-w-0 flex-1">
                     <span
                       className={`block text-[16px] font-semibold tracking-tight ${

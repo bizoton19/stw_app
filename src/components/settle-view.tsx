@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Banknote, ChevronLeft } from "lucide-react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
+import { LineKindIcon } from "@/components/line-kind-icon";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { hostPayments } from "@/lib/host-pay";
 import { centsToLabel, remainingLineCents, unitPriceCents } from "@/lib/money";
@@ -138,7 +139,10 @@ export function SettleView({
                 key={item.id}
                 className="flex items-center justify-between gap-3 text-[14px] tabular-nums"
               >
-                <span className="min-w-0 truncate font-medium">{item.name}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <LineKindIcon name={item.name} kind={item.kind} size={12} />
+                  <span className="truncate font-medium">{item.name}</span>
+                </span>
                 <span className="shrink-0 text-muted-foreground">
                   {centsToLabel(unit)} × {left} · {centsToLabel(remainCents)}
                 </span>
@@ -158,11 +162,13 @@ export function SettleView({
           <span className="tabular-nums">{centsToLabel(totals.itemSubtotalCents)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Fees</span>
+          <span className="text-muted-foreground">
+            Fees <span className="font-bold text-foreground">(taxes, tips, etc)</span>
+          </span>
           <span className="tabular-nums">{centsToLabel(totals.feeTotalCents)}</span>
         </div>
         <div className="flex justify-between font-medium">
-          <span>Grand</span>
+          <span>Grand Total</span>
           <span className="tabular-nums">{centsToLabel(totals.grandTotalCents)}</span>
         </div>
       </div>
