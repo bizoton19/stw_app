@@ -650,7 +650,6 @@ export async function reopenReceipt(id: string, hostToken: string | null) {
 }
 
 export async function deleteReceipt(id: string, hostToken: string | null): Promise<void> {
-  const { deleteReceiptImage } = await import("./receipt-image");
   await withLock(id, async () => {
     const receipt = assertHost(id, hostToken);
     if (receipt.status !== "finalized") {
@@ -666,7 +665,16 @@ export async function deleteReceipt(id: string, hostToken: string | null): Promi
     state().listeners.delete(id);
     state().hostPushTokens.delete(id);
   });
-  await deleteReceiptImage(id);
+  // Local image files only — avoid importing receipt-image (pulls server-only).
+  try {
+    const { unlink } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const dir = path.join(process.cwd(), ".data", "receipt-images");
+    await unlink(path.join(dir, `${id}.bin`)).catch(() => undefined);
+    await unlink(path.join(dir, `${id}.mime`)).catch(() => undefined);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function getTotals(id: string) {
