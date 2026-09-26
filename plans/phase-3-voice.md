@@ -2,6 +2,8 @@
 
 Status: **design + technical plan — later.** Depends on [Phase 2 venue typeahead](./phase-2-venue.md) storing structured `venue` on the receipt. Do not build until Phase 2 is live and App Store / privacy copy already covers venue storage.
 
+**Related (broader dual-entry):** guests starting *before* a host link — type / voice / menu draft + reconcile — is analyzed in [guest-first-reconcile.md](./guest-first-reconcile.md). Phase 3 voice is one capture modality into that draft; this doc stays focused on listen → structure → suggest claims.
+
 Parent plan: [requirements.md](./requirements.md) §5 / §17.
 
 ---
