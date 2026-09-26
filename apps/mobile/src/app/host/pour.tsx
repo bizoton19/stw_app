@@ -43,8 +43,8 @@ export default function HostPour() {
     );
 
   function continueToFees() {
-    draft.setItems((prev) =>
-      prev.map((item) => {
+    draft.setItems((prev) => {
+      const next = prev.map((item) => {
         const mode = pourMode[item.id];
         if (!mode) return item;
         const pour: ItemPour =
@@ -52,8 +52,9 @@ export default function HostPour() {
             ? pourAsGlasses(pourGlasses[item.id] ?? DEFAULT_GLASSES_PER_BOTTLE)
             : pourAsPrinted();
         return { ...item, pour };
-      }),
-    );
+      });
+      return next;
+    });
     router.push("/host/fees");
   }
 

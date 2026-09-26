@@ -68,7 +68,9 @@ export function ClaimLineRow({
           <Text style={[styles.meta, styles.tabular]}>
             {centsToLabel(unit)} each
             {money.glasses
-              ? ` · ${money.capacity} glasses · from ${item.qty} bottle${item.qty === 1 ? "" : "s"}`
+              ? ` · ${money.capacity} glasses${
+                  item.qty > 1 ? ` (from ${item.qty} on check)` : ""
+                }`
               : ` · ${item.qty} on check`}
           </Text>
         </View>

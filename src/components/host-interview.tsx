@@ -199,17 +199,16 @@ export function HostInterview() {
   }
 
   function applyPourAndContinue() {
-    setItems((prev) =>
-      prev.map((item) => {
-        const mode = pourMode[item.id];
-        if (!mode) return item;
-        const pour: ItemPour =
-          mode === "glasses"
-            ? pourAsGlasses(pourGlasses[item.id] ?? DEFAULT_GLASSES_PER_BOTTLE)
-            : pourAsPrinted();
-        return { ...item, pour };
-      }),
-    );
+    const next = items.map((item) => {
+      const mode = pourMode[item.id];
+      if (!mode) return item;
+      const pour: ItemPour =
+        mode === "glasses"
+          ? pourAsGlasses(pourGlasses[item.id] ?? DEFAULT_GLASSES_PER_BOTTLE)
+          : pourAsPrinted();
+      return { ...item, pour };
+    });
+    setItems(next);
     go("fees");
   }
 

@@ -452,7 +452,9 @@ export function ClaimBoard({
                     <span className="mt-0.5 block text-[13px] tabular-nums text-muted-foreground">
                       {centsToLabel(money.unitCents)} each
                       {money.glasses
-                        ? ` · ${money.capacity} glasses · from ${item.qty} bottle${item.qty === 1 ? "" : "s"}`
+                        ? ` · ${money.capacity} glasses${
+                            item.qty > 1 ? ` (from ${item.qty} on check)` : ""
+                          }`
                         : ` · ${item.qty} on check`}
                     </span>
                   </span>
