@@ -98,7 +98,8 @@ export function SettleView({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
       <div className="-ml-2 flex h-11 items-center">
         <Link
           href={`/r/${receipt.id}`}
@@ -244,7 +245,7 @@ export function SettleView({
         <Banknote className="size-3.5" strokeWidth={2} aria-hidden />
         Everyone&apos;s share
       </p>
-      <ul className="min-h-0 flex-1 space-y-6 overflow-y-auto">
+      <ul className="space-y-6">
         {totals.people.length === 0 ? (
           <li className="py-8 text-center text-[14px] text-muted-foreground">
             Nobody has claimed yet.
@@ -283,8 +284,9 @@ export function SettleView({
           })
         )}
       </ul>
+      </div>
 
-      <div className="mt-4 space-y-1">
+      <div className="shrink-0 space-y-1 border-t border-border bg-background px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Link
           href={`/r/${receipt.id}`}
           className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium"

@@ -23,6 +23,8 @@ Track shippable UI polish. Mark items `[x]` when done in code.
 - [x] **UE-11 · Remaining = unit × left** — Live board / settle show **unit price × units left** and a running **still on the table** dollar total that moves down on claim and up on unclaim (SSE/refresh).
 - [x] **UE-12 · Race claim copy** — On concurrent claim loss (`409 not_enough_remaining`), show **“{item} has already been claimed by {user}”** (or partial-left variant) using `claimedBy` from the API.
 
+**Related plan (not UI checklist):** [bottle-glass-claiming.md](./bottle-glass-claiming.md) — hybrid host-confirmed bottle → glasses for wine packages.
+
 ---
 
 ## Notes
