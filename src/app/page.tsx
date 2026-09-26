@@ -13,7 +13,7 @@ export default function Home() {
         <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-2xl bg-border">
           <Image
             src="/table-ready.jpg"
-            alt="Friends sharing a restaurant table"
+            alt="Friends at a restaurant table staring at the check over wine and food"
             fill
             className="object-cover"
             sizes="(max-width: 430px) 100vw, 390px"

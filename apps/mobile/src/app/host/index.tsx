@@ -33,7 +33,7 @@ export default function HostReady() {
           <Image
             source={require("../../../assets/images/table-ready.jpg")}
             style={styles.heroImage}
-            accessibilityLabel="Friends sharing a restaurant table"
+            accessibilityLabel="Friends at a restaurant table staring at the check over wine and food"
           />
           <Text style={styles.lead}>
             One photo, a short review, then a link for the table.
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   hero: { alignItems: "center", paddingTop: 4, gap: 20 },
   heroImage: {
     width: "100%",
-    height: 168,
+    height: 200,
     borderRadius: 16,
     backgroundColor: colors.border,
   },
