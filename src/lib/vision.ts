@@ -100,7 +100,8 @@ export async function parseReceiptVision(image: {
   }
   const model = visionModel();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
+  /** Slightly under the outer Promise.race so AbortSignal fires first when possible. */
+  const timer = setTimeout(() => controller.abort(), 38_000);
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -155,6 +156,11 @@ export async function parseReceiptVision(image: {
     } catch {
       return validateParse(salvageJsonObject(text));
     }
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw Object.assign(new Error("vision_timeout"), { code: "timeout" });
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }

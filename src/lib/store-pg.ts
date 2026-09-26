@@ -262,7 +262,7 @@ export async function parseReceipt(
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
   });
-  const { result, parse } = await parseReceiptImage(image, opts);
+  const { result, parse } = await parseReceiptImage(image, { ...opts, receiptId: id });
   return withTransaction(async (client) => {
     const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
     if (receipt.status !== "draft") {

@@ -61,6 +61,8 @@ Useful fields on each HTTP line:
 
 Emit **one JSON line per vision attempt** to stdout (Railway deploy logs pick these up automatically).
 
+**Status:** shipped — filter deploy logs for `vision.parse`. Hard timeout: `VISION_TIMEOUT_MS` (40s) via Promise.race + AbortSignal.
+
 Suggested fields (no photo bytes, no PII beyond receipt id):
 
 ```json
@@ -78,18 +80,10 @@ Suggested fields (no photo bytes, no PII beyond receipt id):
 }
 ```
 
-Implementation sketch:
-
-1. Time `parseReceiptVision` in `src/lib/parse-receipt.ts` / `vision.ts` with `performance.now()` (or `Date.now()`).
-2. `console.log(JSON.stringify({ … }))` — Railway indexes JSON-ish deploy logs; filter with `vision.parse` in the log explorer.
-3. Optionally persist the same row on the receipt (`parseFlag` → richer `parseMeta` jsonb) or a `split_the_wine.parse_events` table so restarts don’t lose history.
+`reason` may also be `timeout` | `failed` | `empty` | `no_key` | `no_image`.
 
 **Filter in Railway:** deploy logs containing `vision.parse`  
-**CLI:** `railway logs --service api | rg vision.parse`
-
-**Done when:** each live OpenRouter call has a duration you can copy into a spreadsheet if needed.
-
-This is **telemetry**, not model eval.
+**CLI:** `railway logs --service api --deployment | rg vision.parse`
 
 ---
 

@@ -250,6 +250,8 @@ export function HostInterview() {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {
         setError("Couldn't read that photo. Add the lines on the next screens.");
+      } else if (parse?.reason === "timeout") {
+        setError("Reading timed out. Try a clearer photo, or add the lines yourself.");
       } else if (parse?.reason === "no_key") {
         setError("Scanning isn't configured here. Add the lines on the next screens.");
       } else if (parse?.reason === "no_image") {

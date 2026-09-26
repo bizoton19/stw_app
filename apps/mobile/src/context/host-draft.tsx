@@ -143,6 +143,8 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {
         setError("Couldn't read that photo. Add the lines on the next screens.");
+      } else if (parse?.reason === "timeout") {
+        setError("Reading timed out. Try a clearer photo, or add the lines yourself.");
       } else if (parse?.reason === "no_key") {
         setError("Scanning isn't configured here. Add the lines on the next screens.");
       } else if (parse?.reason === "no_image") {
@@ -158,7 +160,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         setError(`Server said ${code}. You can still enter the lines yourself.`);
       } else {
         setError(
-          "Couldn't reach the server. Check the API URL on the home screen, then enter the lines yourself.",
+          "Couldn't finish reading that photo (connection dropped). Try again, or add the lines yourself.",
         );
       }
     }

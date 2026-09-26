@@ -221,7 +221,7 @@ export async function parseReceipt(
     if (receipt.status !== "draft") {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
-    const { result, parse } = await parseReceiptImage(image, opts);
+    const { result, parse } = await parseReceiptImage(image, { ...opts, receiptId: id });
     receipt.restaurant = result.restaurant;
     receipt.venue = null;
     receipt.receiptDate = result.receiptDate ?? null;
