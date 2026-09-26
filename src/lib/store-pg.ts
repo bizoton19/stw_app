@@ -768,6 +768,40 @@ export async function reopenReceipt(id: string, hostToken: string | null) {
   });
 }
 
+export async function deleteReceipt(id: string, hostToken: string | null): Promise<void> {
+  await ensureSchema();
+  const { deleteObjectKey } = await import("./object-storage");
+  const storageKey = await withTransaction(async (client) => {
+    const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
+    if (receipt.status !== "finalized") {
+      throw Object.assign(new Error("not_finalized"), {
+        code: "conflict",
+        message: "Close the tab before deleting it.",
+      });
+    }
+    let storageKey: string | null = null;
+    try {
+      const { rows } = await client.query<{ storage_key: string | null }>(
+        `SELECT storage_key FROM ${DB_SCHEMA}.receipt_images WHERE receipt_id = $1`,
+        [id],
+      );
+      storageKey = rows[0]?.storage_key ?? null;
+    } catch {
+      /* receipt_images may not exist yet on older schemas */
+    }
+    await client.query(`DELETE FROM ${DB_SCHEMA}.receipts WHERE id = $1`, [id]);
+    listeners().listeners.delete(id);
+    return storageKey;
+  });
+  if (storageKey) {
+    try {
+      await deleteObjectKey(storageKey);
+    } catch {
+      /* blob best-effort — row is already gone */
+    }
+  }
+}
+
 export async function getTotals(id: string) {
   return computeTotals(await getPublicReceipt(id));
 }

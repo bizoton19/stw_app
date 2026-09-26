@@ -37,6 +37,7 @@ type ClaimFlow = {
   unclaim: (claimId: string) => Promise<void>;
   closeOut: () => Promise<boolean>;
   reopen: () => Promise<boolean>;
+  deleteClosed: () => Promise<boolean>;
 };
 
 const Ctx = createContext<ClaimFlow | null>(null);
@@ -266,6 +267,29 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     }
   }, [id, refresh]);
 
+  const deleteClosed = useCallback(async () => {
+    const token = getHostToken(id);
+    setBusy(true);
+    setMessage(null);
+    try {
+      await api(`/api/receipts/${id}`, { method: "DELETE", hostToken: token });
+      const { clearHostedReceipt } = await import("@/lib/host-tabs");
+      await clearHostedReceipt(id);
+      return true;
+    } catch (err) {
+      const e = err as ApiError;
+      setMessage(
+        e.message ||
+          (e.code === "conflict"
+            ? "Close the tab before deleting it."
+            : "Couldn't delete that tab."),
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, [id]);
+
   const value = useMemo(
     () => ({
       id,
@@ -288,12 +312,14 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       unclaim,
       closeOut,
       reopen,
+      deleteClosed,
     }),
     [
       activeQueued,
       busy,
       claimQueued,
       closeOut,
+      deleteClosed,
       error,
       guest,
       id,

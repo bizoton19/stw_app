@@ -1,6 +1,6 @@
 import { hostTokenOf, jsonError } from "@/lib/http";
 import { normalizeHostInfo } from "@/lib/host-pay";
-import { getPublicReceipt, saveReceipt } from "@/lib/store";
+import { deleteReceipt, getPublicReceipt, saveReceipt } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +55,20 @@ export async function PUT(
       receipt,
       claimUrl: `/r/${receipt.id}`,
     });
+  } catch (err) {
+    return jsonError(err);
+  }
+}
+
+/** Host-only. Deletes a closed (finalized) tab. */
+export async function DELETE(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await ctx.params;
+    await deleteReceipt(id, hostTokenOf(req));
+    return Response.json({ ok: true });
   } catch (err) {
     return jsonError(err);
   }

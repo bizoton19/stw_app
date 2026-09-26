@@ -134,6 +134,31 @@ export default function SettleScreen() {
           Reopen claiming
         </QuietButton>
       )}
+      {closed ? (
+        <QuietButton
+          disabled={flow.busy}
+          onPress={() => {
+            Alert.alert(
+              "Delete closed tab?",
+              "This permanently deletes the tab. Claim links will stop working.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => {
+                    void flow.deleteClosed().then((ok) => {
+                      if (ok) router.replace("/");
+                    });
+                  },
+                },
+              ],
+            );
+          }}
+        >
+          Delete tab
+        </QuietButton>
+      ) : null}
     </View>
   ) : (
     <View>

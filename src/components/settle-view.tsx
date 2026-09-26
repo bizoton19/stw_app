@@ -73,6 +73,35 @@ export function SettleView({
     }
   }
 
+  async function deleteClosed() {
+    if (
+      !window.confirm(
+        "Delete this closed tab permanently? Claim links will stop working.",
+      )
+    ) {
+      return;
+    }
+    const token = getHostToken(receipt.id);
+    setBusy(true);
+    try {
+      await api(`/api/receipts/${receipt.id}`, {
+        method: "DELETE",
+        hostToken: token,
+      });
+      router.replace("/");
+    } catch (err) {
+      const e = err as { message?: string; code?: string };
+      setMessage(
+        e.message ||
+          (e.code === "conflict"
+            ? "Close the tab before deleting it."
+            : "Couldn't delete that tab."),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function payWith(payment: HostPayment, amountCents: number) {
     if (!payMethodIsOpenable(payment.method)) return;
     const ok = window.confirm(
@@ -296,9 +325,14 @@ export function SettleView({
           Back to the claim board
         </Link>
         {isHost && closed ? (
-          <QuietButton disabled={busy} onClick={() => void reopen()}>
-            Reopen claiming
-          </QuietButton>
+          <>
+            <QuietButton disabled={busy} onClick={() => void reopen()}>
+              Reopen claiming
+            </QuietButton>
+            <QuietButton disabled={busy} onClick={() => void deleteClosed()}>
+              Delete tab
+            </QuietButton>
+          </>
         ) : null}
       </div>
     </div>

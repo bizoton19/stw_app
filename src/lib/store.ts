@@ -125,6 +125,11 @@ export async function reopenReceipt(id: string, hostToken: string | null) {
   return usingDatabase() ? pg.reopenReceipt(id, hostToken) : memory.reopenReceipt(id, hostToken);
 }
 
+/** Host-only. Closed (finalized) tabs only — close first, then delete. */
+export async function deleteReceipt(id: string, hostToken: string | null) {
+  return usingDatabase() ? pg.deleteReceipt(id, hostToken) : memory.deleteReceipt(id, hostToken);
+}
+
 export async function getTotals(id: string) {
   return usingDatabase() ? pg.getTotals(id) : memory.getTotals(id);
 }

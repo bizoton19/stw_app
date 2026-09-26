@@ -649,6 +649,26 @@ export async function reopenReceipt(id: string, hostToken: string | null) {
   });
 }
 
+export async function deleteReceipt(id: string, hostToken: string | null): Promise<void> {
+  const { deleteReceiptImage } = await import("./receipt-image");
+  await withLock(id, async () => {
+    const receipt = assertHost(id, hostToken);
+    if (receipt.status !== "finalized") {
+      throw Object.assign(new Error("not_finalized"), {
+        code: "conflict",
+        message: "Close the tab before deleting it.",
+      });
+    }
+    for (const claim of receipt.claims) {
+      state().claimsById.delete(claim.id);
+    }
+    state().receipts.delete(id);
+    state().listeners.delete(id);
+    state().hostPushTokens.delete(id);
+  });
+  await deleteReceiptImage(id);
+}
+
 export function getTotals(id: string) {
   return computeTotals(toPublic(requireReceipt(id)));
 }

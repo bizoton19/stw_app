@@ -20,6 +20,8 @@ import {
   refreshHostedReceiptStatuses,
   type HostedReceiptSummary,
 } from "@/lib/host-tabs";
+import { api } from "@/lib/api";
+import { getHostToken } from "@/lib/session";
 import { colors } from "@/lib/theme";
 
 function receiptDate(isoDay?: string, updatedAt?: string): string {
@@ -80,16 +82,55 @@ export default function HomeScreen() {
   }
 
   function confirmRemove(row: HostedReceiptSummary) {
+    const closed = row.status === "finalized";
+    if (!closed) {
+      Alert.alert(
+        "Remove from this phone?",
+        `${row.restaurant || "This tab"} leaves your list. Close it first if you want to delete it for everyone.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => {
+              void clearHostedReceipt(row.id).then(refresh);
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     Alert.alert(
-      "Remove from this phone?",
-      `${row.restaurant || "This tab"} leaves your list. The claim link still works for anyone who has it.`,
+      "Delete closed tab?",
+      `${row.restaurant || "This tab"} will be permanently deleted. Claim links will stop working.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Remove",
+          text: "Delete",
           style: "destructive",
           onPress: () => {
-            void clearHostedReceipt(row.id).then(refresh);
+            void (async () => {
+              try {
+                const hostToken = getHostToken(row.id);
+                if (!hostToken) throw new Error("Missing host token");
+                await api(`/api/receipts/${row.id}`, {
+                  method: "DELETE",
+                  hostToken,
+                });
+              } catch (err) {
+                const e = err as { message?: string; code?: string };
+                if (e.code !== "not_found") {
+                  Alert.alert(
+                    "Couldn't delete",
+                    e.message || "Close the tab, then try again.",
+                  );
+                  return;
+                }
+              }
+              await clearHostedReceipt(row.id);
+              refresh();
+            })();
           },
         },
       ],
@@ -175,12 +216,20 @@ export default function HomeScreen() {
                   </PressScale>
                   <PressScale
                     haptic="select"
-                    accessibilityLabel="Remove tab from this phone"
+                    accessibilityLabel={
+                      active.status === "finalized"
+                        ? "Delete closed tab"
+                        : "Remove tab from this phone"
+                    }
                     onPress={() => confirmRemove(active)}
                     style={styles.heroRemove}
                   >
                     <Trash2 size={16} color={colors.inkSoft} strokeWidth={2} />
-                    <Text style={styles.heroRemoveText}>Remove from phone</Text>
+                    <Text style={styles.heroRemoveText}>
+                      {active.status === "finalized"
+                        ? "Delete closed tab"
+                        : "Remove from phone"}
+                    </Text>
                   </PressScale>
                 </View>
               ) : (
