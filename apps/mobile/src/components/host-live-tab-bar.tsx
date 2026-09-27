@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { DoorOpen, Home, RotateCcw, Utensils } from "lucide-react-native";
+import { DoorOpen, Home, RotateCcw, Trash2, Utensils } from "lucide-react-native";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
@@ -7,7 +7,7 @@ type Tab = {
   key: string;
   label: string;
   accessibilityLabel?: string;
-  icon: "home" | "claims" | "close" | "reopen";
+  icon: "home" | "claims" | "close" | "reopen" | "delete";
   onPress: () => void;
   disabled?: boolean;
   danger?: boolean;
@@ -23,6 +23,7 @@ export function HostLiveTabBar({
   busy,
   onClose,
   onReopen,
+  onDelete,
 }: {
   onHome: () => void;
   onClaims: () => void;
@@ -30,6 +31,8 @@ export function HostLiveTabBar({
   busy?: boolean;
   onClose: () => void;
   onReopen: () => void;
+  /** Shown next to Reopen when the tab is closed. */
+  onDelete?: () => void;
 }) {
   const tabs: Tab[] = [
     {
@@ -45,25 +48,39 @@ export function HostLiveTabBar({
       icon: "claims",
       onPress: onClaims,
     },
-    closed
-      ? {
-          key: "reopen",
-          label: "Reopen",
-          accessibilityLabel: "Reopen claiming",
-          icon: "reopen",
-          onPress: onReopen,
-          disabled: busy,
-        }
-      : {
-          key: "close",
-          label: "Close",
-          accessibilityLabel: "Close claiming — leftovers on me",
-          icon: "close",
-          onPress: onClose,
-          disabled: busy,
-          danger: true,
-        },
   ];
+
+  if (closed) {
+    tabs.push({
+      key: "reopen",
+      label: "Reopen",
+      accessibilityLabel: "Reopen claiming",
+      icon: "reopen",
+      onPress: onReopen,
+      disabled: busy,
+    });
+    if (onDelete) {
+      tabs.push({
+        key: "delete",
+        label: "Delete",
+        accessibilityLabel: "Delete closed tab",
+        icon: "delete",
+        onPress: onDelete,
+        disabled: busy,
+        danger: true,
+      });
+    }
+  } else {
+    tabs.push({
+      key: "close",
+      label: "Close",
+      accessibilityLabel: "Close claiming — leftovers on me",
+      icon: "close",
+      onPress: onClose,
+      disabled: busy,
+      danger: true,
+    });
+  }
 
   return (
     <View style={styles.bar} accessibilityRole="tablist">
@@ -103,6 +120,7 @@ function TabIcon({
   if (name === "home") return <Home size={size} color={color} strokeWidth={stroke} />;
   if (name === "claims") return <Utensils size={size} color={color} strokeWidth={stroke} />;
   if (name === "reopen") return <RotateCcw size={size} color={color} strokeWidth={stroke} />;
+  if (name === "delete") return <Trash2 size={size} color={color} strokeWidth={stroke} />;
   return <DoorOpen size={size} color={color} strokeWidth={stroke} />;
 }
 

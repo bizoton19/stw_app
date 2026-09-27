@@ -3,7 +3,7 @@ import { Alert, ScrollView, Share, StyleSheet, Switch, Text, View } from "react-
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Banknote } from "lucide-react-native";
-import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { IconActionButton } from "@/components/icon-action-button";
@@ -117,41 +117,32 @@ export default function SettleScreen() {
   }
 
   const footer = flow.isHost ? (
-    <View>
-      <HostLiveTabBar
-        onHome={goHostDesk}
-        onClaims={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
-        closed={closed}
-        busy={flow.busy}
-        onClose={() => void flow.closeOut()}
-        onReopen={() => void flow.reopen()}
-      />
-      {closed ? (
-        <QuietButton
-          disabled={flow.busy}
-          onPress={() => {
-            Alert.alert(
-              "Delete closed tab?",
-              "This permanently deletes the tab. Claim links will stop working.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => {
-                    void flow.deleteClosed().then((ok) => {
-                      if (ok) goHostDesk();
-                    });
-                  },
-                },
-              ],
-            );
-          }}
-        >
-          Delete tab
-        </QuietButton>
-      ) : null}
-    </View>
+    <HostLiveTabBar
+      onHome={goHostDesk}
+      onClaims={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
+      closed={closed}
+      busy={flow.busy}
+      onClose={() => void flow.closeOut()}
+      onReopen={() => void flow.reopen()}
+      onDelete={() => {
+        Alert.alert(
+          "Delete closed tab?",
+          "This permanently deletes the tab. Claim links will stop working.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => {
+                void flow.deleteClosed().then((ok) => {
+                  if (ok) goHostDesk();
+                });
+              },
+            },
+          ],
+        );
+      }}
+    />
   ) : (
     <View>
       <PrimaryButton
