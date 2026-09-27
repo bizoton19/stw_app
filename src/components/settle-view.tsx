@@ -331,6 +331,27 @@ export function SettleView({
           })
         )}
       </ul>
+
+      {isHost && payments.length > 0 ? (
+        <div className="mt-6 mb-2">
+          <p className="mb-2.5 text-[13px] font-semibold text-ink-soft">Your pay handles</p>
+          <ul className="space-y-2.5">
+            {payments.map((payment) => (
+              <li key={payment.method} className="flex items-center gap-3">
+                <PayMethodIcon method={payment.method} size={36} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold">
+                    {PAY_METHOD_META[payment.method].label}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
+                    {payment.handle}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       </div>
 
       <div className="shrink-0 space-y-1 border-t border-border bg-background px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">

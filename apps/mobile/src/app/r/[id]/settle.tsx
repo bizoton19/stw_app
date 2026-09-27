@@ -431,9 +431,17 @@ export default function SettleScreen() {
           <View style={styles.payHostNote}>
             <Text style={styles.peopleTitle}>Your pay handles</Text>
             {payments.map((payment) => (
-              <Text key={payment.method} style={styles.muted}>
-                {PAY_METHOD_META[payment.method].label} · {payment.handle}
-              </Text>
+              <View key={payment.method} style={styles.payHandleRow}>
+                <PayMethodIcon method={payment.method} size={36} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.payHandleLabel}>
+                    {PAY_METHOD_META[payment.method].label}
+                  </Text>
+                  <Text style={styles.payHandleValue} numberOfLines={1}>
+                    {payment.handle}
+                  </Text>
+                </View>
+              </View>
             ))}
           </View>
         ) : null}
@@ -639,5 +647,21 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 15, fontWeight: "700", color: colors.ink },
   amount: { fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"], color: colors.ink },
-  payHostNote: { marginTop: 8, marginBottom: 16, gap: 4 },
+  payHostNote: { marginTop: 8, marginBottom: 16, gap: 10 },
+  payHandleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  payHandleLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.ink,
+  },
+  payHandleValue: {
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: "500",
+    color: colors.inkSoft,
+  },
 });
