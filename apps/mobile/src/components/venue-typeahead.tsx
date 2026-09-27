@@ -11,7 +11,7 @@ import {
 import * as Location from "expo-location";
 import { Field } from "@/components/field";
 import { VenueKindIcon } from "@/components/venue-kind-icon";
-import { getApiUrl } from "@/lib/config";
+import { placePinColor, staticMapUri } from "@/lib/place-pin";
 import {
   newSession,
   resolvePlaceDetails,
@@ -19,6 +19,7 @@ import {
   typedVenue,
   type PlacePrediction,
 } from "@/lib/places";
+import { venueLocationKey } from "@/lib/venue-day";
 import { colors } from "@/lib/theme";
 import type { ReceiptVenue } from "@/lib/types";
 
@@ -42,16 +43,6 @@ export function formatReceiptDateLabel(iso: string | null | undefined): string |
     year: "numeric",
     timeZone: "UTC",
   });
-}
-
-function staticMapUri(lat: number, lng: number, w: number, h: number): string {
-  const params = new URLSearchParams({
-    lat: String(lat),
-    lng: String(lng),
-    w: String(w),
-    h: String(h),
-  });
-  return `${getApiUrl()}/api/places/static-map?${params}`;
 }
 
 function isPinned(venue: ReceiptVenue | null | undefined): boolean {
@@ -251,7 +242,13 @@ export function VenueTypeahead({
             <View style={[styles.mapWrap, { minHeight: mapH }]}>
               <Image
                 source={{
-                  uri: staticMapUri(venue!.lat!, venue!.lng!, mapW, mapH),
+                  uri: staticMapUri({
+                    lat: venue!.lat!,
+                    lng: venue!.lng!,
+                    w: mapW,
+                    h: mapH,
+                    color: placePinColor(venueLocationKey(venue, venue?.name)),
+                  }),
                 }}
                 style={[styles.map, { height: mapH }]}
                 accessibilityLabel={`Map of ${venue!.name}`}

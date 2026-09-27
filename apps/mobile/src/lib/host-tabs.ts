@@ -11,11 +11,14 @@ export type HostedReceiptSummary = {
   restaurant: string;
   claimUrl: string;
   updatedAt: string;
-  /** Places key used to block duplicate tabs same day. */
+  /** Places key used to block duplicate tabs same day + pin color. */
   placeKey?: string;
   receiptDay?: string;
   /** open | finalized | draft — from publish / close / reopen / API refresh. */
   status?: ReceiptStatus;
+  /** For static-map thumbs on the host desk. */
+  venueLat?: number | null;
+  venueLng?: number | null;
 };
 
 export function hostedStatusLabel(status?: ReceiptStatus | "draft"): "Open" | "Closed" | "Draft" {
@@ -88,15 +91,23 @@ export async function listHostedReceipts(): Promise<HostedReceiptSummary[]> {
 export async function refreshHostedReceiptStatuses(): Promise<HostedReceiptSummary[]> {
   const list = await listHostedReceipts();
   if (list.length === 0) return [];
+  const { venueLocationKey } = await import("./venue-day");
   const next = await Promise.all(
     list.map(async (row) => {
       try {
         const receipt = await api<PublicReceipt>(`/api/receipts/${row.id}`);
+        const placeKey =
+          row.placeKey ||
+          venueLocationKey(receipt.venue, receipt.restaurant) ||
+          undefined;
         return {
           ...row,
           restaurant: receipt.restaurant || row.restaurant,
           status: receipt.status,
           receiptDay: receipt.receiptDate ?? row.receiptDay,
+          placeKey,
+          venueLat: receipt.venue?.lat ?? row.venueLat ?? null,
+          venueLng: receipt.venue?.lng ?? row.venueLng ?? null,
         } satisfies HostedReceiptSummary;
       } catch {
         return row;

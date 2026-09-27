@@ -4,6 +4,12 @@ import { jsonError } from "@/lib/http";
 export const dynamic = "force-dynamic";
 
 const MAX = 1280;
+const DEFAULT_PIN = "6E2E35"; // merlot
+
+function pinColor(raw: string | null): string {
+  const hex = (raw || DEFAULT_PIN).replace(/^#/, "").toUpperCase();
+  return /^[0-9A-F]{6}$/.test(hex) ? hex : DEFAULT_PIN;
+}
 
 export async function GET(req: Request) {
   try {
@@ -21,10 +27,12 @@ export async function GET(req: Request) {
     let h = Math.round(Number(url.searchParams.get("h") || 220));
     w = Math.min(MAX, Math.max(120, w));
     h = Math.min(MAX, Math.max(120, h));
+    const z = Math.min(18, Math.max(10, Math.round(Number(url.searchParams.get("z") || 14))));
+    const color = pinColor(url.searchParams.get("color"));
 
-    // Light style + merlot pin — matches paper / merlot product chrome.
-    const overlay = `pin-s+6E2E35(${lng},${lat})`;
-    const path = `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${overlay}/${lng},${lat},14,0/${w}x${h}@2x`;
+    // Light style + colored pin — color is stable per place for the host desk.
+    const overlay = `pin-s+${color}(${lng},${lat})`;
+    const path = `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${overlay}/${lng},${lat},${z},0/${w}x${h}@2x`;
     const mapUrl = `${path}?access_token=${encodeURIComponent(token)}`;
 
     const res = await fetch(mapUrl, { cache: "force-cache" });

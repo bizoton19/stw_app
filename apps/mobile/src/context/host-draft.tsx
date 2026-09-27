@@ -379,6 +379,8 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
               placeKey: placeKey ?? undefined,
               receiptDay: day,
               status: "open",
+              venueLat: venueToSave.lat ?? null,
+              venueLng: venueToSave.lng ?? null,
             });
           }
         }
@@ -409,13 +411,15 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       placeKey: placeKey ?? undefined,
       receiptDay: day,
       status: "open",
+      venueLat: venueToSave.lat ?? null,
+      venueLng: venueToSave.lng ?? null,
     });
     // Keep interview fields in memory for /host/share, but stop caching — otherwise
     // the autosave effect rewrites the draft and Home shows Draft + Open.
     skipPersist.current = true;
     setPublished(true);
     resumePathRef.current = null;
-    await clearHostDraft();
+    await clearHostDraftForReceipt(receiptId);
   }, [fees, items, note, payments, receiptDate, receiptId, restaurant, venue]);
 
   const hasSavedProgress =

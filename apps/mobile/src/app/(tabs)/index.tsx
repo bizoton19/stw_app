@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
 import { AppShell, PrimaryButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
+import { VenueMapThumb } from "@/components/venue-map-thumb";
 import {
   clearHostDraft,
   draftHasProgress,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/host-tabs";
 import { api } from "@/lib/api";
 import { getHostToken } from "@/lib/session";
+import { venueLocationKey } from "@/lib/venue-day";
 import { colors } from "@/lib/theme";
 
 function receiptDate(isoDay?: string, updatedAt?: string): string {
@@ -210,13 +212,24 @@ export default function HomeScreen() {
                         </Text>
                       </View>
                     </View>
-                    <Text style={styles.heroDate}>
-                      {receiptDate(draft.receiptDate ?? undefined, draft.updatedAt)}
-                    </Text>
-                    <Text style={styles.heroPlace} numberOfLines={2}>
-                      {draftPlaceLabel(draft)}
-                    </Text>
-                    <Text style={styles.heroCta}>Tap to continue where you left off</Text>
+                    <View style={styles.heroBody}>
+                      <VenueMapThumb
+                        lat={draft.venue?.lat}
+                        lng={draft.venue?.lng}
+                        placeKey={venueLocationKey(draft.venue, draft.restaurant)}
+                        label={draftPlaceLabel(draft)}
+                        size={64}
+                      />
+                      <View style={styles.heroTextCol}>
+                        <Text style={styles.heroDate}>
+                          {receiptDate(draft.receiptDate ?? undefined, draft.updatedAt)}
+                        </Text>
+                        <Text style={styles.heroPlace} numberOfLines={2}>
+                          {draftPlaceLabel(draft)}
+                        </Text>
+                        <Text style={styles.heroCta}>Tap to continue where you left off</Text>
+                      </View>
+                    </View>
                   </PressScale>
                   <PressScale
                     haptic="select"
@@ -265,15 +278,26 @@ export default function HomeScreen() {
                         </Text>
                       </View>
                     </View>
-                    <Text style={styles.heroDate}>
-                      {receiptDate(active.receiptDay, active.updatedAt)}
-                    </Text>
-                    <Text style={styles.heroPlace} numberOfLines={2}>
-                      {active.restaurant || "Open check"}
-                    </Text>
-                    <Text style={styles.heroCta}>
-                      Tap for who owes what · claimed & remaining
-                    </Text>
+                    <View style={styles.heroBody}>
+                      <VenueMapThumb
+                        lat={active.venueLat}
+                        lng={active.venueLng}
+                        placeKey={active.placeKey}
+                        label={active.restaurant || "Open check"}
+                        size={64}
+                      />
+                      <View style={styles.heroTextCol}>
+                        <Text style={styles.heroDate}>
+                          {receiptDate(active.receiptDay, active.updatedAt)}
+                        </Text>
+                        <Text style={styles.heroPlace} numberOfLines={2}>
+                          {active.restaurant || "Open check"}
+                        </Text>
+                        <Text style={styles.heroCta}>
+                          Tap for who owes what · claimed & remaining
+                        </Text>
+                      </View>
+                    </View>
                   </PressScale>
                   <PressScale
                     haptic="select"
@@ -318,6 +342,13 @@ export default function HomeScreen() {
                   style={styles.rowMain}
                   accessibilityLabel={`${label} · ${receiptDate(item.receiptDay, item.updatedAt)}`}
                 >
+                  <VenueMapThumb
+                    lat={item.venueLat}
+                    lng={item.venueLng}
+                    placeKey={item.placeKey}
+                    label={item.restaurant || item.id}
+                    size={44}
+                  />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <View style={styles.rowTitleRow}>
                       <Text style={styles.rowDate}>
@@ -413,16 +444,22 @@ const styles = StyleSheet.create({
   },
   heroRemoveText: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   heroEyebrow: { fontSize: 12, fontWeight: "700", color: colors.merlot },
+  heroBody: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  heroTextCol: { flex: 1, minWidth: 0 },
   heroDate: {
-    marginTop: 10,
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "800",
     color: colors.ink,
     letterSpacing: -0.7,
-    lineHeight: 40,
+    lineHeight: 34,
   },
   heroPlace: {
-    marginTop: 6,
+    marginTop: 4,
     fontSize: 16,
     fontWeight: "600",
     color: colors.inkSoft,
@@ -460,7 +497,7 @@ const styles = StyleSheet.create({
   statusPillText: { fontSize: 12, fontWeight: "700", color: colors.select },
   statusPillTextClosed: { color: colors.inkSoft },
   statusPillTextDraft: { color: colors.merlot },
-  heroCta: { marginTop: 14, fontSize: 13, fontWeight: "600", color: colors.inkSoft },
+  heroCta: { marginTop: 8, fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   emptyCard: {
     padding: 18,
     borderRadius: 16,
