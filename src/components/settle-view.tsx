@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Banknote, ChevronLeft, HandCoins } from "lucide-react";
+import { Banknote, ChevronLeft } from "lucide-react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
+import { HostSupportTip } from "@/components/host-support-tip";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { hostPayments } from "@/lib/host-pay";
@@ -349,19 +350,7 @@ export function SettleView({
             </QuietButton>
           </>
         ) : null}
-        {isHost ? (
-          <p className="pt-1 text-center text-[13px] text-muted-foreground">
-            <a
-              href="https://www.splitthewine.app/support"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-            >
-              <HandCoins className="size-3.5" strokeWidth={2.25} aria-hidden />
-              Support Split the Wine
-            </a>
-          </p>
-        ) : null}
+        {isHost ? <HostSupportTip /> : null}
       </div>
     </div>
   );

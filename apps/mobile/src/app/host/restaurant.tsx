@@ -35,6 +35,7 @@ export default function HostRestaurant() {
             </PrimaryButton>
           </View>
         }
+        supportTip
       >
         {draft.error ? (
           <Text style={{ color: colors.danger, fontSize: 15, marginBottom: 16 }}>{draft.error}</Text>

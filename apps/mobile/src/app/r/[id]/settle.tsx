@@ -6,7 +6,6 @@ import { Banknote } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
-import { HostSupportTip } from "@/components/host-support-tip";
 import { IconActionButton } from "@/components/icon-action-button";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
 import { PayMethodIcon } from "@/components/pay-method-icon";
@@ -151,7 +150,6 @@ export default function SettleScreen() {
           Delete tab
         </QuietButton>
       ) : null}
-      <HostSupportTip />
     </View>
   ) : (
     <View>
@@ -180,6 +178,7 @@ export default function SettleScreen() {
                 })
         }
         footer={footer}
+        supportTip={flow.isHost}
       >
         <Text style={styles.lead}>
           {flow.isHost

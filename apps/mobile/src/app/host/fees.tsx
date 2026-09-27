@@ -41,6 +41,7 @@ export default function HostFees() {
             </PrimaryButton>
           </View>
         }
+        supportTip
       >
         <Text style={styles.lead}>{t("fees.lead")}</Text>
         {draft.fees.map((fee) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ChevronDown, Copy, HandCoins, ImageIcon, QrCode, Share2, Trash2 } from "lucide-react";
+import { Camera, ChevronDown, Copy, ImageIcon, QrCode, Share2, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
@@ -1161,17 +1161,6 @@ export function HostInterview() {
           Open the live board
         </ContinueButton>
         <QuietButton onClick={() => router.push("/")}>Done for now</QuietButton>
-        <p className="pt-2 text-center text-[13px] text-muted-foreground">
-          <a
-            href="https://www.splitthewine.app/support"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-          >
-            <HandCoins className="size-3.5" strokeWidth={2.25} aria-hidden />
-            Support Split the Wine
-          </a>
-        </p>
       </div>
     );
   }
@@ -1198,6 +1187,7 @@ export function HostInterview() {
       direction={direction}
       stepKey={step}
       footer={footer}
+      supportTip
     >
       {body}
     </InterviewChrome>

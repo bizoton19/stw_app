@@ -39,6 +39,7 @@ export default function HostParsing() {
             <PrimaryButton disabled>Reading the receipt</PrimaryButton>
           </View>
         }
+        supportTip
       >
         <View style={styles.center}>
           <WineMarkBusy size={72} />

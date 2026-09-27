@@ -379,6 +379,7 @@ export default function HostItems() {
             ) : null}
           </View>
         }
+        supportTip
       >
         {hint ? (
           <Pressable onPress={stopEditing}>

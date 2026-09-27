@@ -24,6 +24,7 @@ export default function HostReady() {
             Yes — start with the receipt
           </PrimaryButton>
         }
+        supportTip
       >
         <View style={styles.hero}>
           <View style={styles.heroFrame}>

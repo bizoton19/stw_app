@@ -82,6 +82,7 @@ export default function HostPour() {
             Continue
           </PrimaryButton>
         }
+        supportTip
       >
         <Text style={styles.lead}>
           {anyResolve

@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
-import { HostSupportTip } from "@/components/host-support-tip";
 import { IconActionButton } from "@/components/icon-action-button";
 import { useHostDraft } from "@/context/host-draft";
 import { registerHostClaimPush } from "@/lib/host-push";
@@ -58,9 +57,9 @@ export default function HostShare() {
               Open the live board
             </PrimaryButton>
             <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
-            <HostSupportTip />
           </View>
         }
+        supportTip
       >
         <Text style={styles.place}>{place}</Text>
         {draft.venue?.formattedAddress ? (

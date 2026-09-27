@@ -131,6 +131,7 @@ export default function HostCapture() {
             </PrimaryButton>
           </View>
         }
+        supportTip
       >
         <View style={[styles.list, !hasImage && styles.listEmpty]}>
           <ChoiceRow

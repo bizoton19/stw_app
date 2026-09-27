@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
 import { colors, type } from "@/lib/theme";
+import { HostSupportTip } from "./host-support-tip";
 import { PressScale } from "./press-scale";
 import { WineMark } from "./wine-mark";
 
@@ -63,6 +64,8 @@ export function InterviewChrome({
    * (use FlatList inside). Default ScrollView wraps kicker+title+children.
    */
   scroll = true,
+  /** Quiet Support Split the Wine link under the step footer (host interview). */
+  supportTip = false,
 }: {
   step: number;
   total: number;
@@ -75,6 +78,7 @@ export function InterviewChrome({
   dense?: boolean;
   sparse?: boolean;
   scroll?: boolean;
+  supportTip?: boolean;
 }) {
   const progress = (step / total) * 100;
   const heading = (
@@ -167,6 +171,7 @@ export function InterviewChrome({
       {body}
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
         {footer}
+        {supportTip ? <HostSupportTip /> : null}
       </SafeAreaView>
     </>
   );

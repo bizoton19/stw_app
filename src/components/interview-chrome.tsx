@@ -2,6 +2,7 @@
 
 import { ChevronLeft } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { HostSupportTip } from "@/components/host-support-tip";
 import { cn } from "@/lib/utils";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -16,6 +17,7 @@ export function InterviewChrome({
   stepKey,
   children,
   footer,
+  supportTip = false,
 }: {
   step: number;
   total: number;
@@ -26,6 +28,7 @@ export function InterviewChrome({
   stepKey: string;
   children: React.ReactNode;
   footer: React.ReactNode;
+  supportTip?: boolean;
 }) {
   const reduce = useReducedMotion();
   const progress = (step / total) * 100;
@@ -92,6 +95,7 @@ export function InterviewChrome({
 
       <div className="shrink-0 border-t border-border bg-background px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {footer}
+        {supportTip ? <HostSupportTip /> : null}
       </div>
     </div>
   );

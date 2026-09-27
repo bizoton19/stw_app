@@ -100,6 +100,7 @@ export default function HostPay() {
               <QuietButton onPress={() => setConfirming(false)}>Edit</QuietButton>
             </View>
           }
+          supportTip
         >
           {error ? (
             <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
@@ -155,6 +156,7 @@ export default function HostPay() {
             {handleRows.length === 0 ? "Select a payment method" : "Review payment info"}
           </PrimaryButton>
         }
+        supportTip
       >
         {error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
