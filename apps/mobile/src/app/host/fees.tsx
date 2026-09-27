@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import { Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
@@ -24,6 +25,7 @@ export default function HostFees() {
         kicker={t("fees.kicker")}
         title={t("fees.title")}
         onBack={() => router.back()}
+        onHome={goHostDesk}
         keyboard
         dense
         footer={

@@ -1,5 +1,6 @@
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import { useMemo, useState } from "react";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { Field } from "@/components/field";
@@ -93,6 +94,7 @@ export default function HostPay() {
           kicker="Getting paid"
           title="Look right?"
           onBack={() => setConfirming(false)}
+          onHome={goHostDesk}
           footer={
             <View>
               <FooterHint>A quick glance now beats chasing people later.</FooterHint>
@@ -152,6 +154,7 @@ export default function HostPay() {
         kicker="Getting paid"
         title="How should people pay you?"
         onBack={() => router.back()}
+        onHome={goHostDesk}
         keyboard
         footer={
           <PrimaryButton onPress={goConfirm} disabled={draft.payments.length === 0}>

@@ -93,6 +93,22 @@ Share step: primary **Done — go Home**, back chevron → Home, live board is s
 
 ---
 
+## BUG-5 — Step 4 auto-locks place (no dropdown / no map) after draft hydrate race
+
+### Severity
+High — host cannot confirm Places; Continue may look stuck or wrong pin.
+
+### Root cause
+AsyncStorage draft hydrate could finish **after** Start fresh / parse and restore a stale Places pin. Locked card showed with no working map and no suggestion list.
+
+### Fix
+- Draft epoch: clear/parse invalidates in-flight hydrate.
+- Parse always clears `venue` (OCR name only seeds typeahead).
+- Map load failure unlocks so suggestions return.
+- Home icon on every host interview step (`onHome` → desk).
+
+---
+
 ## Notes
 - Redeploy **API** so production matches open-tab delete (if an older deploy still rejected non-finalized delete).
 - Expo Go picks up mobile changes on reload; no store rebuild required for friend-test.

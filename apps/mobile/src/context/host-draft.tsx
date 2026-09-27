@@ -99,14 +99,17 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const resumePathRef = useRef<string | null>(null);
   const skipPersist = useRef(true);
+  /** Bumped on clear / parse so a slow AsyncStorage hydrate cannot revive a stale pin. */
+  const draftEpochRef = useRef(0);
   /** After a successful publish, keep in-memory fields for the share screen but never re-cache. */
   const [published, setPublished] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    const epochAtStart = draftEpochRef.current;
     void (async () => {
       const saved = await loadHostDraft();
-      if (cancelled) return;
+      if (cancelled || epochAtStart !== draftEpochRef.current) return;
       if (saved && draftHasProgress(saved)) {
         setReceiptId(saved.receiptId);
         setRestaurant(saved.restaurant);
@@ -122,9 +125,11 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
           setImage({ uri: saved.imageUri, mimeType: "image/jpeg", fileName: "receipt.jpg" });
         }
       }
+      if (cancelled || epochAtStart !== draftEpochRef.current) return;
       setReady(true);
       // Avoid writing back the empty initial state before hydrate finishes.
       requestAnimationFrame(() => {
+        if (epochAtStart !== draftEpochRef.current) return;
         skipPersist.current = false;
       });
     })();
@@ -179,6 +184,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   const clearSavedDraft = useCallback(async () => {
+    draftEpochRef.current += 1;
     skipPersist.current = true;
     setPublished(false);
     await clearHostDraft();
@@ -240,7 +246,9 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const applyReceipt = useCallback((receipt: PublicReceipt) => {
     setRestaurant(receipt.restaurant);
-    setVenue(receipt.venue ?? null);
+    // Always leave place unconfirmed — host must tap a Places row on step 4.
+    // (API also clears venue on parse; this blocks stale draft hydrate races.)
+    setVenue(null);
     setReceiptDate(receipt.receiptDate ?? null);
     setItems(toDraftItems(receipt.items));
     setFees(toDraftFees(receipt.fees));
@@ -255,6 +263,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   }, [receiptId]);
 
   const runParse = useCallback(async () => {
+    draftEpochRef.current += 1;
     setError(null);
     try {
       const id = await ensureDraft();
@@ -264,6 +273,8 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         hostToken: getHostToken(id),
       });
       applyReceipt(receipt);
+      // Belt-and-suspenders if a late hydrate tried to restore an old pin.
+      setVenue(null);
       if (parse?.reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {

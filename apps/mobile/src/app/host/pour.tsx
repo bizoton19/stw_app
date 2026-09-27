@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
@@ -77,6 +78,7 @@ export default function HostPour() {
         kicker={anyResolve ? "Quick check" : "Bottles"}
         title={anyResolve ? "Could this be a shared bottle?" : "How should people claim these?"}
         onBack={() => router.back()}
+        onHome={goHostDesk}
         footer={
           <PrimaryButton disabled={!pourOk} onPress={continueToFees}>
             Continue

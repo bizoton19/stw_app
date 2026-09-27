@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Alert, Image, Platform, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import { useShareIntentContext } from "expo-share-intent";
@@ -115,6 +116,7 @@ export default function HostCapture() {
         kicker="The receipt"
         title="How should we add the tab?"
         onBack={() => router.back()}
+        onHome={goHostDesk}
         sparse={!hasImage}
         footer={
           <View>

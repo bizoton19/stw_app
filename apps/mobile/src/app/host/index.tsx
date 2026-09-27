@@ -1,5 +1,6 @@
 import { Alert, Image, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { useHostDraft, resumePathForDraft } from "@/context/host-draft";
 import { loadHostDraft } from "@/lib/host-draft-store";
@@ -66,6 +67,7 @@ export default function HostReady() {
         total={9}
         title="Ready to split this check?"
         onBack={() => router.back()}
+        onHome={goHostDesk}
         sparse
         footer={
           <View>

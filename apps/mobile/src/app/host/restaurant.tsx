@@ -1,15 +1,21 @@
 import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { useHostDraft } from "@/context/host-draft";
-import { isValidatedVenue } from "@/lib/venue-day";
 import { colors } from "@/lib/theme";
 
 export default function HostRestaurant() {
   const router = useRouter();
   const draft = useHostDraft();
-  const placeLocked = isValidatedVenue(draft.venue);
+  // Require a Places pin with coords (map) — never continue on name/placeId alone.
+  const placeLocked =
+    draft.venue?.source === "places" &&
+    typeof draft.venue.lat === "number" &&
+    typeof draft.venue.lng === "number" &&
+    Number.isFinite(draft.venue.lat) &&
+    Number.isFinite(draft.venue.lng);
 
   return (
     <AppShell>
@@ -19,6 +25,7 @@ export default function HostRestaurant() {
         kicker="The place"
         title="Confirm the place on the check"
         onBack={() => router.back()}
+        onHome={goHostDesk}
         keyboard
         sparse={placeLocked}
         footer={

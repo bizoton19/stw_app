@@ -45,6 +45,7 @@ export default function HostShare() {
         title="Send this. They claim what they consumed."
         sparse
         onBack={goHostDesk}
+        onHome={goHostDesk}
         footer={
           <View>
             <FooterHint>Anyone with the link can claim — no account needed.</FooterHint>

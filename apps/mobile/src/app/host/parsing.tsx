@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { WineMarkBusy } from "@/components/wine-mark";
 import { useHostDraft } from "@/context/host-draft";
@@ -32,6 +33,7 @@ export default function HostParsing() {
         kicker="Reading"
         title="Looking over every pour…"
         onBack={() => router.back()}
+        onHome={goHostDesk}
         sparse
         footer={
           <View>

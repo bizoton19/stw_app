@@ -149,6 +149,18 @@ export function VenueTypeahead({
     [coords],
   );
 
+  // If a stale pin has coords but the map never loads, unlock so the host can pick again.
+  useEffect(() => {
+    if (!isPinned(venue) || !mapFailed) return;
+    lockedRef.current = false;
+    seededSearchRef.current = true;
+    const name = venue?.name?.trim() || value.trim();
+    onChangeVenue(null);
+    if (name) onChangeName(name);
+    setMapFailed(false);
+    if (name.length >= 2) runSearch(name);
+  }, [mapFailed, venue, value, onChangeName, onChangeVenue, runSearch]);
+
   // After parse: show suggestions for the OCR name — host must tap to confirm.
   useEffect(() => {
     if (!locationReady || isPinned(venue) || seededSearchRef.current) return;

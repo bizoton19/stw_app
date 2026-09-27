@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, Home } from "lucide-react-native";
 import { colors, type } from "@/lib/theme";
 import { HostSupportTip } from "./host-support-tip";
 import { PressScale } from "./press-scale";
@@ -53,6 +53,7 @@ export function InterviewChrome({
   kicker,
   title,
   onBack,
+  onHome,
   children,
   footer,
   keyboard = false,
@@ -72,6 +73,8 @@ export function InterviewChrome({
   kicker?: string;
   title: string;
   onBack?: () => void;
+  /** Jump to host desk without stacking Back through every step. */
+  onHome?: () => void;
   children: React.ReactNode;
   footer: React.ReactNode;
   keyboard?: boolean;
@@ -162,7 +165,19 @@ export function InterviewChrome({
           <Text allowFontScaling style={styles.stepLabel}>
             {step} of {total}
           </Text>
-          <View style={styles.backBtn} />
+          {onHome ? (
+            <PressScale
+              accessibilityLabel="Home"
+              onPress={onHome}
+              haptic={false}
+              style={styles.backBtn}
+              hitSlop={8}
+            >
+              <Home size={22} color={colors.ink} strokeWidth={2.25} />
+            </PressScale>
+          ) : (
+            <View style={styles.backBtn} />
+          )}
         </View>
         <View style={styles.track}>
           <View style={[styles.fill, { width: `${progress}%` }]} />

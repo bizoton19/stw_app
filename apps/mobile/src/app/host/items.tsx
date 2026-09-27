@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { goHostDesk } from "@/lib/navigation";
 import { Swipeable } from "react-native-gesture-handler";
 import { ChevronDown, RotateCcw, Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, QuietButton } from "@/components/chrome";
@@ -286,6 +287,7 @@ export default function HostItems() {
         kicker={t("items.kicker")}
         title={t("items.title")}
         onBack={() => router.back()}
+        onHome={goHostDesk}
         keyboard={Boolean(editingId)}
         dense
         footer={
