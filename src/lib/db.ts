@@ -66,6 +66,14 @@ export async function ensureSchema(): Promise<void> {
 
         CREATE INDEX IF NOT EXISTS receipts_updated_at_idx
           ON ${DB_SCHEMA}.receipts (updated_at DESC);
+
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.launch_notify (
+          email text PRIMARY KEY,
+          platforms text[] NOT NULL DEFAULT '{}',
+          source text,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        );
       `);
     })();
   }
@@ -81,6 +89,14 @@ export async function ensureSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS host_push_tokens_receipt_idx
       ON ${DB_SCHEMA}.host_push_tokens (receipt_id);
+
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.launch_notify (
+      email text PRIMARY KEY,
+      platforms text[] NOT NULL DEFAULT '{}',
+      source text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
   `);
 }
 

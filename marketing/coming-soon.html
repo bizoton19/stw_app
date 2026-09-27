@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coming soon — Split the Wine</title>
+    <meta name="description" content="Get notified when Split the Wine is available on the App Store and Google Play.">
+    <link rel="canonical" href="https://www.splitthewine.app/coming-soon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        merlot: '#6E2E35',
+                        paper: '#F6F4F1',
+                        ink: '#2A241C',
+                        inkSoft: '#7A7268',
+                        muted: '#8A847C',
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F6F4F1;
+            color: #2A241C;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col selection:bg-merlot selection:text-white">
+
+    <nav class="max-w-4xl mx-auto w-full px-6 py-8 flex justify-between items-center">
+        <a href="/" class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <svg width="42" height="42" style="transform: rotate(-15deg);" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 24 L21.5 26 L26.5 22 L31.5 24 V13.5 H26.6 V6.7 H25.8 V3.5 H22.2 V6.7 H21.4 V13.5 H16.5 Z" fill="#6E2E35" />
+                <path d="M31.5 25 V41.6 A3 3 0 0 1 28.5 44.6 H19.5 A3 3 0 0 1 16.5 41.6 V25 L21.5 27 L26.5 23 L31.5 25 Z" fill="#6E2E35" />
+            </svg>
+            <span class="font-bold text-2xl tracking-tight">Split the Wine</span>
+        </a>
+        <a href="/" class="text-sm font-semibold text-inkSoft hover:text-merlot transition-colors" data-i18n="nav.home">Home</a>
+    </nav>
+
+    <main class="flex-1 max-w-lg mx-auto w-full px-6 py-8 pb-24">
+        <p class="text-[13px] font-semibold text-merlot mb-3 tracking-wide uppercase" data-i18n="kicker">Coming soon</p>
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" data-i18n="title">
+            Be first when the app lands.
+        </h1>
+        <p class="text-[16px] leading-relaxed text-inkSoft mb-10" data-i18n="lead">
+            We’re finishing friend-test and store review. Leave your email — we’ll ping you once for App Store and Google Play. No newsletter, no accounts required to use the product later.
+        </p>
+
+        <!-- Thank-you state -->
+        <div id="thanks" class="hidden rounded-2xl border border-[#E6E0D8] bg-white p-6 mb-8">
+            <div class="flex items-start gap-3">
+                <i data-lucide="check-circle-2" class="w-6 h-6 text-merlot shrink-0 mt-0.5"></i>
+                <div>
+                    <p class="font-bold text-ink text-lg" data-i18n="thanks.title">You’re on the list.</p>
+                    <p class="text-sm text-inkSoft mt-1 leading-relaxed" data-i18n="thanks.body">
+                        We’ll email you when the app is available. Until then, share the site with whoever always puts their card down.
+                    </p>
+                    <a href="/" class="inline-block mt-4 text-sm font-semibold text-merlot hover:underline" data-i18n="thanks.home">Back to home</a>
+                </div>
+            </div>
+        </div>
+
+        <p id="form-error" class="hidden mb-4 text-sm font-medium text-[#A33B32]" role="alert"></p>
+
+        <!-- Posts to Railway API; Netlify Forms kept as no-JS fallback when hosted on Netlify -->
+        <form
+            id="notify-form"
+            name="app-notify"
+            method="POST"
+            action="/coming-soon?success=1"
+            data-netlify="true"
+            netlify-honeypot="bot-field"
+            class="rounded-2xl border border-[#E6E0D8] bg-white p-6 space-y-4"
+        >
+            <input type="hidden" name="form-name" value="app-notify" />
+            <p class="hidden">
+                <label>Don’t fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
+            </p>
+
+            <div>
+                <label for="email" class="block text-sm font-semibold text-ink mb-2" data-i18n="form.email">Email</label>
+                <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    autocomplete="email"
+                    inputmode="email"
+                    placeholder="you@email.com"
+                    class="w-full h-12 rounded-xl border border-[#E6E0D8] bg-paper px-4 text-[16px] text-ink placeholder:text-muted focus:outline-none focus:border-merlot/50"
+                    data-i18n-placeholder="form.placeholder"
+                />
+            </div>
+
+            <fieldset>
+                <legend class="text-sm font-semibold text-ink mb-2" data-i18n="form.platform">I’m mostly on</legend>
+                <div class="flex flex-wrap gap-3">
+                    <label class="inline-flex items-center gap-2 text-sm text-inkSoft cursor-pointer">
+                        <input type="checkbox" name="platform" value="ios" class="rounded border-[#E6E0D8] text-merlot focus:ring-merlot" checked />
+                        <span data-i18n="form.ios">iPhone</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-sm text-inkSoft cursor-pointer">
+                        <input type="checkbox" name="platform" value="android" class="rounded border-[#E6E0D8] text-merlot focus:ring-merlot" />
+                        <span data-i18n="form.android">Android</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <button
+                type="submit"
+                id="submit-btn"
+                class="w-full h-12 rounded-xl bg-merlot text-paper font-bold text-[15px] hover:opacity-95 transition-opacity disabled:opacity-60"
+                data-i18n="form.submit"
+            >
+                Notify me at launch
+            </button>
+
+            <p class="text-xs text-muted leading-relaxed" data-i18n="form.legal">
+                One launch email only. Unsubscribe anytime. See our
+                <a href="/privacy" class="underline hover:text-merlot">Privacy Policy</a>.
+            </p>
+        </form>
+
+        <p class="mt-8 text-center text-sm text-inkSoft" data-i18n="footnote">
+            Hosts use the app. Guests claim from a link — no download required.
+        </p>
+    </main>
+
+    <footer class="py-8 px-6 border-t border-[#E6E0D8] text-center text-sm text-inkSoft">
+        <div class="flex justify-center gap-6 mb-4">
+            <a href="/privacy" class="hover:text-merlot transition-colors" data-i18n="footer.privacy">Privacy Policy</a>
+            <a href="/support" class="hover:text-merlot transition-colors" data-i18n="footer.support">Support the app</a>
+            <a href="/" class="hover:text-merlot transition-colors" data-i18n="nav.home">Home</a>
+        </div>
+        &copy; 2026 Split the Wine
+    </footer>
+
+    <script>
+        const i18n = {
+            en: {
+                "nav.home": "Home",
+                "kicker": "Coming soon",
+                "title": "Be first when the app lands.",
+                "lead": "We’re finishing friend-test and store review. Leave your email — we’ll ping you once for App Store and Google Play. No newsletter, no accounts required to use the product later.",
+                "thanks.title": "You’re on the list.",
+                "thanks.body": "We’ll email you when the app is available. Until then, share the site with whoever always puts their card down.",
+                "thanks.home": "Back to home",
+                "form.email": "Email",
+                "form.placeholder": "you@email.com",
+                "form.platform": "I’m mostly on",
+                "form.ios": "iPhone",
+                "form.android": "Android",
+                "form.submit": "Notify me at launch",
+                "form.legal": "One launch email only. Unsubscribe anytime. See our <a href=\"/privacy\" class=\"underline hover:text-merlot\">Privacy Policy</a>.",
+                "footnote": "Hosts use the app. Guests claim from a link — no download required.",
+                "footer.privacy": "Privacy Policy",
+                "footer.support": "Support the app",
+            },
+            es: {
+                "nav.home": "Inicio",
+                "kicker": "Próximamente",
+                "title": "Sé el primero cuando salga la app.",
+                "lead": "Estamos en pruebas y revisión de las tiendas. Déjanos tu email — te avisamos una vez para App Store y Google Play. Sin boletín. Más adelante no harás falta una cuenta para usarla.",
+                "thanks.title": "Ya estás en la lista.",
+                "thanks.body": "Te escribiremos cuando la app esté disponible. Mientras, comparte el sitio con quien siempre pone la tarjeta.",
+                "thanks.home": "Volver al inicio",
+                "form.email": "Email",
+                "form.placeholder": "tu@email.com",
+                "form.platform": "Uso principalmente",
+                "form.ios": "iPhone",
+                "form.android": "Android",
+                "form.submit": "Avísame en el lanzamiento",
+                "form.legal": "Solo un email de lanzamiento. Baja cuando quieras. Ver la <a href=\"/privacy\" class=\"underline hover:text-merlot\">Política de privacidad</a>.",
+                "footnote": "El anfitrión usa la app. Los invitados reclaman con un enlace — sin descargar.",
+                "footer.privacy": "Privacidad",
+                "footer.support": "Apoyar la app",
+            },
+            fr: {
+                "nav.home": "Accueil",
+                "kicker": "Bientôt",
+                "title": "Soyez les premiers à l’avoir.",
+                "lead": "Nous finissons les tests amis et la revue des stores. Laissez votre email — un seul message pour l’App Store et Google Play. Pas de newsletter. Plus tard, pas de compte obligatoire pour utiliser le produit.",
+                "thanks.title": "Vous êtes sur la liste.",
+                "thanks.body": "Nous vous écrirons quand l’app sera dispo. En attendant, partagez le site avec celui qui pose toujours la carte.",
+                "thanks.home": "Retour à l’accueil",
+                "form.email": "Email",
+                "form.placeholder": "vous@email.com",
+                "form.platform": "Je suis surtout sur",
+                "form.ios": "iPhone",
+                "form.android": "Android",
+                "form.submit": "Prévenez-moi au lancement",
+                "form.legal": "Un seul email de lancement. Désabonnement à tout moment. Voir la <a href=\"/privacy\" class=\"underline hover:text-merlot\">Politique de confidentialité</a>.",
+                "footnote": "L’hôte utilise l’app. Les invités réclament via un lien — sans téléchargement.",
+                "footer.privacy": "Confidentialité",
+                "footer.support": "Soutenir l’app",
+            },
+            ht: {
+                "nav.home": "Akèy",
+                "kicker": "Byento",
+                "title": "Vin premye lè aplikasyon an soti.",
+                "lead": "Nou ap fini tès ak revizyon magazen yo. Kite imèl ou — n ap voye yon sèl mesaj pou App Store ak Google Play. Pa gen bilten. Apre sa, ou pa bezwen yon kont pou itilize pwodwi a.",
+                "thanks.title": "Ou sou lis la.",
+                "thanks.body": "N ap ekri ou lè aplikasyon an disponib. Pandan sa, pataje sit la ak moun ki toujou mete kat la.",
+                "thanks.home": "Tounen lakay",
+                "form.email": "Imèl",
+                "form.placeholder": "ou@email.com",
+                "form.platform": "Mwen plis sou",
+                "form.ios": "iPhone",
+                "form.android": "Android",
+                "form.submit": "Avi mwen nan lansman",
+                "form.legal": "Yon sèl imèl lansman. Ou ka retire ou nenpòt lè. Gade <a href=\"/privacy\" class=\"underline hover:text-merlot\">Règleman sou vi prive</a>.",
+                "footnote": "Moun ki resevwa a itilize app la. Envite yo reklame ak yon lyen — pa bezwen telechaje.",
+                "footer.privacy": "Vi Prive",
+                "footer.support": "Sipòte app la",
+            },
+        };
+
+        lucide.createIcons();
+
+        function setLanguage(lang) {
+            if (!i18n[lang]) return;
+            document.documentElement.lang = lang;
+            document.querySelectorAll("[data-i18n]").forEach((el) => {
+                const key = el.getAttribute("data-i18n");
+                if (i18n[lang][key]) el.innerHTML = i18n[lang][key];
+            });
+            document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+                const key = el.getAttribute("data-i18n-placeholder");
+                if (i18n[lang][key]) el.setAttribute("placeholder", i18n[lang][key]);
+            });
+            try {
+                localStorage.setItem("stw-marketing-lang", lang);
+            } catch (e) {}
+        }
+
+        try {
+            const saved = localStorage.getItem("stw-marketing-lang");
+            if (saved && i18n[saved]) setLanguage(saved);
+            else {
+                const browserLang = navigator.language.slice(0, 2).toLowerCase();
+                if (i18n[browserLang]) setLanguage(browserLang);
+            }
+        } catch (e) {}
+
+        // Show thanks after redirect or successful API submit
+        const params = new URLSearchParams(window.location.search);
+        const formEl = document.getElementById("notify-form");
+        const thanksEl = document.getElementById("thanks");
+        const errorEl = document.getElementById("form-error");
+        const submitBtn = document.getElementById("submit-btn");
+
+        function showThanks() {
+            thanksEl.classList.remove("hidden");
+            formEl.classList.add("hidden");
+            if (errorEl) errorEl.classList.add("hidden");
+        }
+
+        if (params.get("success") === "1" || window.location.hash === "#thanks") {
+            showThanks();
+        }
+
+        const API_BASE = "https://api.splitthewine.app";
+
+        async function onNotifySubmit(e) {
+            e.preventDefault();
+            const email = (document.getElementById("email").value || "").trim();
+            const platforms = Array.from(
+                formEl.querySelectorAll('input[name="platform"]:checked'),
+            ).map((el) => el.value);
+            if (errorEl) {
+                errorEl.classList.add("hidden");
+                errorEl.textContent = "";
+            }
+            submitBtn.disabled = true;
+            try {
+                const res = await fetch(`${API_BASE}/api/waitlist`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, platforms, source: "coming-soon" }),
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || "request_failed");
+                }
+                showThanks();
+                history.replaceState(null, "", "/coming-soon?success=1");
+            } catch (err) {
+                // Fall back to native Netlify Forms post if API is unreachable.
+                formEl.removeEventListener("submit", onNotifySubmit);
+                formEl.submit();
+            }
+        }
+
+        formEl.addEventListener("submit", onNotifySubmit);
+    </script>
+</body>
+</html>

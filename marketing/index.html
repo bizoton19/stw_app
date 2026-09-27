@@ -121,14 +121,24 @@
             Photograph the check. Friends claim what they ordered. Pay the host — we never touch the money, and we don't need your social graph.
         </p>
         
-        <!-- App Store Badges -->
-        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 fade-up delay-300">
-            <a href="#" class="transition-transform hover:-translate-y-0.5 hover:opacity-90">
-                <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1276560000" alt="Download on the App Store" style="height: 48px; border-radius: 8px;">
+        <!-- Coming soon → notify list (store badges go live after launch) -->
+        <div class="mt-10 flex flex-col items-center justify-center gap-5 fade-up delay-300">
+            <a
+                href="/coming-soon"
+                class="inline-flex items-center justify-center gap-2 rounded-full bg-merlot text-paper px-8 py-3.5 text-[15px] font-bold hover:opacity-95 transition-opacity shadow-sm"
+                data-i18n="hero.cta"
+            >
+                Coming soon — notify me
             </a>
-            <a href="#" class="transition-transform hover:-translate-y-0.5 hover:opacity-90">
-                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" style="height: 68px; margin-top: -10px; margin-bottom: -10px;">
-            </a>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 opacity-70">
+                <a href="/coming-soon" class="transition-transform hover:-translate-y-0.5 hover:opacity-100" aria-label="Coming soon on the App Store">
+                    <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1276560000" alt="Coming soon on the App Store" style="height: 48px; border-radius: 8px;">
+                </a>
+                <a href="/coming-soon" class="transition-transform hover:-translate-y-0.5 hover:opacity-100" aria-label="Coming soon on Google Play">
+                    <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Coming soon on Google Play" style="height: 68px; margin-top: -10px; margin-bottom: -10px;">
+                </a>
+            </div>
+            <p class="text-sm text-inkSoft font-medium" data-i18n="hero.stores">App Store &amp; Google Play — join the list for launch day.</p>
         </div>
 
         <!-- Privacy highlight -->
@@ -236,6 +246,7 @@
         </div>
         <p class="text-sm text-inkSoft mb-4" data-i18n="footer.tagline">Built for the table, not the ledger.</p>
         <div class="flex justify-center gap-6 text-sm text-inkSoft">
+            <a href="/coming-soon" class="hover:text-merlot transition-colors" data-i18n="footer.notify">Coming soon</a>
             <a href="/privacy" class="hover:text-merlot transition-colors" data-i18n="footer.privacy">Privacy Policy</a>
             <a href="/support" class="hover:text-merlot transition-colors" data-i18n="footer.support">Support the app</a>
             <a href="mailto:support@splitthewine.app" class="hover:text-merlot transition-colors" data-i18n="footer.contact">Contact Support</a>
@@ -249,6 +260,8 @@
                 "nav.how": "How it works",
                 "hero.title": "Split the tab. <br/> <span class=\"text-merlot\">Skip the math.</span>",
                 "hero.subtitle": "Photograph the check. Friends claim what they ordered. Pay the host — we never touch the money, and we don't need your social graph.",
+                "hero.cta": "Coming soon — notify me",
+                "hero.stores": "App Store &amp; Google Play — join the list for launch day.",
                 "hero.privacy": "No accounts required. Links expire. Total privacy.",
                 "steps.title": "Four steps. Zero friction.",
                 "steps.1.title": "1. Snap the Check",
@@ -268,6 +281,7 @@
                 "privacy.3.title": "Direct Payments",
                 "privacy.3.desc": "We don't process payments or take a cut. Money moves directly between your existing apps.",
                 "footer.tagline": "Built for the table, not the ledger.",
+                "footer.notify": "Coming soon",
                 "footer.privacy": "Privacy Policy",
                 "footer.support": "Support the app",
                 "footer.contact": "Contact Support"
@@ -276,6 +290,8 @@
                 "nav.how": "Cómo funciona",
                 "hero.title": "Divide la cuenta. <br/> <span class=\"text-merlot\">Olvídate de las matemáticas.</span>",
                 "hero.subtitle": "Fotografía la cuenta. Tus amigos eligen lo que pidieron. Págale al anfitrión — nunca tocamos el dinero y no necesitamos tus contactos.",
+                "hero.cta": "Próximamente — avísame",
+                "hero.stores": "App Store y Google Play — únete a la lista para el lanzamiento.",
                 "hero.privacy": "Sin cuentas. Los enlaces caducan. Privacidad total.",
                 "steps.title": "Cuatro pasos. Cero fricción.",
                 "steps.1.title": "1. Toma una foto",
@@ -295,6 +311,7 @@
                 "privacy.3.title": "Pagos Directos",
                 "privacy.3.desc": "No procesamos pagos ni cobramos comisión. El dinero se mueve directamente entre tus apps.",
                 "footer.tagline": "Construido para la mesa, no para el banco.",
+                "footer.notify": "Próximamente",
                 "footer.privacy": "Privacidad",
                 "footer.support": "Apoyar la app",
                 "footer.contact": "Soporte"
@@ -303,6 +320,8 @@
                 "nav.how": "Comment ça marche",
                 "hero.title": "Divisez l'addition. <br/> <span class=\"text-merlot\">Oubliez les maths.</span>",
                 "hero.subtitle": "Photographiez l'addition. Vos amis sélectionnent ce qu'ils ont pris. Payez l'hôte — nous ne touchons jamais l'argent.",
+                "hero.cta": "Bientôt — prévenez-moi",
+                "hero.stores": "App Store et Google Play — inscrivez-vous pour le lancement.",
                 "hero.privacy": "Aucun compte requis. Liens éphémères. Confidentialité totale.",
                 "steps.title": "Quatre étapes. Zéro friction.",
                 "steps.1.title": "1. Prenez l'addition en photo",
@@ -322,6 +341,7 @@
                 "privacy.3.title": "Paiements directs",
                 "privacy.3.desc": "Nous ne traitons pas les paiements. L'argent circule directement entre vos applications.",
                 "footer.tagline": "Conçu pour la table, pas pour la compta.",
+                "footer.notify": "Bientôt",
                 "footer.privacy": "Confidentialité",
                 "footer.support": "Soutenir l'app",
                 "footer.contact": "Support"
@@ -330,6 +350,8 @@
                 "nav.how": "Kijan li mache",
                 "hero.title": "Separe adisyon an. <br/> <span class=\"text-merlot\">Bliye kalkil yo.</span>",
                 "hero.subtitle": "Fè foto adisyon an. Zanmi ou yo chwazi sa yo te pran. Peye moun ki envite a — nou pa janm manyen lajan an.",
+                "hero.cta": "Byento — avi mwen",
+                "hero.stores": "App Store ak Google Play — rantre nan lis la pou lansman.",
                 "hero.privacy": "Pa bezwen kont. Lyen yo ekspire. Vi prive total.",
                 "steps.title": "Kat etap. Zewo tèt fè mal.",
                 "steps.1.title": "1. Fè foto adisyon an",
@@ -349,6 +371,7 @@
                 "privacy.3.title": "Peman Dirèk",
                 "privacy.3.desc": "Nou pa trete peman. Lajan an pase dirèkteman nan aplikasyon ou yo.",
                 "footer.tagline": "Fè pou tab la, pa pou bank lan.",
+                "footer.notify": "Byento",
                 "footer.privacy": "Vi Prive",
                 "footer.support": "Sipòte app la",
                 "footer.contact": "Sipò"
