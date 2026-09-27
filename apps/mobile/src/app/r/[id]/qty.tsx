@@ -68,6 +68,7 @@ export default function QtyScreen() {
       <InterviewChrome
         step={qtyStep}
         total={totalSteps}
+        hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
         title="How many of each?"
         onBack={() => router.back()}

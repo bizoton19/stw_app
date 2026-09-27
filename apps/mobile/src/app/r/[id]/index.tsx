@@ -70,6 +70,7 @@ function JoinScreen() {
       <InterviewChrome
         step={1}
         total={3}
+        hideProgress={flow.isHost}
         kicker={restaurant}
         title={
           flow.isHost
@@ -133,6 +134,7 @@ function PickBoard() {
       <InterviewChrome
         step={pickStep}
         total={totalSteps}
+        hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
         title="Claiming is closed"
         footer={
@@ -220,6 +222,7 @@ function PickBoard() {
     <InterviewChrome
       step={pickStep}
       total={totalSteps}
+      hideProgress={flow.isHost}
       kicker={receipt.restaurant || "The check"}
       title="What did you have?"
       onBack={flow.isHost ? goHostDesk : undefined}
