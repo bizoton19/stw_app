@@ -50,38 +50,31 @@
             If it helped tonight, tip however you already pay friends.
         </p>
 
-        <!--
-          Edit handles below before deploy:
-          - Venmo username (no @ in the URL path)
-          - Cash App $cashtag (keep $ in cash.app URL)
-          - Zelle: email or phone shown for copy (no deep link)
-        -->
+        <!-- Handles live only in the script below — never rendered in the page. -->
         <div class="space-y-3">
-            <a
+            <button
+                type="button"
                 id="tip-venmo"
-                href="https://venmo.com/u/asalomon19"
                 class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
-                rel="noopener noreferrer"
             >
                 <span>
                     <span class="block text-[15px] font-bold text-ink">Venmo</span>
-                    <span class="block text-[13px] text-inkSoft" id="venmo-label">@asalomon19</span>
+                    <span class="block text-[13px] text-inkSoft">Opens the app when installed</span>
                 </span>
-                <span class="text-[13px] font-semibold text-merlot">Open</span>
-            </a>
+                <span class="text-[13px] font-semibold text-merlot" id="venmo-action">Open</span>
+            </button>
 
-            <a
+            <button
+                type="button"
                 id="tip-cashapp"
-                href="https://cash.app/$afsalo"
                 class="flex h-14 w-full items-center justify-between rounded-2xl border border-[#E6E0D8] bg-white px-5 text-left hover:border-merlot/40 transition-colors"
-                rel="noopener noreferrer"
             >
                 <span>
                     <span class="block text-[15px] font-bold text-ink">Cash App</span>
-                    <span class="block text-[13px] text-inkSoft" id="cashapp-label">$afsalo</span>
+                    <span class="block text-[13px] text-inkSoft">Opens the app when installed</span>
                 </span>
-                <span class="text-[13px] font-semibold text-merlot">Open</span>
-            </a>
+                <span class="text-[13px] font-semibold text-merlot" id="cashapp-action">Open</span>
+            </button>
 
             <button
                 type="button"
@@ -90,7 +83,7 @@
             >
                 <span>
                     <span class="block text-[15px] font-bold text-ink">Zelle</span>
-                    <span class="block text-[13px] text-inkSoft" id="zelle-label">bizoton19@gmail.com</span>
+                    <span class="block text-[13px] text-inkSoft">Copies email for your bank app</span>
                 </span>
                 <span class="text-[13px] font-semibold text-merlot" id="zelle-action">Copy</span>
             </button>
@@ -102,7 +95,7 @@
             >
                 <span>
                     <span class="block text-[15px] font-bold text-ink">Zelle</span>
-                    <span class="block text-[13px] text-inkSoft" id="zelle-phone-label">4077013140</span>
+                    <span class="block text-[13px] text-inkSoft">Copies phone for your bank app</span>
                 </span>
                 <span class="text-[13px] font-semibold text-merlot" id="zelle-phone-action">Copy</span>
             </button>
@@ -127,23 +120,85 @@
     </footer>
 
     <script>
-        function wireCopy(buttonId, labelId, actionId) {
-            const btn = document.getElementById(buttonId);
-            const label = document.getElementById(labelId);
-            const action = document.getElementById(actionId);
-            btn.addEventListener('click', async () => {
-                const value = label.textContent.trim();
-                try {
-                    await navigator.clipboard.writeText(value);
-                    action.textContent = 'Copied';
-                    setTimeout(() => { action.textContent = 'Copy'; }, 1500);
-                } catch (e) {
-                    action.textContent = 'Select & copy';
-                }
-            });
+        // Private tip targets — not shown in the UI.
+        const TIP = {
+            venmo: 'asalomon19',
+            cashapp: 'afsalo',
+            zelleEmail: 'bizoton19@gmail.com',
+            zellePhone: '4077013140',
+        };
+
+        function flash(el, text, restore) {
+            el.textContent = text;
+            setTimeout(() => { el.textContent = restore; }, 1600);
         }
-        wireCopy('tip-zelle', 'zelle-label', 'zelle-action');
-        wireCopy('tip-zelle-phone', 'zelle-phone-label', 'zelle-phone-action');
+
+        async function copyText(value) {
+            await navigator.clipboard.writeText(value);
+        }
+
+        /**
+         * Try a custom scheme first (opens native app when present), then https.
+         * Browsers can't reliably detect install — we attempt app, then fall back.
+         */
+        function openPay(appUrl, webUrl) {
+            const started = Date.now();
+            let hidden = false;
+            const onHide = () => { hidden = true; };
+            document.addEventListener('visibilitychange', onHide, { once: true });
+            window.addEventListener('pagehide', onHide, { once: true });
+
+            try {
+                window.location.href = appUrl;
+            } catch (_) { /* fall through */ }
+
+            setTimeout(() => {
+                document.removeEventListener('visibilitychange', onHide);
+                window.removeEventListener('pagehide', onHide);
+                // If the app opened, the page usually hides; otherwise open https.
+                if (!hidden && Date.now() - started < 2200 && webUrl) {
+                    window.location.href = webUrl;
+                }
+            }, 900);
+        }
+
+        document.getElementById('tip-venmo').addEventListener('click', () => {
+            const user = TIP.venmo;
+            const note = encodeURIComponent('Split the Wine tip');
+            const app = `venmo://paycharge?txn=pay&recipients=${encodeURIComponent(user)}&note=${note}`;
+            const web = `https://venmo.com/${encodeURIComponent(user)}?txn=pay&note=${note}`;
+            openPay(app, web);
+            flash(document.getElementById('venmo-action'), 'Opening…', 'Open');
+        });
+
+        document.getElementById('tip-cashapp').addEventListener('click', () => {
+            const tag = TIP.cashapp.startsWith('$') ? TIP.cashapp : `$${TIP.cashapp}`;
+            // cash.app https opens the app when installed; cashme:// is a secondary attempt.
+            const web = `https://cash.app/${encodeURIComponent(tag)}`;
+            const app = `cashme://${encodeURIComponent(tag)}`;
+            openPay(app, web);
+            flash(document.getElementById('cashapp-action'), 'Opening…', 'Open');
+        });
+
+        document.getElementById('tip-zelle').addEventListener('click', async () => {
+            const action = document.getElementById('zelle-action');
+            try {
+                await copyText(TIP.zelleEmail);
+                flash(action, 'Copied', 'Copy');
+            } catch (_) {
+                flash(action, 'Copy failed', 'Copy');
+            }
+        });
+
+        document.getElementById('tip-zelle-phone').addEventListener('click', async () => {
+            const action = document.getElementById('zelle-phone-action');
+            try {
+                await copyText(TIP.zellePhone);
+                flash(action, 'Copied', 'Copy');
+            } catch (_) {
+                flash(action, 'Copy failed', 'Copy');
+            }
+        });
     </script>
 </body>
 </html>

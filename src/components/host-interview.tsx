@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ChevronDown, Copy, ImageIcon, QrCode, Share2, Trash2 } from "lucide-react";
+import { Camera, ChevronDown, Copy, HandCoins, ImageIcon, QrCode, Share2, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
@@ -1166,8 +1166,9 @@ export function HostInterview() {
             href="https://www.splitthewine.app/support"
             target="_blank"
             rel="noreferrer"
-            className="text-muted-foreground hover:text-primary"
+            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary"
           >
+            <HandCoins className="size-3.5" strokeWidth={2.25} aria-hidden />
             Support Split the Wine
           </a>
         </p>

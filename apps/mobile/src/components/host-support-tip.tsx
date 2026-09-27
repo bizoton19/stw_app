@@ -1,4 +1,5 @@
-import { Linking, StyleSheet, Text } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
+import { HandCoins } from "lucide-react-native";
 import { PressScale } from "@/components/press-scale";
 import { supportUrl } from "@/lib/config";
 import { colors } from "@/lib/theme";
@@ -13,7 +14,10 @@ export function HostSupportTip() {
       style={styles.wrap}
       haptic={false}
     >
-      <Text style={styles.link}>Support Split the Wine</Text>
+      <View style={styles.row}>
+        <HandCoins size={14} color={colors.muted} strokeWidth={2.25} />
+        <Text style={styles.link}>Support Split the Wine</Text>
+      </View>
     </PressScale>
   );
 }
@@ -22,6 +26,11 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: "center",
     paddingVertical: 6,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   link: {
     fontSize: 13,

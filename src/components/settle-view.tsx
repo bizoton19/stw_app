@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Banknote, ChevronLeft } from "lucide-react";
+import { Banknote, ChevronLeft, HandCoins } from "lucide-react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
 import { LineKindIcon } from "@/components/line-kind-icon";
@@ -355,8 +355,9 @@ export function SettleView({
               href="https://www.splitthewine.app/support"
               target="_blank"
               rel="noreferrer"
-              className="text-muted-foreground hover:text-primary"
+              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary"
             >
+              <HandCoins className="size-3.5" strokeWidth={2.25} aria-hidden />
               Support Split the Wine
             </a>
           </p>
