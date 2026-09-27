@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, Share, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import { Banknote } from "lucide-react-native";
+import { Banknote, ChevronDown, ChevronUp } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
@@ -34,6 +34,7 @@ export default function SettleScreen() {
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [showTotalDetails, setShowTotalDetails] = useState(false);
+  const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
 
   useEffect(() => {
     if (!flow.isHost || !receipt?.id || receipt.status === "finalized") return;
@@ -158,6 +159,7 @@ export default function SettleScreen() {
       <InterviewChrome
         step={3}
         total={3}
+        hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
         title={flow.isHost ? "Live board" : "Settle Payment"}
         onBack={
@@ -373,11 +375,10 @@ export default function SettleScreen() {
             {totals.people.map((person) => {
               const amount = centsToLabel(person.totalCents);
               const isYou = flow.guest?.name === person.personName;
+              const personKey = `${person.personName}\0${person.personContact ?? ""}`;
+              const open = expandedPerson === personKey;
               return (
-                <View
-                  key={`${person.personName}\0${person.personContact ?? ""}`}
-                  style={styles.personCard}
-                >
+                <View key={personKey} style={styles.personCard}>
                   <View style={styles.personCardHead}>
                     <ClaimerAvatar name={person.personName} size={34} />
                     <View style={{ flex: 1, minWidth: 0 }}>
@@ -391,16 +392,33 @@ export default function SettleScreen() {
                     </View>
                   </View>
                   <Text style={styles.amount}>{amount}</Text>
-                  <View style={styles.personLines}>
-                    {person.lines.map((line) => (
-                      <Text key={line.itemId} style={styles.personLine} numberOfLines={2}>
-                        {line.units}× {line.itemName}
+                  {open ? (
+                    <View style={styles.personLines}>
+                      {person.lines.map((line) => (
+                        <Text key={line.itemId} style={styles.personLine} numberOfLines={2}>
+                          {line.units}× {line.itemName}
+                        </Text>
+                      ))}
+                      <Text style={styles.personLine}>
+                        Tax & tip · {centsToLabel(person.feeCents)}
                       </Text>
-                    ))}
-                    <Text style={styles.personLine}>
-                      Tax & tip · {centsToLabel(person.feeCents)}
+                    </View>
+                  ) : null}
+                  <PressScale
+                    haptic="select"
+                    onPress={() => setExpandedPerson(open ? null : personKey)}
+                    style={styles.personDetailsBtn}
+                    accessibilityLabel={open ? "Hide details" : "Show details"}
+                  >
+                    <Text style={styles.personDetailsLabel}>
+                      {open ? "Hide details" : "Details"}
                     </Text>
-                  </View>
+                    {open ? (
+                      <ChevronUp size={16} color={colors.merlot} strokeWidth={2.25} />
+                    ) : (
+                      <ChevronDown size={16} color={colors.merlot} strokeWidth={2.25} />
+                    )}
+                  </PressScale>
                 </View>
               );
             })}
@@ -588,7 +606,9 @@ const styles = StyleSheet.create({
   personCards: { paddingHorizontal: 20, gap: 10 },
   personCard: {
     width: 196,
-    padding: 14,
+    paddingTop: 14,
+    paddingHorizontal: 14,
+    paddingBottom: 8,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
@@ -599,6 +619,22 @@ const styles = StyleSheet.create({
   personContact: { marginTop: 2, fontSize: 12, color: colors.muted },
   personLines: { gap: 4 },
   personLine: { fontSize: 12, lineHeight: 17, color: colors.inkSoft, fontWeight: "500" },
+  personDetailsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingTop: 4,
+    paddingBottom: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    marginTop: 2,
+  },
+  personDetailsLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.merlot,
+  },
   name: { fontSize: 15, fontWeight: "700", color: colors.ink },
   amount: { fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"], color: colors.ink },
   payHostNote: { marginTop: 8, marginBottom: 16, gap: 4 },

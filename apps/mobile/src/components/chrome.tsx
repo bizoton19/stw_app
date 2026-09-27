@@ -67,6 +67,8 @@ export function InterviewChrome({
   scroll = true,
   /** Quiet Support Split the Wine link under the step footer (host interview). */
   supportTip = false,
+  /** Hide “N of M” + progress bar (host live board is not an interview step). */
+  hideProgress = false,
 }: {
   step: number;
   total: number;
@@ -82,6 +84,7 @@ export function InterviewChrome({
   sparse?: boolean;
   scroll?: boolean;
   supportTip?: boolean;
+  hideProgress?: boolean;
 }) {
   const progress = (step / total) * 100;
   const heading = (
@@ -162,9 +165,13 @@ export function InterviewChrome({
           ) : (
             <View style={styles.backBtn} />
           )}
-          <Text allowFontScaling style={styles.stepLabel}>
-            {step} of {total}
-          </Text>
+          {hideProgress ? (
+            <View style={styles.stepLabelSpacer} />
+          ) : (
+            <Text allowFontScaling style={styles.stepLabel}>
+              {step} of {total}
+            </Text>
+          )}
           {onHome ? (
             <PressScale
               accessibilityLabel="Home"
@@ -179,9 +186,11 @@ export function InterviewChrome({
             <View style={styles.backBtn} />
           )}
         </View>
-        <View style={styles.track}>
-          <View style={[styles.fill, { width: `${progress}%` }]} />
-        </View>
+        {hideProgress ? null : (
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${progress}%` }]} />
+          </View>
+        )}
       </View>
       {body}
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
@@ -294,6 +303,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.inkSoft,
   },
+  stepLabelSpacer: { flex: 1 },
   track: { height: 2, borderRadius: 99, backgroundColor: colors.border, overflow: "hidden" },
   fill: { height: 2, backgroundColor: colors.merlot, borderRadius: 99 },
   scroll: { flex: 1 },
