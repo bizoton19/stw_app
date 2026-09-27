@@ -37,6 +37,7 @@ export function SettleView({
   const [paying, setPaying] = useState<string | null>(null);
   const [payHint, setPayHint] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [showTotalDetails, setShowTotalDetails] = useState(false);
   const isHost = Boolean(getHostToken(receipt.id));
   const guest = getGuest(receipt.id);
   const payments = hostPayments(receipt.hostInfo);

@@ -323,40 +323,40 @@ export default function SettleScreen() {
         {flow.isHost && leftover && remainingLines.length > 0 ? (
           <View style={styles.remainBlock}>
             <View style={styles.detailToggle}>
-              <Text style={styles.detailToggleLabel}>Show total details</Text>
-              <Switch
-                value={showTotalDetails}
-                onValueChange={setShowTotalDetails}
-                trackColor={{ false: colors.border, true: "rgba(47,93,80,0.45)" }}
-                thumbColor={showTotalDetails ? colors.select : "#f4f3f0"}
-                ios_backgroundColor={colors.border}
-                accessibilityLabel="Show total details"
-              />
+              <Text style={styles.peopleTitle}>Still on the table</Text>
+              <View style={styles.detailToggleRight}>
+                <Text style={styles.detailToggleLabel}>Show total details</Text>
+                <Switch
+                  value={showTotalDetails}
+                  onValueChange={setShowTotalDetails}
+                  trackColor={{ false: colors.border, true: "rgba(47,93,80,0.45)" }}
+                  thumbColor={showTotalDetails ? colors.select : "#f4f3f0"}
+                  ios_backgroundColor={colors.border}
+                  accessibilityLabel="Show total details"
+                />
+              </View>
             </View>
-            {showTotalDetails ? (
-              <>
-                <Text style={styles.peopleTitle}>Still on the table</Text>
-                {remainingLines.map((item) => {
-                  const left = receipt.remaining[item.id] ?? 0;
-                  const money = claimMoneySlice(item, left);
-                  return (
-                    <View key={item.id} style={styles.remainRow}>
-                      <View style={styles.remainNameRow}>
-                        <LineKindIcon name={item.name} kind={item.kind} size={12} />
-                        <Text style={styles.remainName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                      </View>
-                      <Text style={styles.remainLeft}>
-                        {centsToLabel(money.unitCents)} × {left}
-                        {money.glasses ? (left === 1 ? " glass" : " glasses") : ""} ·{" "}
-                        {centsToLabel(money.remainingCents)}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </>
-            ) : null}
+            {remainingLines.map((item) => {
+              const left = receipt.remaining[item.id] ?? 0;
+              const money = claimMoneySlice(item, left);
+              return (
+                <View key={item.id} style={styles.remainRow}>
+                  <View style={styles.remainNameRow}>
+                    <LineKindIcon name={item.name} kind={item.kind} size={12} />
+                    <Text style={styles.remainName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                  </View>
+                  <Text style={styles.remainLeft}>
+                    {showTotalDetails
+                      ? `${centsToLabel(money.unitCents)} × ${left}${
+                          money.glasses ? (left === 1 ? " glass" : " glasses") : ""
+                        } · ${centsToLabel(money.remainingCents)}`
+                      : `${centsToLabel(money.remainingCents)} (${left})`}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         ) : null}
 
@@ -553,11 +553,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    paddingVertical: 2,
+    marginBottom: 2,
+  },
+  detailToggleRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
   },
   detailToggleLabel: {
-    flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.muted,
   },
