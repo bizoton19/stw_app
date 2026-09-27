@@ -73,8 +73,8 @@ export function HostLiveTabBar({
   } else {
     tabs.push({
       key: "close",
-      label: "Close",
-      accessibilityLabel: "Close claiming — leftovers on me",
+      label: "Close tab",
+      accessibilityLabel: "Close tab — leftovers on me",
       icon: "close",
       onPress: onClose,
       disabled: busy,
