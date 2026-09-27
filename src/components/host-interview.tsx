@@ -1162,12 +1162,11 @@ export function HostInterview() {
         </ContinueButton>
         <QuietButton onClick={() => router.push("/")}>Done for now</QuietButton>
         <p className="pt-2 text-center text-[13px] text-muted-foreground">
-          Thanks for hosting.{" "}
           <a
             href="https://www.splitthewine.app/support"
             target="_blank"
             rel="noreferrer"
-            className="font-semibold text-primary"
+            className="text-muted-foreground hover:text-primary"
           >
             Support Split the Wine
           </a>
