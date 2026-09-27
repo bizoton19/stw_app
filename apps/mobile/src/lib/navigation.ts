@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { router } from "expo-router";
 import { colors } from "@/lib/theme";
 
 /** Shared Expo Router Stack screenOptions — platform-adaptive transitions. */
@@ -14,3 +15,21 @@ export const nativeStackScreenOptions = {
   }),
   animationDuration: Platform.OS === "ios" ? 320 : 250,
 };
+
+/**
+ * Leave host / receipt stacks in one step (avoid hammering Back through the interview).
+ */
+export function goHostDesk() {
+  const r = router as typeof router & {
+    canDismiss?: () => boolean;
+    dismissAll?: () => void;
+  };
+  try {
+    if (typeof r.canDismiss === "function" && r.canDismiss() && typeof r.dismissAll === "function") {
+      r.dismissAll();
+    }
+  } catch {
+    /* older runtimes — replace alone is enough */
+  }
+  router.replace("/");
+}

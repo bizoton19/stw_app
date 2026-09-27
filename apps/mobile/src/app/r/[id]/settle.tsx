@@ -21,6 +21,7 @@ import { claimMoneySlice } from "@/lib/pour";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment } from "@/lib/types";
+import { goHostDesk } from "@/lib/navigation";
 import { colors } from "@/lib/theme";
 
 export default function SettleScreen() {
@@ -118,7 +119,7 @@ export default function SettleScreen() {
   const footer = flow.isHost ? (
     <View>
       <HostLiveTabBar
-        onHome={() => router.replace("/")}
+        onHome={goHostDesk}
         onClaims={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
         closed={closed}
         busy={flow.busy}
@@ -139,7 +140,7 @@ export default function SettleScreen() {
                   style: "destructive",
                   onPress: () => {
                     void flow.deleteClosed().then((ok) => {
-                      if (ok) router.replace("/");
+                      if (ok) goHostDesk();
                     });
                   },
                 },
@@ -170,7 +171,7 @@ export default function SettleScreen() {
         title={flow.isHost ? "Live board" : "Settle Payment"}
         onBack={
           flow.isHost
-            ? () => router.replace("/")
+            ? goHostDesk
             : () =>
                 router.replace({
                   pathname: "/r/[id]",

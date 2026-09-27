@@ -14,6 +14,7 @@ import { hostNoteText } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
+import { goHostDesk } from "@/lib/navigation";
 import { colors } from "@/lib/theme";
 import { useMemo, useState } from "react";
 import type { Claim, Item } from "@/lib/types";
@@ -221,7 +222,7 @@ function PickBoard() {
       total={totalSteps}
       kicker={receipt.restaurant || "The check"}
       title="What did you have?"
-      onBack={flow.isHost ? () => router.replace("/") : undefined}
+      onBack={flow.isHost ? goHostDesk : undefined}
       footer={footer}
       scroll={false}
     >

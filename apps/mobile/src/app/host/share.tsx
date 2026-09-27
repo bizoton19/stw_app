@@ -8,6 +8,7 @@ import { IconActionButton } from "@/components/icon-action-button";
 import { useHostDraft } from "@/context/host-draft";
 import { registerHostClaimPush } from "@/lib/host-push";
 import { centsToLabel } from "@/lib/money";
+import { goHostDesk } from "@/lib/navigation";
 import { colors } from "@/lib/theme";
 
 export default function HostShare() {
@@ -43,10 +44,12 @@ export default function HostShare() {
         kicker="Share"
         title="Send this. They claim what they consumed."
         sparse
+        onBack={goHostDesk}
         footer={
           <View>
             <FooterHint>Anyone with the link can claim — no account needed.</FooterHint>
-            <PrimaryButton
+            <PrimaryButton onPress={goHostDesk}>Done — go Home</PrimaryButton>
+            <QuietButton
               onPress={() =>
                 router.replace({
                   pathname: "/r/[id]/settle",
@@ -55,8 +58,7 @@ export default function HostShare() {
               }
             >
               Open the live board
-            </PrimaryButton>
-            <QuietButton onPress={() => router.replace("/")}>Home</QuietButton>
+            </QuietButton>
           </View>
         }
         supportTip

@@ -98,6 +98,8 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const resumePathRef = useRef<string | null>(null);
   const skipPersist = useRef(true);
+  /** After a successful publish, keep in-memory fields for the share screen but never re-cache. */
+  const [published, setPublished] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,7 +139,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    if (!ready || skipPersist.current) return;
+    if (!ready || skipPersist.current || published) return;
     const snapshot: PersistedHostDraft = {
       version: 1,
       updatedAt: new Date().toISOString(),
@@ -154,11 +156,14 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       resumePath: resumePathRef.current,
     };
     const t = setTimeout(() => {
+      // Re-check: publish / discard may have flipped this after the effect scheduled.
+      if (skipPersist.current || published) return;
       void saveHostDraft(snapshot);
     }, 250);
     return () => clearTimeout(t);
   }, [
     ready,
+    published,
     receiptId,
     restaurant,
     venue,
@@ -174,6 +179,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
 
   const clearSavedDraft = useCallback(async () => {
     skipPersist.current = true;
+    setPublished(false);
     await clearHostDraft();
     setReceiptId(null);
     setPickMode(null);
@@ -403,25 +409,31 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       receiptDay: day,
       status: "open",
     });
-    await clearHostDraft();
+    // Keep interview fields in memory for /host/share, but stop caching — otherwise
+    // the autosave effect rewrites the draft and Home shows Draft + Open.
+    skipPersist.current = true;
+    setPublished(true);
     resumePathRef.current = null;
+    await clearHostDraft();
   }, [fees, items, note, payments, receiptDate, receiptId, restaurant, venue]);
 
-  const hasSavedProgress = draftHasProgress({
-    version: 1,
-    updatedAt: "",
-    receiptId,
-    restaurant,
-    venue,
-    receiptDate,
-    items,
-    fees,
-    payments,
-    note,
-    imageUri: image?.uri ?? null,
-    pickMode,
-    resumePath: resumePathRef.current,
-  });
+  const hasSavedProgress =
+    !published &&
+    draftHasProgress({
+      version: 1,
+      updatedAt: "",
+      receiptId,
+      restaurant,
+      venue,
+      receiptDate,
+      items,
+      fees,
+      payments,
+      note,
+      imageUri: image?.uri ?? null,
+      pickMode,
+      resumePath: resumePathRef.current,
+    });
 
   const value = useMemo(
     () => ({

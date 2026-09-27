@@ -70,6 +70,29 @@ Draft persistence lived in host flow only; Home never loaded `loadHostDraft()` /
 
 ---
 
+## BUG-3 — Draft still on Home after successful publish (Draft + Open)
+
+### Severity
+Medium — desk shows a ghost unfinished draft next to the real open tab.
+
+### Root cause
+`publish()` called `clearHostDraft()`, but the autosave effect still held interview state in memory and rewrote AsyncStorage shortly after (pathname change to `/host/share`).
+
+### Fix
+After publish: `skipPersist`, mark `published`, clear storage; autosave no-ops while published. Share screen still uses in-memory fields.
+
+---
+
+## BUG-4 — No easy exit to Home at end of host workflow
+
+### Severity
+Medium — host hammers Back through the interview stack.
+
+### Fix
+Share step: primary **Done — go Home**, back chevron → Home, live board is secondary. Shared `goHostDesk()` dismisses nested stacks when available, then replaces to Home. Live board / claims host back also use it.
+
+---
+
 ## Notes
 - Redeploy **API** so production matches open-tab delete (if an older deploy still rejected non-finalized delete).
 - Expo Go picks up mobile changes on reload; no store rebuild required for friend-test.
