@@ -8,12 +8,15 @@ import {
   resetStoreForTests,
 } from "./store-memory";
 
-describe("delete closed tab", () => {
-  it("rejects delete while the tab is still open", async () => {
+describe("delete tab", () => {
+  it("deletes an open tab for the host so the venue/day can be reused", async () => {
     resetStoreForTests();
-    await assert.rejects(
-      () => deleteReceipt("demo", "demo-host"),
-      (err: unknown) => (err as { code?: string }).code === "conflict",
+    const demo = await getPublicReceipt("demo");
+    assert.equal(demo.status, "open");
+    await deleteReceipt("demo", "demo-host");
+    assert.throws(
+      () => getPublicReceipt("demo"),
+      (err: unknown) => (err as { code?: string }).code === "not_found",
     );
   });
 

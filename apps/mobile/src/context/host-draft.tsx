@@ -356,8 +356,32 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         }),
       });
     } catch (err) {
-      const e = err as { code?: string; message?: string };
-      if (e.code === "venue_day_taken" || e.code === "invalid") {
+      const e = err as { code?: string; message?: string; existingId?: string };
+      if (e.code === "venue_day_taken") {
+        // If the conflicting tab was only hidden locally, put it back on Home so trash can delete it.
+        if (e.existingId && e.existingId !== receiptId) {
+          const { getHostToken: tokenFor } = await import("@/lib/session");
+          const existingToken = tokenFor(e.existingId);
+          if (existingToken) {
+            const { rememberHostedReceipt } = await import("@/lib/host-tabs");
+            await rememberHostedReceipt({
+              id: e.existingId,
+              restaurant: venueToSave.name.trim() || restaurant.trim() || "Tonight’s check",
+              claimUrl: publicClaimUrl(e.existingId),
+              updatedAt: new Date().toISOString(),
+              placeKey: placeKey ?? undefined,
+              receiptDay: day,
+              status: "open",
+            });
+          }
+        }
+        throw new Error(
+          e.message
+            ? `${e.message} Delete that tab from Home, then publish again.`
+            : "You already have a tab for that place today. Delete it from Home, then publish again.",
+        );
+      }
+      if (e.code === "invalid") {
         throw new Error(e.message || "Couldn't publish that place for today.");
       }
       if (e.message && e.message !== "request_failed") {

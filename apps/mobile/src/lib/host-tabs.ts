@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "./api";
-import { getHostToken, hydrateSession } from "./session";
+import { clearHostToken, getHostToken, hydrateSession } from "./session";
 import type { PublicReceipt, ReceiptStatus } from "./types";
 
 const ACTIVE_KEY = "stw-active-receipt";
@@ -18,7 +18,8 @@ export type HostedReceiptSummary = {
   status?: ReceiptStatus;
 };
 
-export function hostedStatusLabel(status?: ReceiptStatus): "Open" | "Closed" {
+export function hostedStatusLabel(status?: ReceiptStatus | "draft"): "Open" | "Closed" | "Draft" {
+  if (status === "draft") return "Draft";
   return status === "finalized" ? "Closed" : "Open";
 }
 
@@ -111,4 +112,5 @@ export async function clearHostedReceipt(id: string) {
   await writeHostedList(list);
   const active = await AsyncStorage.getItem(ACTIVE_KEY);
   if (active === id) await AsyncStorage.removeItem(ACTIVE_KEY);
+  await clearHostToken(id);
 }

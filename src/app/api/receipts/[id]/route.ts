@@ -60,7 +60,7 @@ export async function PUT(
   }
 }
 
-/** Host-only. Deletes a closed (finalized) tab. */
+/** Host-only. Deletes an open or closed tab. */
 export async function DELETE(
   req: Request,
   ctx: { params: Promise<{ id: string }> },

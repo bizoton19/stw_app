@@ -62,6 +62,11 @@ export function getHostToken(receiptId: string): string | null {
   return host.get(receiptId) ?? null;
 }
 
+export async function clearHostToken(receiptId: string) {
+  host.delete(receiptId);
+  await AsyncStorage.removeItem(`${HOST_PREFIX}${receiptId}`);
+}
+
 export async function ensureDemoHost(isHostQuery: boolean) {
   if (isHostQuery) await persistHost("demo", "demo-host");
 }

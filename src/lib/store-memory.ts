@@ -651,13 +651,8 @@ export async function reopenReceipt(id: string, hostToken: string | null) {
 
 export async function deleteReceipt(id: string, hostToken: string | null): Promise<void> {
   await withLock(id, async () => {
+    // Host may delete open or closed tabs so a venue/day slot can be reused.
     const receipt = assertHost(id, hostToken);
-    if (receipt.status !== "finalized") {
-      throw Object.assign(new Error("not_finalized"), {
-        code: "conflict",
-        message: "Close the tab before deleting it.",
-      });
-    }
     for (const claim of receipt.claims) {
       state().claimsById.delete(claim.id);
     }

@@ -772,13 +772,8 @@ export async function deleteReceipt(id: string, hostToken: string | null): Promi
   await ensureSchema();
   const { deleteObjectKey } = await import("./object-storage");
   const storageKey = await withTransaction(async (client) => {
-    const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
-    if (receipt.status !== "finalized") {
-      throw Object.assign(new Error("not_finalized"), {
-        code: "conflict",
-        message: "Close the tab before deleting it.",
-      });
-    }
+    // Host may delete open or closed tabs so a venue/day slot can be reused after a bad publish.
+    assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
     let storageKey: string | null = null;
     try {
       const { rows } = await client.query<{ storage_key: string | null }>(

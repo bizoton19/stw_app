@@ -14,6 +14,13 @@ import { ApiBar } from "@/components/api-bar";
 import { AppShell, PrimaryButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import {
+  clearHostDraft,
+  draftHasProgress,
+  loadHostDraft,
+  resumePathForDraft,
+  type PersistedHostDraft,
+} from "@/lib/host-draft-store";
+import {
   clearHostedReceipt,
   getActiveHostReceiptId,
   hostedStatusLabel,
@@ -43,15 +50,22 @@ function isToday(isoDay?: string, updatedAt?: string): boolean {
   return raw === new Date().toISOString().slice(0, 10);
 }
 
+function draftPlaceLabel(draft: PersistedHostDraft): string {
+  return draft.venue?.name?.trim() || draft.restaurant.trim() || "Unfinished check";
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hosted, setHosted] = useState<HostedReceiptSummary[]>([]);
+  const [draft, setDraft] = useState<PersistedHostDraft | null>(null);
 
   const refresh = useCallback(() => {
     void (async () => {
       setActiveId(await getActiveHostReceiptId());
       setHosted(await refreshHostedReceiptStatuses());
+      const saved = await loadHostDraft();
+      setDraft(saved && draftHasProgress(saved) ? saved : null);
     })();
   }, []);
 
@@ -81,29 +95,38 @@ export default function HomeScreen() {
     });
   }
 
+  function continueDraft() {
+    if (!draft) return;
+    router.push(resumePathForDraft(draft) as never);
+  }
+
+  function confirmDiscardDraft() {
+    Alert.alert(
+      "Discard draft?",
+      "This clears the unfinished tab saved on this phone. A server draft (if any) is left alone until you publish or delete a published tab.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: () => {
+            void clearHostDraft().then(() => {
+              setDraft(null);
+              refresh();
+            });
+          },
+        },
+      ],
+    );
+  }
+
   function confirmRemove(row: HostedReceiptSummary) {
     const closed = row.status === "finalized";
-    if (!closed) {
-      Alert.alert(
-        "Remove from this phone?",
-        `${row.restaurant || "This tab"} leaves your list. Close it first if you want to delete it for everyone.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Remove",
-            style: "destructive",
-            onPress: () => {
-              void clearHostedReceipt(row.id).then(refresh);
-            },
-          },
-        ],
-      );
-      return;
-    }
-
     Alert.alert(
-      "Delete closed tab?",
-      `${row.restaurant || "This tab"} will be permanently deleted. Claim links will stop working.`,
+      closed ? "Delete closed tab?" : "Delete this tab?",
+      closed
+        ? `${row.restaurant || "This tab"} will be permanently deleted. Claim links will stop working.`
+        : `${row.restaurant || "This tab"} will be deleted for everyone and free that place for today so you can publish again.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -123,7 +146,7 @@ export default function HomeScreen() {
                 if (e.code !== "not_found") {
                   Alert.alert(
                     "Couldn't delete",
-                    e.message || "Close the tab, then try again.",
+                    e.message || "Try again in a moment.",
                   );
                   return;
                 }
@@ -137,6 +160,8 @@ export default function HomeScreen() {
     );
   }
 
+  const showEmpty = !active && !draft;
+
   return (
     <AppShell>
       <SafeAreaView edges={["bottom"]} style={styles.main}>
@@ -144,7 +169,7 @@ export default function HomeScreen() {
           <View style={styles.topText}>
             <Text style={styles.kicker}>Host desk</Text>
             <Text style={styles.title} numberOfLines={1}>
-              {active ? "Your tabs" : "Ready when you are"}
+              {active || draft ? "Your tabs" : "Ready when you are"}
             </Text>
           </View>
           <PressScale
@@ -169,6 +194,42 @@ export default function HomeScreen() {
           bounces={Platform.OS === "ios"}
           ListHeaderComponent={
             <View>
+              {draft ? (
+                <View style={styles.heroWrap}>
+                  <PressScale
+                    haptic="select"
+                    onPress={continueDraft}
+                    style={styles.heroCard}
+                    accessibilityLabel={`Draft tab for ${draftPlaceLabel(draft)}`}
+                  >
+                    <View style={styles.heroMetaRow}>
+                      <Text style={styles.heroEyebrow}>Unfinished</Text>
+                      <View style={[styles.statusPill, styles.statusPillDraft]}>
+                        <Text style={[styles.statusPillText, styles.statusPillTextDraft]}>
+                          {hostedStatusLabel("draft")}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.heroDate}>
+                      {receiptDate(draft.receiptDate ?? undefined, draft.updatedAt)}
+                    </Text>
+                    <Text style={styles.heroPlace} numberOfLines={2}>
+                      {draftPlaceLabel(draft)}
+                    </Text>
+                    <Text style={styles.heroCta}>Tap to continue where you left off</Text>
+                  </PressScale>
+                  <PressScale
+                    haptic="select"
+                    accessibilityLabel="Discard draft"
+                    onPress={confirmDiscardDraft}
+                    style={styles.heroRemove}
+                  >
+                    <Trash2 size={16} color={colors.inkSoft} strokeWidth={2} />
+                    <Text style={styles.heroRemoveText}>Discard draft</Text>
+                  </PressScale>
+                </View>
+              ) : null}
+
               {active ? (
                 <View style={styles.heroWrap}>
                   <PressScale
@@ -216,23 +277,19 @@ export default function HomeScreen() {
                   </PressScale>
                   <PressScale
                     haptic="select"
-                    accessibilityLabel={
-                      active.status === "finalized"
-                        ? "Delete closed tab"
-                        : "Remove tab from this phone"
-                    }
+                    accessibilityLabel="Delete tab"
                     onPress={() => confirmRemove(active)}
                     style={styles.heroRemove}
                   >
                     <Trash2 size={16} color={colors.inkSoft} strokeWidth={2} />
                     <Text style={styles.heroRemoveText}>
-                      {active.status === "finalized"
-                        ? "Delete closed tab"
-                        : "Remove from phone"}
+                      {active.status === "finalized" ? "Delete closed tab" : "Delete tab"}
                     </Text>
                   </PressScale>
                 </View>
-              ) : (
+              ) : null}
+
+              {showEmpty ? (
                 <View style={styles.emptyCard}>
                   <Text style={styles.emptyTitle}>No open tab yet</Text>
                   <Text style={styles.emptyBody}>
@@ -243,7 +300,8 @@ export default function HomeScreen() {
                     Start a tab
                   </PrimaryButton>
                 </View>
-              )}
+              ) : null}
+
               {others.length > 0 ? (
                 <Text style={styles.sectionLabel}>Recent</Text>
               ) : null}
@@ -278,7 +336,7 @@ export default function HomeScreen() {
                 </PressScale>
                 <PressScale
                   haptic="select"
-                  accessibilityLabel="Remove from this phone"
+                  accessibilityLabel="Delete tab"
                   onPress={() => confirmRemove(item)}
                   style={styles.rowTrash}
                 >
@@ -288,7 +346,7 @@ export default function HomeScreen() {
             );
           }}
           ListEmptyComponent={
-            active ? null : (
+            active || draft ? null : (
               <Text style={styles.hint}>Your hosted tabs will show up here.</Text>
             )
           }
@@ -390,6 +448,9 @@ const styles = StyleSheet.create({
   statusPillClosed: {
     backgroundColor: "rgba(42, 36, 28, 0.08)",
   },
+  statusPillDraft: {
+    backgroundColor: "rgba(110, 46, 53, 0.12)",
+  },
   liveDot: {
     width: 7,
     height: 7,
@@ -398,6 +459,7 @@ const styles = StyleSheet.create({
   },
   statusPillText: { fontSize: 12, fontWeight: "700", color: colors.select },
   statusPillTextClosed: { color: colors.inkSoft },
+  statusPillTextDraft: { color: colors.merlot },
   heroCta: { marginTop: 14, fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   emptyCard: {
     padding: 18,

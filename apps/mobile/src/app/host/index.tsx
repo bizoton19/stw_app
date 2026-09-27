@@ -16,9 +16,10 @@ export default function HostReady() {
   const draft = useHostDraft();
   const canResume = draft.ready && draft.hasSavedProgress;
 
-  function resume() {
-    router.push(
-      resumePathForDraft({
+  async function resume() {
+    const saved = await loadHostDraft();
+    const path = resumePathForDraft(
+      saved ?? {
         version: 1,
         updatedAt: "",
         receiptId: draft.receiptId,
@@ -32,8 +33,9 @@ export default function HostReady() {
         imageUri: draft.image?.uri ?? null,
         pickMode: draft.pickMode,
         resumePath: null,
-      }) as never,
+      },
     );
+    router.push(path as never);
   }
 
   function startFresh() {
@@ -69,7 +71,7 @@ export default function HostReady() {
           <View>
             {canResume ? (
               <>
-                <PrimaryButton onPress={resume}>Continue unfinished tab</PrimaryButton>
+                <PrimaryButton onPress={() => void resume()}>Continue unfinished tab</PrimaryButton>
                 <QuietButton onPress={startFresh}>Start fresh instead</QuietButton>
               </>
             ) : (
