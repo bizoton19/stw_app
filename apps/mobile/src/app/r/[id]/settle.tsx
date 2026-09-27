@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, Share, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Banknote } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
+import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { HostSupportTip } from "@/components/host-support-tip";
 import { IconActionButton } from "@/components/icon-action-button";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
@@ -32,6 +33,7 @@ export default function SettleScreen() {
   const [paying, setPaying] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [showTotalDetails, setShowTotalDetails] = useState(false);
 
   useEffect(() => {
     if (!flow.isHost || !receipt?.id || receipt.status === "finalized") return;
@@ -116,27 +118,14 @@ export default function SettleScreen() {
 
   const footer = flow.isHost ? (
     <View>
-      <PrimaryButton onPress={() => router.replace("/")}>Back to host desk</PrimaryButton>
-      <QuietButton
-        onPress={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
-      >
-        Claim my drinks
-      </QuietButton>
-      {!closed ? (
-        <QuietButton
-          disabled={flow.busy}
-          onPress={() => void flow.closeOut()}
-        >
-          Close claiming — leftovers on me
-        </QuietButton>
-      ) : (
-        <QuietButton
-          disabled={flow.busy}
-          onPress={() => void flow.reopen()}
-        >
-          Reopen claiming
-        </QuietButton>
-      )}
+      <HostLiveTabBar
+        onHome={() => router.replace("/")}
+        onClaims={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
+        closed={closed}
+        busy={flow.busy}
+        onClose={() => void flow.closeOut()}
+        onReopen={() => void flow.reopen()}
+      />
       {closed ? (
         <QuietButton
           disabled={flow.busy}
@@ -333,26 +322,41 @@ export default function SettleScreen() {
 
         {flow.isHost && leftover && remainingLines.length > 0 ? (
           <View style={styles.remainBlock}>
-            <Text style={styles.peopleTitle}>Still on the table</Text>
-            {remainingLines.map((item) => {
-              const left = receipt.remaining[item.id] ?? 0;
-              const money = claimMoneySlice(item, left);
-              return (
-              <View key={item.id} style={styles.remainRow}>
-                <View style={styles.remainNameRow}>
-                  <LineKindIcon name={item.name} kind={item.kind} size={12} />
-                  <Text style={styles.remainName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                </View>
-                <Text style={styles.remainLeft}>
-                  {centsToLabel(money.unitCents)} × {left}
-                  {money.glasses ? (left === 1 ? " glass" : " glasses") : ""} ·{" "}
-                  {centsToLabel(money.remainingCents)}
-                </Text>
-              </View>
-              );
-            })}
+            <View style={styles.detailToggle}>
+              <Text style={styles.detailToggleLabel}>Show total details</Text>
+              <Switch
+                value={showTotalDetails}
+                onValueChange={setShowTotalDetails}
+                trackColor={{ false: colors.border, true: "rgba(47,93,80,0.45)" }}
+                thumbColor={showTotalDetails ? colors.select : "#f4f3f0"}
+                ios_backgroundColor={colors.border}
+                accessibilityLabel="Show total details"
+              />
+            </View>
+            {showTotalDetails ? (
+              <>
+                <Text style={styles.peopleTitle}>Still on the table</Text>
+                {remainingLines.map((item) => {
+                  const left = receipt.remaining[item.id] ?? 0;
+                  const money = claimMoneySlice(item, left);
+                  return (
+                    <View key={item.id} style={styles.remainRow}>
+                      <View style={styles.remainNameRow}>
+                        <LineKindIcon name={item.name} kind={item.kind} size={12} />
+                        <Text style={styles.remainName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                      </View>
+                      <Text style={styles.remainLeft}>
+                        {centsToLabel(money.unitCents)} × {left}
+                        {money.glasses ? (left === 1 ? " glass" : " glasses") : ""} ·{" "}
+                        {centsToLabel(money.remainingCents)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </>
+            ) : null}
           </View>
         ) : null}
 
@@ -544,6 +548,19 @@ const styles = StyleSheet.create({
   payLabel: { fontSize: 15, fontWeight: "600", color: colors.ink },
   payCta: { fontSize: 12, fontWeight: "700", color: colors.merlot },
   remainBlock: { marginBottom: 20, gap: 8 },
+  detailToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 2,
+  },
+  detailToggleLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.muted,
+  },
   remainRow: {
     flexDirection: "row",
     justifyContent: "space-between",
