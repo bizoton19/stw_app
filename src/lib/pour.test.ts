@@ -101,6 +101,22 @@ describe("pour heuristics", () => {
     assert.ok(s);
     assert.equal(s!.suggestGlasses, 6);
     assert.equal(s!.confidence, "low");
+    assert.equal(s!.needsResolve, true);
+    assert.match(s!.prompt, /shared bottle/);
+    assert.doesNotMatch(s!.prompt, /confidence|low|med|high/i);
+  });
+
+  it("marks clear bottles as high confidence without needing resolve", () => {
+    const s = suggestPourForItem({
+      id: "it_1",
+      name: "Btl Pinot Noir",
+      qty: 1,
+      totalCents: 7200,
+      kind: "drink",
+    });
+    assert.ok(s);
+    assert.equal(s!.confidence, "high");
+    assert.equal(s!.needsResolve, false);
   });
 
   it("uses per-unit price so cheap multi-qty drinks skip the pour screen", () => {

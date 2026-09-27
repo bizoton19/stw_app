@@ -29,9 +29,33 @@ export type PourSuggestion = {
   totalCents: number;
   printedQty: number;
   suggestGlasses: number;
+  /** Internal only — never show in UI. */
   confidence: "high" | "med" | "low";
-  label: string;
+  /**
+   * User-facing suggestion. For ambiguous lines this is the resolve question
+   * (e.g. “$60 Cabernet looks like a shared bottle — want to split it?”).
+   */
+  prompt: string;
+  /**
+   * True when confidence is below “high”: host must explicitly choose;
+   * do not pre-select “split into glasses.”
+   */
+  needsResolve: boolean;
 };
+
+function moneyLabel(cents: number): string {
+  const dollars = cents / 100;
+  return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;
+}
+
+function suggestion(
+  base: Omit<PourSuggestion, "needsResolve" | "prompt"> & { prompt: string },
+): PourSuggestion {
+  return {
+    ...base,
+    needsResolve: base.confidence !== "high",
+  };
+}
 
 export function claimCapacity(item: Pick<Item, "qty" | "pour">): number {
   const pour = item.pour;
@@ -81,72 +105,75 @@ export function suggestPourForItem(item: {
     return null;
   }
   if (CARAFE.test(name)) {
-    return {
+    return suggestion({
       itemId: item.id,
       name,
       totalCents: item.totalCents,
       printedQty: item.qty,
       suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
       confidence: "low",
-      label: "Carafe / pitcher — confirm pour size",
-    };
+      prompt: `${name} · ${moneyLabel(item.totalCents)} looks shareable — split into glasses?`,
+    });
   }
   if (MAGNUM.test(name)) {
-    return {
+    return suggestion({
       itemId: item.id,
       name,
       totalCents: item.totalCents,
       printedQty: item.qty,
       suggestGlasses: 12,
       confidence: "high",
-      label: "Magnum — usually ~12 glasses",
-    };
+      prompt: "Magnum — usually about 12 glasses",
+    });
   }
   if (SPARKLING.test(name) && (BOTTLE.test(name) || MAGNUM.test(name) || item.totalCents >= 6000)) {
-    return {
+    const high = BOTTLE.test(name) || MAGNUM.test(name);
+    return suggestion({
       itemId: item.id,
       name,
       totalCents: item.totalCents,
       printedQty: item.qty,
       suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
-      confidence: BOTTLE.test(name) || MAGNUM.test(name) ? "high" : "med",
-      label: "Champagne / sparkling — often ~6 flutes",
-    };
+      confidence: high ? "high" : "med",
+      prompt: high
+        ? "Champagne / sparkling — often about 6 flutes"
+        : `${name} · ${moneyLabel(item.totalCents)} looks like a shared bottle — want to split it?`,
+    });
   }
   if (BOTTLE.test(name)) {
-    return {
+    return suggestion({
       itemId: item.id,
       name,
       totalCents: item.totalCents,
       printedQty: item.qty,
       suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
       confidence: "high",
-      label: "Bottle — often ~6 glasses",
-    };
+      prompt: "Bottle — often about 6 glasses",
+    });
   }
   const drinkish = kindOf(item) === "drink" || WINE_PACKAGE.test(name);
   if (drinkish && item.qty <= 2 && item.totalCents >= 5000 && WINE_PACKAGE.test(name)) {
-    return {
+    return suggestion({
       itemId: item.id,
       name,
       totalCents: item.totalCents,
       printedQty: item.qty,
       suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
       confidence: "med",
-      label: "Wine package — often 1 bottle ≈ 6 glasses",
-    };
+      prompt: `${name} · ${moneyLabel(item.totalCents)} looks like a shared bottle — want to split it?`,
+    });
   }
   const unitCents = Math.round(item.totalCents / Math.max(1, item.qty));
   if (kindOf(item) === "drink" && item.qty <= 3 && unitCents >= BOTTLE_PRICE_HINT_CENTS) {
-    return {
+    return suggestion({
       itemId: item.id,
       name,
       totalCents: item.totalCents,
       printedQty: item.qty,
       suggestGlasses: DEFAULT_GLASSES_PER_BOTTLE,
       confidence: "low",
-      label: `Over $${(BOTTLE_PRICE_HINT_CENTS / 100).toFixed(0)} — bottle or keep as printed?`,
-    };
+      prompt: `${name} · ${moneyLabel(unitCents)} looks like a shared bottle — want to split it?`,
+    });
   }
   return null;
 }

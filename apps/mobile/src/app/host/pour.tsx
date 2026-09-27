@@ -12,14 +12,18 @@ import {
   pourAsGlasses,
   pourAsPrinted,
   pourCandidates,
+  type PourSuggestion,
 } from "@/lib/pour";
 import type { ItemPour } from "@/lib/types";
 import { colors } from "@/lib/theme";
+
+type PourMode = "glasses" | "as_printed";
 
 export default function HostPour() {
   const router = useRouter();
   const draft = useHostDraft();
   const candidates = useMemo(() => pourCandidates(draft.items), [draft.items]);
+  const anyResolve = candidates.some((row) => row.needsResolve);
 
   const [pourGlasses, setPourGlasses] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
@@ -28,10 +32,11 @@ export default function HostPour() {
     }
     return init;
   });
-  const [pourMode, setPourMode] = useState<Record<string, "glasses" | "as_printed">>(() => {
-    const init: Record<string, "glasses" | "as_printed"> = {};
+  const [pourMode, setPourMode] = useState<Record<string, PourMode>>(() => {
+    const init: Record<string, PourMode> = {};
     for (const row of pourCandidates(draft.items)) {
-      init[row.itemId] = "glasses";
+      // Ambiguous lines: no default — host must resolve.
+      if (!row.needsResolve) init[row.itemId] = "glasses";
     }
     return init;
   });
@@ -69,8 +74,8 @@ export default function HostPour() {
       <InterviewChrome
         step={6}
         total={9}
-        kicker="Bottles"
-        title="How should people claim these?"
+        kicker={anyResolve ? "Quick check" : "Bottles"}
+        title={anyResolve ? "Could this be a shared bottle?" : "How should people claim these?"}
         onBack={() => router.back()}
         footer={
           <PrimaryButton disabled={!pourOk} onPress={continueToFees}>
@@ -79,81 +84,94 @@ export default function HostPour() {
         }
       >
         <Text style={styles.lead}>
-          Friends can take a glass each — tax still follows what they claim.
+          {anyResolve
+            ? "We’ll only ask when a line looks shareable — you decide."
+            : "Friends can take a glass each — tax still follows what they claim."}
         </Text>
-        {candidates.map((row) => {
-          const mode = pourMode[row.itemId] ?? "glasses";
-          const glasses = pourGlasses[row.itemId] ?? row.suggestGlasses;
-          return (
-            <View key={row.itemId} style={styles.card}>
-              <Text style={styles.name}>{row.name}</Text>
-              <Text style={styles.meta}>
-                {centsToLabel(row.totalCents)}
-                {row.printedQty > 1 ? ` · qty ${row.printedQty}` : ""} · {row.label}
-              </Text>
-              <View style={styles.stepperRow}>
-                <Text style={styles.stepperLabel}>{glasses} glasses in this bottle</Text>
-                <View style={styles.stepper}>
-                  <PressScale
-                    accessibilityLabel="Fewer glasses"
-                    disabled={glasses <= MIN_GLASSES_PER_UNIT}
-                    onPress={() =>
-                      setPourGlasses((prev) => ({
-                        ...prev,
-                        [row.itemId]: Math.max(MIN_GLASSES_PER_UNIT, glasses - 1),
-                      }))
-                    }
-                    style={styles.stepBtn}
-                  >
-                    <Text style={styles.stepBtnText}>−</Text>
-                  </PressScale>
-                  <Text style={styles.stepVal}>{glasses}</Text>
-                  <PressScale
-                    accessibilityLabel="More glasses"
-                    disabled={glasses >= MAX_GLASSES_PER_UNIT}
-                    onPress={() =>
-                      setPourGlasses((prev) => ({
-                        ...prev,
-                        [row.itemId]: Math.min(MAX_GLASSES_PER_UNIT, glasses + 1),
-                      }))
-                    }
-                    style={styles.stepBtn}
-                  >
-                    <Text style={styles.stepBtnText}>+</Text>
-                  </PressScale>
-                </View>
-              </View>
-              <View style={styles.modeRow}>
-                <PressScale
-                  onPress={() =>
-                    setPourMode((prev) => ({ ...prev, [row.itemId]: "as_printed" }))
-                  }
-                  style={[styles.modeBtn, mode === "as_printed" && styles.modeBottleOn]}
-                >
-                  <Text
-                    style={[styles.modeText, mode === "as_printed" && styles.modeBottleText]}
-                  >
-                    Keep as bottle
-                  </Text>
-                </PressScale>
-                <PressScale
-                  onPress={() =>
-                    setPourMode((prev) => ({ ...prev, [row.itemId]: "glasses" }))
-                  }
-                  style={[styles.modeBtn, mode === "glasses" && styles.modeGlassesOn]}
-                >
-                  <Text
-                    style={[styles.modeText, mode === "glasses" && styles.modeGlassesText]}
-                  >
-                    Split into glasses
-                  </Text>
-                </PressScale>
-              </View>
-            </View>
-          );
-        })}
+        {candidates.map((row) => (
+          <PourCard
+            key={row.itemId}
+            row={row}
+            mode={pourMode[row.itemId]}
+            glasses={pourGlasses[row.itemId] ?? row.suggestGlasses}
+            onMode={(next) => setPourMode((prev) => ({ ...prev, [row.itemId]: next }))}
+            onGlasses={(next) => setPourGlasses((prev) => ({ ...prev, [row.itemId]: next }))}
+          />
+        ))}
       </InterviewChrome>
     </AppShell>
+  );
+}
+
+function PourCard({
+  row,
+  mode,
+  glasses,
+  onMode,
+  onGlasses,
+}: {
+  row: PourSuggestion;
+  mode: PourMode | undefined;
+  glasses: number;
+  onMode: (mode: PourMode) => void;
+  onGlasses: (n: number) => void;
+}) {
+  const unresolved = row.needsResolve && !mode;
+  const showStepper = mode === "glasses" || (!row.needsResolve && mode !== "as_printed");
+
+  return (
+    <View style={[styles.card, unresolved && styles.cardResolve]}>
+      <Text style={styles.name}>{row.name}</Text>
+      <Text style={styles.meta}>
+        {centsToLabel(row.totalCents)}
+        {row.printedQty > 1 ? ` · qty ${row.printedQty}` : ""}
+      </Text>
+      <Text style={styles.prompt}>{row.prompt}</Text>
+
+      {showStepper ? (
+        <View style={styles.stepperRow}>
+          <Text style={styles.stepperLabel}>{glasses} glasses in this bottle</Text>
+          <View style={styles.stepper}>
+            <PressScale
+              accessibilityLabel="Fewer glasses"
+              disabled={glasses <= MIN_GLASSES_PER_UNIT}
+              onPress={() => onGlasses(Math.max(MIN_GLASSES_PER_UNIT, glasses - 1))}
+              style={styles.stepBtn}
+            >
+              <Text style={styles.stepBtnText}>−</Text>
+            </PressScale>
+            <Text style={styles.stepVal}>{glasses}</Text>
+            <PressScale
+              accessibilityLabel="More glasses"
+              disabled={glasses >= MAX_GLASSES_PER_UNIT}
+              onPress={() => onGlasses(Math.min(MAX_GLASSES_PER_UNIT, glasses + 1))}
+              style={styles.stepBtn}
+            >
+              <Text style={styles.stepBtnText}>+</Text>
+            </PressScale>
+          </View>
+        </View>
+      ) : null}
+
+      <View style={styles.modeRow}>
+        <PressScale
+          onPress={() => onMode("as_printed")}
+          style={[styles.modeBtn, mode === "as_printed" && styles.modeBottleOn]}
+        >
+          <Text style={[styles.modeText, mode === "as_printed" && styles.modeBottleText]}>
+            {row.needsResolve ? "Keep as printed" : "Keep as bottle"}
+          </Text>
+        </PressScale>
+        <PressScale
+          onPress={() => onMode("glasses")}
+          style={[styles.modeBtn, mode === "glasses" && styles.modeGlassesOn]}
+        >
+          <Text style={[styles.modeText, mode === "glasses" && styles.modeGlassesText]}>
+            {row.needsResolve ? "Yes, split into glasses" : "Split into glasses"}
+          </Text>
+        </PressScale>
+      </View>
+    </View>
   );
 }
 
@@ -167,8 +185,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: colors.paper,
   },
+  cardResolve: {
+    borderColor: "rgba(47,93,80,0.35)",
+    backgroundColor: "rgba(47,93,80,0.04)",
+  },
   name: { fontSize: 15, fontWeight: "700", color: colors.ink, letterSpacing: -0.2 },
   meta: { marginTop: 3, fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
+  prompt: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
+    color: colors.ink,
+  },
   stepperRow: {
     marginTop: 12,
     flexDirection: "row",

@@ -198,7 +198,8 @@ export function HostInterview() {
     const modes: Record<string, "glasses" | "as_printed"> = {};
     for (const row of next) {
       glasses[row.itemId] = row.suggestGlasses;
-      modes[row.itemId] = "glasses";
+      // Ambiguous lines: no default — host must resolve.
+      if (!row.needsResolve) modes[row.itemId] = "glasses";
     }
     setPourGlasses(glasses);
     setPourMode(modes);
@@ -715,70 +716,82 @@ export function HostInterview() {
       </div>
     );
   } else if (step === "pour") {
+    const anyResolve = candidates.some((row) => row.needsResolve);
     const pourOk =
       candidates.length > 0 &&
       candidates.every((row) => pourMode[row.itemId] === "glasses" || pourMode[row.itemId] === "as_printed");
     body = (
       <>
         <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">
-          Friends can take a glass each — tax still follows what they claim.
+          {anyResolve
+            ? "We’ll only ask when a line looks shareable — you decide."
+            : "Friends can take a glass each — tax still follows what they claim."}
         </p>
         <ul className="space-y-3">
           {candidates.map((row: PourSuggestion) => {
-            const mode = pourMode[row.itemId] ?? "glasses";
+            const mode = pourMode[row.itemId];
             const glasses = pourGlasses[row.itemId] ?? row.suggestGlasses;
+            const unresolved = row.needsResolve && !mode;
+            const showStepper = mode === "glasses" || (!row.needsResolve && mode !== "as_printed");
             return (
               <li
                 key={row.itemId}
-                className="rounded-2xl border border-border bg-[#FFFcf8] px-3.5 py-3.5"
+                className={`rounded-2xl border px-3.5 py-3.5 ${
+                  unresolved
+                    ? "border-[rgba(47,93,80,0.35)] bg-[rgba(47,93,80,0.04)]"
+                    : "border-border bg-[#FFFcf8]"
+                }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-semibold tracking-tight">{row.name}</p>
-                    <p className="mt-0.5 text-[12px] tabular-nums text-muted-foreground">
-                      {centsToLabel(row.totalCents)}
-                      {row.printedQty > 1 ? ` · qty ${row.printedQty}` : ""} · {row.label}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-[13px] font-medium text-foreground">
-                    {glasses} glasses in this bottle
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold tracking-tight">{row.name}</p>
+                  <p className="mt-0.5 text-[12px] tabular-nums text-muted-foreground">
+                    {centsToLabel(row.totalCents)}
+                    {row.printedQty > 1 ? ` · qty ${row.printedQty}` : ""}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="pressable inline-flex size-9 items-center justify-center rounded-full border border-border text-[18px] font-bold"
-                      aria-label="Fewer glasses"
-                      disabled={glasses <= MIN_GLASSES_PER_UNIT}
-                      onClick={() =>
-                        setPourGlasses((prev) => ({
-                          ...prev,
-                          [row.itemId]: Math.max(MIN_GLASSES_PER_UNIT, glasses - 1),
-                        }))
-                      }
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center text-[15px] font-bold tabular-nums">
-                      {glasses}
-                    </span>
-                    <button
-                      type="button"
-                      className="pressable inline-flex size-9 items-center justify-center rounded-full border border-border text-[18px] font-bold"
-                      aria-label="More glasses"
-                      disabled={glasses >= MAX_GLASSES_PER_UNIT}
-                      onClick={() =>
-                        setPourGlasses((prev) => ({
-                          ...prev,
-                          [row.itemId]: Math.min(MAX_GLASSES_PER_UNIT, glasses + 1),
-                        }))
-                      }
-                    >
-                      +
-                    </button>
-                  </div>
+                  <p className="mt-2 text-[14px] font-semibold leading-snug text-foreground">
+                    {row.prompt}
+                  </p>
                 </div>
+                {showStepper ? (
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-[13px] font-medium text-foreground">
+                      {glasses} glasses in this bottle
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="pressable inline-flex size-9 items-center justify-center rounded-full border border-border text-[18px] font-bold"
+                        aria-label="Fewer glasses"
+                        disabled={glasses <= MIN_GLASSES_PER_UNIT}
+                        onClick={() =>
+                          setPourGlasses((prev) => ({
+                            ...prev,
+                            [row.itemId]: Math.max(MIN_GLASSES_PER_UNIT, glasses - 1),
+                          }))
+                        }
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center text-[15px] font-bold tabular-nums">
+                        {glasses}
+                      </span>
+                      <button
+                        type="button"
+                        className="pressable inline-flex size-9 items-center justify-center rounded-full border border-border text-[18px] font-bold"
+                        aria-label="More glasses"
+                        disabled={glasses >= MAX_GLASSES_PER_UNIT}
+                        onClick={() =>
+                          setPourGlasses((prev) => ({
+                            ...prev,
+                            [row.itemId]: Math.min(MAX_GLASSES_PER_UNIT, glasses + 1),
+                          }))
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
@@ -791,7 +804,7 @@ export function HostInterview() {
                       setPourMode((prev) => ({ ...prev, [row.itemId]: "as_printed" }))
                     }
                   >
-                    Keep as bottle
+                    {row.needsResolve ? "Keep as printed" : "Keep as bottle"}
                   </button>
                   <button
                     type="button"
@@ -804,7 +817,7 @@ export function HostInterview() {
                       setPourMode((prev) => ({ ...prev, [row.itemId]: "glasses" }))
                     }
                   >
-                    Split into glasses
+                    {row.needsResolve ? "Yes, split into glasses" : "Split into glasses"}
                   </button>
                 </div>
               </li>
@@ -1155,8 +1168,16 @@ export function HostInterview() {
     <InterviewChrome
       step={stepIndex}
       total={8}
-      kicker={COPY[step].kicker}
-      title={COPY[step].title}
+      kicker={
+        step === "pour" && candidates.some((row) => row.needsResolve)
+          ? "Quick check"
+          : COPY[step].kicker
+      }
+      title={
+        step === "pour" && candidates.some((row) => row.needsResolve)
+          ? "Could this be a shared bottle?"
+          : COPY[step].title
+      }
       onBack={
         step === "ready"
           ? () => router.push("/")
