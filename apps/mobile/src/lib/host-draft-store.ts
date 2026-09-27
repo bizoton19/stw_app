@@ -1,6 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Fee, HostPayment, Item, ItemPour, ReceiptVenue } from "./types";
 
+/**
+ * Host interview draft cache — **this phone only** (AsyncStorage).
+ * Not synced to the API and never shared with other users’ devices.
+ * One unfinished interview slot per phone; publish clears only when the
+ * cached receiptId matches the tab that just published.
+ */
 const KEY = "stw-host-draft-v1";
 
 export type PersistedDraftItem = Item & {
@@ -69,6 +75,19 @@ export async function saveHostDraft(draft: PersistedHostDraft): Promise<void> {
   await AsyncStorage.setItem(KEY, JSON.stringify(draft));
 }
 
+/** Discard whatever unfinished interview is on this phone (user chose Start fresh / Discard). */
 export async function clearHostDraft(): Promise<void> {
+  await AsyncStorage.removeItem(KEY);
+}
+
+/**
+ * After a successful publish: remove this phone’s cached interview only if it
+ * belongs to `receiptId`. Never touches other devices, and skips if the cache
+ * already points at a different receipt.
+ */
+export async function clearHostDraftForReceipt(receiptId: string): Promise<void> {
+  const saved = await loadHostDraft();
+  if (!saved) return;
+  if (saved.receiptId && saved.receiptId !== receiptId) return;
   await AsyncStorage.removeItem(KEY);
 }

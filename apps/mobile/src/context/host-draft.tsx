@@ -12,6 +12,7 @@ import { api, createDraftReceipt, parseReceiptWithImage, submitParseReview } fro
 import { publicClaimUrl } from "@/lib/config";
 import {
   clearHostDraft,
+  clearHostDraftForReceipt,
   draftHasProgress,
   loadHostDraft,
   saveHostDraft,
