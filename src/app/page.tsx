@@ -14,7 +14,7 @@ export default function Home() {
             src="/table-ready.jpg"
             alt="Illustrated round table of friends — one person reading the check"
             fill
-            className="object-cover object-[center_18%]"
+            className="object-contain object-center"
             sizes="(max-width: 430px) 100vw, 390px"
             priority
           />

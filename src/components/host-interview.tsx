@@ -393,7 +393,7 @@ export function HostInterview() {
           <img
             src="/table-ready.jpg"
             alt="Illustrated round table of friends — one person reading the check"
-            className="h-[118%] w-full max-w-none object-cover object-[center_18%]"
+            className="h-full w-full object-contain object-center"
           />
         </div>
         <p className="mb-4 text-[15px] leading-relaxed text-muted-foreground">

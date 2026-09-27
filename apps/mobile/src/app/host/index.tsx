@@ -30,7 +30,7 @@ export default function HostReady() {
             <Image
               source={require("../../../assets/images/table-ready.jpg")}
               style={styles.heroImage}
-              resizeMode="cover"
+              resizeMode="contain"
               accessibilityLabel="Illustrated round table of friends — one person reading the check"
             />
           </View>
@@ -55,18 +55,17 @@ export default function HostReady() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: "center", paddingTop: 4, gap: 18 },
-  /** Crop toward the top so the person with the receipt reads clearly. */
+  /** Match the asset (4:3) so the person + full receipt stay in frame. */
   heroFrame: {
     width: "100%",
-    height: 228,
+    aspectRatio: 4 / 3,
     borderRadius: 16,
     overflow: "hidden",
     backgroundColor: colors.border,
   },
   heroImage: {
     width: "100%",
-    height: "118%",
-    marginTop: "-6%",
+    height: "100%",
   },
   lead: {
     fontSize: 17,
