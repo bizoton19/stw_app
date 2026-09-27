@@ -10,6 +10,7 @@ import { QtyStepper } from "@/components/qty-stepper";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { HostMessage } from "@/components/host-message";
 import { LineKindIcon } from "@/components/line-kind-icon";
+import { ReceiptImageButton } from "@/components/receipt-image-sheet";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice, isGlassesPour } from "@/lib/pour";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
@@ -528,14 +529,7 @@ function BoardHeader({
         </p>
       ) : null}
       {receipt.hasImage ? (
-        <a
-          href={`/api/receipts/${receipt.id}/image`}
-          target="_blank"
-          rel="noreferrer"
-          className="mb-3 inline-flex rounded-full border border-border bg-[#FFFcf8] px-3 py-2 text-[13px] font-semibold text-primary"
-        >
-          View tab photo
-        </a>
+        <ReceiptImageButton receiptId={receipt.id} hasImage />
       ) : null}
     </div>
   );

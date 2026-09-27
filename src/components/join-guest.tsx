@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ContinueButton, InterviewChrome } from "@/components/interview-chrome";
 import { HostMessage } from "@/components/host-message";
+import { ReceiptImageButton } from "@/components/receipt-image-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { saveGuest, type GuestIdentity } from "@/lib/session";
@@ -52,16 +53,7 @@ export function JoinGuest({
           ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
           : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
       </p>
-      {hasImage ? (
-        <a
-          href={`/api/receipts/${receiptId}/image`}
-          target="_blank"
-          rel="noreferrer"
-          className="mb-4 inline-flex rounded-full border border-border bg-[#FFFcf8] px-3 py-2 text-[13px] font-semibold text-primary"
-        >
-          View tab photo
-        </a>
-      ) : null}
+      {hasImage ? <ReceiptImageButton receiptId={receiptId} hasImage /> : null}
       <Label htmlFor="guest-name" className="mb-2 text-[13px] font-medium">
         Name
       </Label>
