@@ -5,6 +5,7 @@ import { UtensilsCrossed, Wine } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { classifyVenueKind } from "@/lib/line-kind";
+import { placePinColor } from "@/lib/place-pin";
 import type { ReceiptVenue } from "@/lib/types";
 
 type PlacePrediction = {
@@ -273,7 +274,7 @@ export function VenueTypeahead({
         {hasMap ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`/api/places/static-map?lat=${venue!.lat}&lng=${venue!.lng}&w=600&h=220`}
+            src={`/api/places/static-map?lat=${venue!.lat}&lng=${venue!.lng}&w=600&h=220&color=${placePinColor(venue!.placeId || venue!.name)}`}
             alt={`Map of ${venue!.name}`}
             className="h-[280px] w-full rounded-[14px] border border-border object-cover bg-[#EDE8E1]"
           />
