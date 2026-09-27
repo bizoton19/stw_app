@@ -1,6 +1,22 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { usePathname } from "expo-router";
 import { api, createDraftReceipt, parseReceiptWithImage, submitParseReview } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
+import {
+  clearHostDraft,
+  draftHasProgress,
+  loadHostDraft,
+  saveHostDraft,
+  type PersistedHostDraft,
+} from "@/lib/host-draft-store";
 import { nextUnusedPayMethod } from "@/lib/pay-region";
 import { normalizeHostNote } from "@/lib/host-pay";
 import { saveHostToken } from "@/lib/session";
@@ -31,6 +47,8 @@ function toDraftFees(fees: Fee[]): DraftFee[] {
 }
 
 type HostDraft = {
+  ready: boolean;
+  hasSavedProgress: boolean;
   receiptId: string | null;
   pickMode: PickMode;
   image: PickedImage | null;
@@ -58,11 +76,14 @@ type HostDraft = {
   runParse: () => Promise<void>;
   recordParseReview: (choice: ParseReviewChoice) => Promise<void>;
   publish: () => Promise<void>;
+  clearSavedDraft: () => Promise<void>;
 };
 
 const Ctx = createContext<HostDraft | null>(null);
 
 export function HostDraftProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [ready, setReady] = useState(false);
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [pickMode, setPickMode] = useState<PickMode>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
@@ -75,6 +96,100 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const [note, setNote] = useState("");
   const [claimUrl, setClaimUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const resumePathRef = useRef<string | null>(null);
+  const skipPersist = useRef(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const saved = await loadHostDraft();
+      if (cancelled) return;
+      if (saved && draftHasProgress(saved)) {
+        setReceiptId(saved.receiptId);
+        setRestaurant(saved.restaurant);
+        setVenue(saved.venue);
+        setReceiptDate(saved.receiptDate);
+        setItems(saved.items);
+        setFees(saved.fees);
+        setPayments(saved.payments);
+        setNote(saved.note);
+        setPickMode(saved.pickMode);
+        resumePathRef.current = saved.resumePath;
+        if (saved.imageUri) {
+          setImage({ uri: saved.imageUri, mimeType: "image/jpeg", fileName: "receipt.jpg" });
+        }
+      }
+      setReady(true);
+      // Avoid writing back the empty initial state before hydrate finishes.
+      requestAnimationFrame(() => {
+        skipPersist.current = false;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pathname?.startsWith("/host/") && pathname !== "/host") {
+      resumePathRef.current = pathname;
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!ready || skipPersist.current) return;
+    const snapshot: PersistedHostDraft = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      receiptId,
+      restaurant,
+      venue,
+      receiptDate,
+      items,
+      fees,
+      payments,
+      note,
+      imageUri: image?.uri ?? null,
+      pickMode,
+      resumePath: resumePathRef.current,
+    };
+    const t = setTimeout(() => {
+      void saveHostDraft(snapshot);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [
+    ready,
+    receiptId,
+    restaurant,
+    venue,
+    receiptDate,
+    items,
+    fees,
+    payments,
+    note,
+    image,
+    pickMode,
+    pathname,
+  ]);
+
+  const clearSavedDraft = useCallback(async () => {
+    skipPersist.current = true;
+    await clearHostDraft();
+    setReceiptId(null);
+    setPickMode(null);
+    setImage(null);
+    setRestaurant("");
+    setVenue(null);
+    setReceiptDate(null);
+    setItems([]);
+    setFees([]);
+    setPayments([]);
+    setNote("");
+    setClaimUrl("");
+    setError(null);
+    resumePathRef.current = null;
+    skipPersist.current = false;
+  }, []);
 
   const setPick = useCallback((mode: PickMode, next?: PickedImage | null) => {
     setPickMode(mode);
@@ -142,8 +257,6 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         hostToken: getHostToken(id),
       });
       applyReceipt(receipt);
-      // Venue may already be Places-pinned by the API. Host confirms or Changes on step 4 —
-      // never auto-lock a guess after they start typing.
       if (parse?.reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (parse?.reason === "failed") {
@@ -185,7 +298,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   );
 
   const publish = useCallback(async () => {
-    if (!receiptId) throw new Error("no_receipt");
+    if (!receiptId) throw new Error("Draft missing — go back and re-open the check photo.");
     const { validateHostPayments } = await import("@/lib/host-pay");
     const { isValidatedVenue, receiptDayKey, venueLocationKey } = await import("@/lib/venue-day");
     const checked = validateHostPayments(payments);
@@ -194,6 +307,10 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Confirm the place from suggestions before sharing.");
     }
     const { getHostToken } = await import("@/lib/session");
+    const token = getHostToken(receiptId);
+    if (!token) {
+      throw new Error("Host session expired on this phone. Start again from the receipt photo.");
+    }
     const venueToSave = venue!;
     const day = receiptDayKey(receiptDate, new Date().toISOString());
     const placeKey = venueLocationKey(venueToSave, restaurant);
@@ -215,7 +332,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     try {
       await api(`/api/receipts/${receiptId}`, {
         method: "PUT",
-        hostToken: getHostToken(receiptId),
+        hostToken: token,
         body: JSON.stringify({
           restaurant: venueToSave.name ?? restaurant,
           venue: venueToSave,
@@ -243,7 +360,12 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       if (e.code === "venue_day_taken" || e.code === "invalid") {
         throw new Error(e.message || "Couldn't publish that place for today.");
       }
-      throw err;
+      if (e.message && e.message !== "request_failed") {
+        throw new Error(e.message);
+      }
+      throw new Error(
+        "Couldn't reach the API to publish. Check the API URL on Home, then tap publish again — your draft is saved.",
+      );
     }
     const url = publicClaimUrl(receiptId);
     setClaimUrl(url);
@@ -257,10 +379,30 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       receiptDay: day,
       status: "open",
     });
+    await clearHostDraft();
+    resumePathRef.current = null;
   }, [fees, items, note, payments, receiptDate, receiptId, restaurant, venue]);
+
+  const hasSavedProgress = draftHasProgress({
+    version: 1,
+    updatedAt: "",
+    receiptId,
+    restaurant,
+    venue,
+    receiptDate,
+    items,
+    fees,
+    payments,
+    note,
+    imageUri: image?.uri ?? null,
+    pickMode,
+    resumePath: resumePathRef.current,
+  });
 
   const value = useMemo(
     () => ({
+      ready,
+      hasSavedProgress,
       receiptId,
       pickMode,
       image,
@@ -287,18 +429,22 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       runParse,
       recordParseReview,
       publish,
+      clearSavedDraft,
     }),
     [
       addPayment,
       claimUrl,
+      clearSavedDraft,
       error,
       fees,
+      hasSavedProgress,
       image,
       items,
       note,
       payments,
       pickMode,
       publish,
+      ready,
       receiptId,
       recordParseReview,
       removePayment,
@@ -322,3 +468,5 @@ export function useHostDraft() {
   if (!ctx) throw new Error("useHostDraft outside provider");
   return ctx;
 }
+
+export { resumePathForDraft } from "@/lib/host-draft-store";

@@ -71,10 +71,12 @@ export default function HostPay() {
     try {
       await draft.publish();
       router.push("/host/share");
-    } catch {
-      setError(
-        "Couldn't publish. Check the API URL on the home screen — localhost won't work from a phone.",
-      );
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : "Couldn't publish. Check the API URL on Home, then try again — your draft is saved.";
+      setError(message);
     } finally {
       setBusy(false);
     }
