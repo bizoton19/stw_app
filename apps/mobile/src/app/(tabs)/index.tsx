@@ -217,6 +217,7 @@ export default function HomeScreen() {
                         lat={draft.venue?.lat}
                         lng={draft.venue?.lng}
                         placeKey={venueLocationKey(draft.venue, draft.restaurant)}
+                        category={draft.venue?.category}
                         label={draftPlaceLabel(draft)}
                         size={64}
                       />
@@ -283,6 +284,7 @@ export default function HomeScreen() {
                         lat={active.venueLat}
                         lng={active.venueLng}
                         placeKey={active.placeKey}
+                        category={active.venueCategory}
                         label={active.restaurant || "Open check"}
                         size={64}
                       />
@@ -346,6 +348,7 @@ export default function HomeScreen() {
                     lat={item.venueLat}
                     lng={item.venueLng}
                     placeKey={item.placeKey}
+                    category={item.venueCategory}
                     label={item.restaurant || item.id}
                     size={44}
                   />

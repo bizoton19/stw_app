@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { UtensilsCrossed, Wine } from "lucide-react";
+import { ShoppingBasket, UtensilsCrossed, Wine } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { classifyVenueKind } from "@/lib/line-kind";
@@ -48,15 +48,20 @@ function typedVenue(name: string): ReceiptVenue {
 function VenueGlyph({ category, name }: { category?: string | null; name?: string | null }) {
   const kind = classifyVenueKind(category, name);
   if (!kind) return null;
-  const bar = kind === "bar";
+  const tint =
+    kind === "bar"
+      ? { bg: "bg-[rgba(110,46,53,0.12)] text-[#6E2E35]", label: "Bar" }
+      : kind === "grocery"
+        ? { bg: "bg-[rgba(61,90,128,0.14)] text-[#3D5A80]", label: "Grocery" }
+        : { bg: "bg-[rgba(92,122,94,0.14)] text-[#4F6B50]", label: "Restaurant" };
+  const Icon =
+    kind === "bar" ? Wine : kind === "grocery" ? ShoppingBasket : UtensilsCrossed;
   return (
     <span
-      className={`inline-flex size-7 shrink-0 items-center justify-center rounded-lg ${
-        bar ? "bg-[rgba(110,46,53,0.12)] text-[#6E2E35]" : "bg-[rgba(92,122,94,0.14)] text-[#4F6B50]"
-      }`}
-      aria-label={bar ? "Bar" : "Restaurant"}
+      className={`inline-flex size-7 shrink-0 items-center justify-center rounded-lg ${tint.bg}`}
+      aria-label={tint.label}
     >
-      {bar ? <Wine className="size-4" strokeWidth={2.25} /> : <UtensilsCrossed className="size-4" strokeWidth={2.25} />}
+      <Icon className="size-4" strokeWidth={2.25} />
     </span>
   );
 }

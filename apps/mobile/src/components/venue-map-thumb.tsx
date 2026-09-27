@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
+import { VenueKindThumb } from "@/components/venue-kind-icon";
+import { classifyVenueKind } from "@/lib/line-kind";
 import { placePinColor, staticMapUri } from "@/lib/place-pin";
 import { colors } from "@/lib/theme";
 
@@ -8,15 +10,26 @@ type Props = {
   lng?: number | null;
   /** Stable place key — drives pin + ring color. */
   placeKey?: string | null;
-  /** Fallback letter when no coords (typed venue). */
+  /** Places / MapKit category for restaurant · bar · grocery icon. */
+  category?: string | null;
+  /** Fallback letter when no coords and no kind (typed venue). */
   label?: string;
   size?: number;
 };
 
 /**
- * Round static-map thumb for host desk cards. Colored pin/ring per place.
+ * Round thumb for host desk cards.
+ * Prefers venue-kind icon (restaurant / bar / grocery) when Places classified it;
+ * else Mapbox static map; else colored letter.
  */
-export function VenueMapThumb({ lat, lng, placeKey, label, size = 56 }: Props) {
+export function VenueMapThumb({
+  lat,
+  lng,
+  placeKey,
+  category,
+  label,
+  size = 56,
+}: Props) {
   const [failed, setFailed] = useState(false);
   const color = placePinColor(placeKey || label);
   const hasCoords =
@@ -26,6 +39,11 @@ export function VenueMapThumb({ lat, lng, placeKey, label, size = 56 }: Props) {
     Number.isFinite(lng);
   const letter = (label || "?").trim().charAt(0).toUpperCase() || "?";
   const px = Math.max(120, Math.round(size * 2));
+  const kind = classifyVenueKind(category, label);
+
+  if (kind) {
+    return <VenueKindThumb category={category} name={label} size={size} />;
+  }
 
   if (!hasCoords || failed) {
     return (

@@ -16,9 +16,11 @@ export type HostedReceiptSummary = {
   receiptDay?: string;
   /** open | finalized | draft — from publish / close / reopen / API refresh. */
   status?: ReceiptStatus;
-  /** For static-map thumbs on the host desk. */
+  /** For static-map / kind thumbs on the host desk. */
   venueLat?: number | null;
   venueLng?: number | null;
+  /** Places category string used to pick restaurant / bar / grocery icon. */
+  venueCategory?: string | null;
 };
 
 export function hostedStatusLabel(status?: ReceiptStatus | "draft"): "Open" | "Closed" | "Draft" {
@@ -108,6 +110,7 @@ export async function refreshHostedReceiptStatuses(): Promise<HostedReceiptSumma
           placeKey,
           venueLat: receipt.venue?.lat ?? row.venueLat ?? null,
           venueLng: receipt.venue?.lng ?? row.venueLng ?? null,
+          venueCategory: receipt.venue?.category ?? row.venueCategory ?? null,
         } satisfies HostedReceiptSummary;
       } catch {
         return row;

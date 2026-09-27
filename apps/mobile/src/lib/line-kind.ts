@@ -1,9 +1,11 @@
-/** Classify Places / MapKit category → restaurant | bar | null (no icon). */
-export type VenueKind = "restaurant" | "bar";
+/** Classify Places / MapKit category → restaurant | bar | grocery | null (no icon). */
+export type VenueKind = "restaurant" | "bar" | "grocery";
 
 const BAR = /\b(bar|pub|nightlife|night_club|wine_bar|brewery|beer|speakeasy|lounge)\b/i;
+const GROCERY =
+  /\b(grocery|supermarket|super_market|convenience(_store)?|liquor_store|liquor\s*store|bodega)\b/i;
 const RESTAURANT =
-  /\b(restaurant|cafe|café|bakery|food|bistro|diner|eatery|steakhouse|pizzeria|sushi)\b/i;
+  /\b(restaurant|cafe|café|bakery|food|bistro|diner|eatery|steakhouse|pizzeria|sushi|fast_food|food_and_drink)\b/i;
 
 export function classifyVenueKind(
   category?: string | null,
@@ -11,7 +13,9 @@ export function classifyVenueKind(
 ): VenueKind | null {
   const hay = `${category ?? ""} ${name ?? ""}`.trim();
   if (!hay) return null;
+  // Bars before grocery/restaurant — "wine bar" / "brewery" should not become food.
   if (BAR.test(hay)) return "bar";
+  if (GROCERY.test(hay)) return "grocery";
   if (RESTAURANT.test(hay)) return "restaurant";
   return null;
 }

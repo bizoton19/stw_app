@@ -1,9 +1,11 @@
-/** Classify Places category → restaurant | bar | null. */
-export type VenueKind = "restaurant" | "bar";
+/** Classify Places category → restaurant | bar | grocery | null. */
+export type VenueKind = "restaurant" | "bar" | "grocery";
 
 const BAR = /\b(bar|pub|nightlife|night_club|wine_bar|brewery|beer|speakeasy|lounge)\b/i;
+const GROCERY =
+  /\b(grocery|supermarket|super_market|convenience(_store)?|liquor_store|liquor\s*store|bodega)\b/i;
 const RESTAURANT =
-  /\b(restaurant|cafe|café|bakery|food|bistro|diner|eatery|steakhouse|pizzeria|sushi)\b/i;
+  /\b(restaurant|cafe|café|bakery|food|bistro|diner|eatery|steakhouse|pizzeria|sushi|fast_food|food_and_drink)\b/i;
 
 export function classifyVenueKind(
   category?: string | null,
@@ -12,6 +14,7 @@ export function classifyVenueKind(
   const hay = `${category ?? ""} ${name ?? ""}`.trim();
   if (!hay) return null;
   if (BAR.test(hay)) return "bar";
+  if (GROCERY.test(hay)) return "grocery";
   if (RESTAURANT.test(hay)) return "restaurant";
   return null;
 }

@@ -399,6 +399,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
               status: "open",
               venueLat: venueToSave.lat ?? null,
               venueLng: venueToSave.lng ?? null,
+              venueCategory: venueToSave.category ?? null,
             });
           }
         }
@@ -431,6 +432,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       status: "open",
       venueLat: venueToSave.lat ?? null,
       venueLng: venueToSave.lng ?? null,
+      venueCategory: venueToSave.category ?? null,
     });
     // Keep interview fields in memory for /host/share, but stop caching — otherwise
     // the autosave effect rewrites the draft and Home shows Draft + Open.
