@@ -161,7 +161,19 @@ export function SettleView({
 
       {isHost && leftover && remainingLines.length > 0 ? (
         <ul className="mt-3 space-y-1.5 border-b border-border pb-4">
-          <li className="text-[12px] font-medium text-muted-foreground">Still on the table</li>
+          <li className="flex items-center justify-between gap-3">
+            <span className="text-[12px] font-medium text-muted-foreground">Still on the table</span>
+            <label className="flex items-center gap-2 text-[12px] font-semibold text-muted-foreground">
+              Show total details
+              <input
+                type="checkbox"
+                role="switch"
+                checked={showTotalDetails}
+                onChange={(e) => setShowTotalDetails(e.target.checked)}
+                className="size-4 accent-[#2F5D50]"
+              />
+            </label>
+          </li>
           {remainingLines.map((item) => {
             const left = receipt.remaining[item.id] ?? 0;
             const money = claimMoneySlice(item, left);
@@ -175,9 +187,11 @@ export function SettleView({
                   <span className="truncate font-medium">{item.name}</span>
                 </span>
                 <span className="shrink-0 text-muted-foreground">
-                  {centsToLabel(money.unitCents)} × {left}
-                  {money.glasses ? (left === 1 ? " glass" : " glasses") : ""} ·{" "}
-                  {centsToLabel(money.remainingCents)}
+                  {showTotalDetails
+                    ? `${centsToLabel(money.unitCents)} × ${left}${
+                        money.glasses ? (left === 1 ? " glass" : " glasses") : ""
+                      } · ${centsToLabel(money.remainingCents)}`
+                    : `${centsToLabel(money.remainingCents)} (${left})`}
                 </span>
               </li>
             );
@@ -337,12 +351,11 @@ export function SettleView({
         ) : null}
         {isHost ? (
           <p className="pt-1 text-center text-[13px] text-muted-foreground">
-            Thanks for hosting.{" "}
             <a
               href="https://www.splitthewine.app/support"
               target="_blank"
               rel="noreferrer"
-              className="font-semibold text-primary"
+              className="text-muted-foreground hover:text-primary"
             >
               Support Split the Wine
             </a>
