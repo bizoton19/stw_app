@@ -109,6 +109,21 @@ AsyncStorage draft hydrate could finish **after** Start fresh / parse and restor
 
 ---
 
+## BUG-6 — Step 4 autocomplete broken after Mapbox thumb work
+
+### Severity
+High — host cannot pick a Places suggestion.
+
+### Likely cause
+Venue typeahead was wired through `place-pin` / colored static-map helpers, plus a map-fail unlock effect that could fight the suggestion list.
+
+### Fix
+- Revert `apps/mobile/src/components/venue-typeahead.tsx` (and web typeahead map URL) to the pre-thumb implementation.
+- Keep Home desk `VenueMapThumb` + optional `color` on `/api/places/static-map` (defaults to merlot).
+- Keep draft-hydrate race fixes so parse still clears venue.
+
+---
+
 ## Notes
 - Redeploy **API** so production matches open-tab delete (if an older deploy still rejected non-finalized delete).
 - Expo Go picks up mobile changes on reload; no store rebuild required for friend-test.

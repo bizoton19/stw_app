@@ -11,7 +11,7 @@ import {
 import * as Location from "expo-location";
 import { Field } from "@/components/field";
 import { VenueKindIcon } from "@/components/venue-kind-icon";
-import { placePinColor, staticMapUri } from "@/lib/place-pin";
+import { getApiUrl } from "@/lib/config";
 import {
   newSession,
   resolvePlaceDetails,
@@ -19,7 +19,6 @@ import {
   typedVenue,
   type PlacePrediction,
 } from "@/lib/places";
-import { venueLocationKey } from "@/lib/venue-day";
 import { colors } from "@/lib/theme";
 import type { ReceiptVenue } from "@/lib/types";
 
@@ -43,6 +42,16 @@ export function formatReceiptDateLabel(iso: string | null | undefined): string |
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+function staticMapUri(lat: number, lng: number, w: number, h: number): string {
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lng: String(lng),
+    w: String(w),
+    h: String(h),
+  });
+  return `${getApiUrl()}/api/places/static-map?${params}`;
 }
 
 function isPinned(venue: ReceiptVenue | null | undefined): boolean {
@@ -149,18 +158,6 @@ export function VenueTypeahead({
     [coords],
   );
 
-  // If a stale pin has coords but the map never loads, unlock so the host can pick again.
-  useEffect(() => {
-    if (!isPinned(venue) || !mapFailed) return;
-    lockedRef.current = false;
-    seededSearchRef.current = true;
-    const name = venue?.name?.trim() || value.trim();
-    onChangeVenue(null);
-    if (name) onChangeName(name);
-    setMapFailed(false);
-    if (name.length >= 2) runSearch(name);
-  }, [mapFailed, venue, value, onChangeName, onChangeVenue, runSearch]);
-
   // After parse: show suggestions for the OCR name — host must tap to confirm.
   useEffect(() => {
     if (!locationReady || isPinned(venue) || seededSearchRef.current) return;
@@ -254,13 +251,7 @@ export function VenueTypeahead({
             <View style={[styles.mapWrap, { minHeight: mapH }]}>
               <Image
                 source={{
-                  uri: staticMapUri({
-                    lat: venue!.lat!,
-                    lng: venue!.lng!,
-                    w: mapW,
-                    h: mapH,
-                    color: placePinColor(venueLocationKey(venue, venue?.name)),
-                  }),
+                  uri: staticMapUri(venue!.lat!, venue!.lng!, mapW, mapH),
                 }}
                 style={[styles.map, { height: mapH }]}
                 accessibilityLabel={`Map of ${venue!.name}`}
