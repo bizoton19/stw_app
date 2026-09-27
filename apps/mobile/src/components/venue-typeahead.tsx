@@ -77,6 +77,7 @@ export function VenueTypeahead({
 
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
   const [locationHint, setLocationHint] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -138,17 +139,28 @@ export function VenueTypeahead({
       const trimmed = q.trim();
       if (trimmed.length < 2) {
         setPredictions([]);
+        setSearchError(null);
         setLoading(false);
         return;
       }
       setLoading(true);
+      setSearchError(null);
       timerRef.current = setTimeout(() => {
         void (async () => {
           try {
             const rows = await searchPlaces(trimmed, coords, sessionRef.current);
             setPredictions(rows);
-          } catch {
+            if (rows.length === 0) {
+              setSearchError(null);
+            }
+          } catch (err) {
             setPredictions([]);
+            const code = (err as { code?: string }).code;
+            setSearchError(
+              code === "places_unauthorized" || code === "places_upstream" || code === "forbidden"
+                ? "Place search isn’t available right now (Mapbox). Try again later, or type the name and we’ll keep going once search is fixed."
+                : "Couldn’t load place suggestions. Check your connection and try again.",
+            );
           } finally {
             setLoading(false);
           }
@@ -278,7 +290,10 @@ export function VenueTypeahead({
           {dateLabel ? (
             <Text style={styles.dateLoose}>Receipt date · {dateLabel}</Text>
           ) : null}
-          {value.trim().length >= 2 && !loading && predictions.length === 0 ? (
+          {searchError ? (
+            <Text style={styles.searchError}>{searchError}</Text>
+          ) : null}
+          {value.trim().length >= 2 && !loading && !searchError && predictions.length === 0 ? (
             <Text style={styles.hint}>
               Keep typing or pick a match below when they appear. We won’t lock a place until you
               tap one.
@@ -322,6 +337,13 @@ export function ensureVenueForPublish(
 
 const styles = StyleSheet.create({
   hint: { fontSize: 12, color: colors.muted, marginTop: -4, marginBottom: 8 },
+  searchError: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.danger,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
   hintCenter: {
     fontSize: 14,
     fontWeight: "600",

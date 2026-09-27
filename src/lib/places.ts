@@ -73,9 +73,13 @@ export async function mapboxAutocomplete(input: {
   );
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    const unauthorized = res.status === 401 || res.status === 403;
     throw Object.assign(new Error("mapbox_suggest_failed"), {
-      code: "places_upstream",
-      status: 502,
+      code: unauthorized ? "places_unauthorized" : "places_upstream",
+      status: unauthorized ? res.status : 502,
+      message: unauthorized
+        ? "Mapbox token is invalid or missing Search scopes. Create a new public token and set MAPBOX_ACCESS_TOKEN."
+        : "Mapbox place search failed.",
       detail: text.slice(0, 200),
     });
   }

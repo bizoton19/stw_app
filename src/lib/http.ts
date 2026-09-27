@@ -20,7 +20,7 @@ export function jsonError(err: unknown) {
   const status =
     code === "not_found"
       ? 404
-      : code === "forbidden"
+      : code === "forbidden" || code === "places_unauthorized"
         ? 403
         : code === "not_enough_remaining" || code === "conflict" || code === "venue_day_taken"
           ? 409
