@@ -3,6 +3,7 @@ import { Share, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { ClaimQrSheet } from "@/components/claim-qr-sheet";
 import { HostSupportTip } from "@/components/host-support-tip";
 import { IconActionButton } from "@/components/icon-action-button";
 import { useHostDraft } from "@/context/host-draft";
@@ -14,6 +15,7 @@ export default function HostShare() {
   const router = useRouter();
   const draft = useHostDraft();
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [pushHint, setPushHint] = useState<string | null>(null);
   const activeItems = draft.items.filter((i) => !i.removed);
   const total =
@@ -78,7 +80,7 @@ export default function HostShare() {
           </Text>
         </View>
         <View style={styles.row}>
-          <View style={{ flex: 1 }}>
+          <View style={styles.action}>
             <IconActionButton
               icon="copy"
               label={copied ? "Copied" : "Copy"}
@@ -89,7 +91,7 @@ export default function HostShare() {
               }}
             />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={styles.action}>
             <IconActionButton
               icon="share"
               label="Share"
@@ -106,8 +108,22 @@ export default function HostShare() {
               }}
             />
           </View>
+          <View style={styles.action}>
+            <IconActionButton
+              icon="qr"
+              label="QR"
+              accessibilityLabel="Share QR"
+              onPress={() => setQrOpen(true)}
+            />
+          </View>
         </View>
       </InterviewChrome>
+      <ClaimQrSheet
+        visible={qrOpen}
+        url={draft.claimUrl}
+        place={place}
+        onClose={() => setQrOpen(false)}
+      />
     </AppShell>
   );
 }
@@ -171,4 +187,5 @@ const styles = StyleSheet.create({
   },
   url: { fontFamily: "monospace", fontSize: 14, lineHeight: 20, color: colors.ink },
   row: { flexDirection: "row", gap: 8, marginTop: 12 },
+  action: { flex: 1, minWidth: 0 },
 });

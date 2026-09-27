@@ -1,8 +1,9 @@
 "use client";
 
-import { Camera, ChevronDown, Copy, ImageIcon, Share2, Trash2 } from "lucide-react";
+import { Camera, ChevronDown, Copy, ImageIcon, QrCode, Share2, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ClaimQrSheet } from "@/components/claim-qr-sheet";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { Input } from "@/components/ui/input";
@@ -163,6 +164,7 @@ export function HostInterview() {
   const [note, setNote] = useState("");
   const [claimUrl, setClaimUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [payConfirming, setPayConfirming] = useState(false);
   const [itemsNoOpen, setItemsNoOpen] = useState(false);
   const [itemsYesOpen, setItemsYesOpen] = useState(false);
@@ -1108,7 +1110,7 @@ export function HostInterview() {
         <p className="break-all rounded-xl border border-border px-3 py-3 font-mono text-[13px]">
           {claimUrl}
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           <QuietButton
             onClick={async () => {
               await navigator.clipboard.writeText(claimUrl);
@@ -1136,7 +1138,17 @@ export function HostInterview() {
             <Share2 className="size-4" strokeWidth={2.25} aria-hidden />
             Share
           </QuietButton>
+          <QuietButton onClick={() => setQrOpen(true)}>
+            <QrCode className="size-4" strokeWidth={2.25} aria-hidden />
+            QR
+          </QuietButton>
         </div>
+        <ClaimQrSheet
+          open={qrOpen}
+          url={claimUrl}
+          place={venue?.name || restaurant}
+          onClose={() => setQrOpen(false)}
+        />
         <div className="mt-8 flex items-center justify-between text-[14px]">
           <span className="text-muted-foreground">Check total</span>
           <span className="tabular-nums font-medium">{centsToLabel(itemSubtotal + feeTotal)}</span>

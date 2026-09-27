@@ -1,31 +1,35 @@
-import { StyleSheet, Text, View } from "react-native";
-import { Copy, Share2 } from "lucide-react-native";
+import { StyleSheet, Text } from "react-native";
+import { Copy, QrCode, Share2 } from "lucide-react-native";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
-/** Secondary action with icon — copy / share / etc. Not for primary Continue. */
+/** Secondary action with icon — copy / share / QR / etc. Not for primary Continue. */
 export function IconActionButton({
   label,
   icon,
   onPress,
   disabled,
+  accessibilityLabel,
 }: {
   label: string;
-  icon: "copy" | "share";
+  icon: "copy" | "share" | "qr";
   onPress?: () => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
 }) {
-  const Icon = icon === "copy" ? Copy : Share2;
+  const Icon = icon === "copy" ? Copy : icon === "qr" ? QrCode : Share2;
   return (
     <PressScale
       onPress={onPress}
       disabled={disabled || !onPress}
       haptic="light"
       style={styles.btn}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
     >
       <Icon size={18} color={colors.ink} strokeWidth={2.25} />
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} numberOfLines={1}>
+        {label}
+      </Text>
     </PressScale>
   );
 }
@@ -41,7 +45,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     backgroundColor: "#FFFcf8",
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
   },
   label: { fontSize: 15, fontWeight: "600", color: colors.ink },
 });

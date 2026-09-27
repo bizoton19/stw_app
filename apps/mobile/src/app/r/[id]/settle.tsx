@@ -7,6 +7,7 @@ import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/compone
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { HostSupportTip } from "@/components/host-support-tip";
 import { IconActionButton } from "@/components/icon-action-button";
+import { ClaimQrSheet } from "@/components/claim-qr-sheet";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
@@ -30,6 +31,7 @@ export default function SettleScreen() {
   const payments = hostPayments(receipt?.hostInfo);
   const [paying, setPaying] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => {
     if (!flow.isHost || !receipt?.id || receipt.status === "finalized") return;
@@ -205,18 +207,26 @@ export default function SettleScreen() {
               {claimUrl}
             </Text>
             <View style={styles.shareRow}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <IconActionButton
                   icon="copy"
                   label={copied ? "Copied" : "Copy"}
                   onPress={() => void copyLink()}
                 />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <IconActionButton
                   icon="share"
-                  label="Share again"
+                  label="Share"
                   onPress={() => void shareLink()}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <IconActionButton
+                  icon="qr"
+                  label="QR"
+                  accessibilityLabel="Share QR"
+                  onPress={() => setQrOpen(true)}
                 />
               </View>
             </View>
@@ -413,6 +423,12 @@ export default function SettleScreen() {
           </View>
         ) : null}
       </InterviewChrome>
+      <ClaimQrSheet
+        visible={qrOpen}
+        url={claimUrl}
+        place={place}
+        onClose={() => setQrOpen(false)}
+      />
     </AppShell>
   );
 }
