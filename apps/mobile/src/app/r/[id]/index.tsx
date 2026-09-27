@@ -1,10 +1,11 @@
-import { FlatList, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Users } from "lucide-react-native";
-import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
+import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { HostMessage } from "@/components/host-message";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
@@ -129,6 +130,48 @@ function PickBoard() {
     });
   }
 
+  function goLiveBoard() {
+    router.replace({
+      pathname: "/r/[id]/settle",
+      params: { id: receipt.id, host: "1" },
+    });
+  }
+
+  const hostTabBar = flow.isHost ? (
+    <HostLiveTabBar
+      mode="claims"
+      onHome={goHostDesk}
+      onClaims={() => undefined}
+      onLiveBoard={goLiveBoard}
+      closed={closed}
+      busy={flow.busy}
+      onClose={() =>
+        void flow.closeOut().then((ok) => {
+          if (ok) goLiveBoard();
+        })
+      }
+      onReopen={() => void flow.reopen()}
+      onDelete={() => {
+        Alert.alert(
+          "Delete closed tab?",
+          "This permanently deletes the tab. Claim links will stop working.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => {
+                void flow.deleteClosed().then((ok) => {
+                  if (ok) goHostDesk();
+                });
+              },
+            },
+          ],
+        );
+      }}
+    />
+  ) : null;
+
   if (closed) {
     return (
       <InterviewChrome
@@ -137,13 +180,15 @@ function PickBoard() {
         hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
         title="Claiming is closed"
+        onBack={flow.isHost ? goHostDesk : undefined}
+        supportTip={flow.isHost}
         footer={
           <View>
-            <PrimaryButton onPress={goSettle}>Settle Payment</PrimaryButton>
+            <PrimaryButton onPress={goSettle}>
+              {flow.isHost ? "Live board" : "Settle Payment"}
+            </PrimaryButton>
             {flow.isHost ? (
-              <QuietButton disabled={flow.busy} onPress={() => void flow.reopen()}>
-                Reopen claiming
-              </QuietButton>
+              hostTabBar
             ) : null}
           </View>
         }
@@ -156,67 +201,56 @@ function PickBoard() {
     );
   }
 
-  const footer =
-    remainingItems.length === 0 ? (
-      <View>
-        <PrimaryButton onPress={goSettle}>Settle Payment</PrimaryButton>
-        {flow.isHost ? (
-          <QuietButton
-            disabled={flow.busy}
-            onPress={() =>
-              void flow.closeOut().then((ok) => {
-                if (ok) goSettle();
-              })
-            }
-          >
-            Close claiming
-          </QuietButton>
-        ) : null}
-      </View>
-    ) : (
-      <View>
-        <PrimaryButton
-          disabled={flow.busy || !flow.guest || activeQueued.length === 0}
-          busy={flow.busy && !flow.needsQty}
-          onPress={() => {
-            if (flow.needsQty) {
-              router.push({ pathname: "/r/[id]/qty", params: { id: receipt.id } });
-              return;
-            }
-            void flow.claimQueued().then((ok) => {
-              if (ok) {
-                void hapticNotify("success");
-                goSettle();
-              } else {
-                void hapticNotify("error");
-              }
-            });
-          }}
-        >
-          {activeQueued.length === 0
-            ? "Pick what you had"
-            : flow.needsQty
-              ? activeQueued.length === 1
-                ? "Claim 1 item"
-                : `Claim ${activeQueued.length} items`
-              : activeQueued.length === 1
-                ? "Claim it"
-                : `Claim ${activeQueued.length}`}
-        </PrimaryButton>
-        {flow.isHost ? (
-          <QuietButton
-            disabled={flow.busy}
-            onPress={() =>
-              void flow.closeOut().then((ok) => {
-                if (ok) goSettle();
-              })
-            }
-          >
-            Close — leftovers on the host
-          </QuietButton>
-        ) : null}
-      </View>
-    );
+  const claimButton = (
+    <PrimaryButton
+      disabled={
+        remainingItems.length > 0 &&
+        (flow.busy || !flow.guest || activeQueued.length === 0)
+      }
+      busy={remainingItems.length > 0 && flow.busy && !flow.needsQty}
+      onPress={() => {
+        if (remainingItems.length === 0) {
+          goSettle();
+          return;
+        }
+        if (flow.needsQty) {
+          router.push({ pathname: "/r/[id]/qty", params: { id: receipt.id } });
+          return;
+        }
+        void flow.claimQueued().then((ok) => {
+          if (ok) {
+            void hapticNotify("success");
+            goSettle();
+          } else {
+            void hapticNotify("error");
+          }
+        });
+      }}
+    >
+      {remainingItems.length === 0
+        ? flow.isHost
+          ? "Live board"
+          : "Settle Payment"
+        : activeQueued.length === 0
+          ? "Pick what you had"
+          : flow.needsQty
+            ? activeQueued.length === 1
+              ? "Claim 1 item"
+              : `Claim ${activeQueued.length} items`
+            : activeQueued.length === 1
+              ? "Claim it"
+              : `Claim ${activeQueued.length}`}
+    </PrimaryButton>
+  );
+
+  const footer = (
+    <View>
+      {claimButton}
+      {flow.isHost ? (
+        hostTabBar
+      ) : null}
+    </View>
+  );
 
   return (
     <InterviewChrome

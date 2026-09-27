@@ -119,8 +119,10 @@ export default function SettleScreen() {
 
   const footer = flow.isHost ? (
     <HostLiveTabBar
+      mode="live"
       onHome={goHostDesk}
       onClaims={() => router.replace({ pathname: "/r/[id]", params: claimParams })}
+      onLiveBoard={() => undefined}
       closed={closed}
       busy={flow.busy}
       onClose={() => void flow.closeOut()}

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { DoorOpen, Home, RotateCcw, Trash2, Utensils } from "lucide-react-native";
+import { DoorOpen, Home, LayoutList, RotateCcw, Trash2, Utensils } from "lucide-react-native";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
@@ -7,7 +7,7 @@ type Tab = {
   key: string;
   label: string;
   accessibilityLabel?: string;
-  icon: "home" | "claims" | "close" | "reopen" | "delete";
+  icon: "home" | "claims" | "live" | "close" | "reopen" | "delete";
   onPress: () => void;
   disabled?: boolean;
   danger?: boolean;
@@ -15,10 +15,13 @@ type Tab = {
 
 /**
  * Compact host live-board nav — icon + small label, shorter than stacked buttons.
+ * On the claims screen (`mode="claims"`), the middle tab returns to the live board.
  */
 export function HostLiveTabBar({
   onHome,
   onClaims,
+  onLiveBoard,
+  mode = "live",
   closed,
   busy,
   onClose,
@@ -27,6 +30,9 @@ export function HostLiveTabBar({
 }: {
   onHome: () => void;
   onClaims: () => void;
+  /** When `mode` is claims, middle tab uses this to return to the live board. */
+  onLiveBoard?: () => void;
+  mode?: "live" | "claims";
   closed: boolean;
   busy?: boolean;
   onClose: () => void;
@@ -34,6 +40,22 @@ export function HostLiveTabBar({
   /** Shown next to Reopen when the tab is closed. */
   onDelete?: () => void;
 }) {
+  const middle: Tab =
+    mode === "claims"
+      ? {
+          key: "live",
+          label: "Live board",
+          accessibilityLabel: "Live board",
+          icon: "live",
+          onPress: onLiveBoard ?? onClaims,
+        }
+      : {
+          key: "claims",
+          label: "My Claims",
+          icon: "claims",
+          onPress: onClaims,
+        };
+
   const tabs: Tab[] = [
     {
       key: "home",
@@ -42,12 +64,7 @@ export function HostLiveTabBar({
       icon: "home",
       onPress: onHome,
     },
-    {
-      key: "claims",
-      label: "My Claims",
-      icon: "claims",
-      onPress: onClaims,
-    },
+    middle,
   ];
 
   if (closed) {
@@ -119,6 +136,7 @@ function TabIcon({
   const stroke = 2.1;
   if (name === "home") return <Home size={size} color={color} strokeWidth={stroke} />;
   if (name === "claims") return <Utensils size={size} color={color} strokeWidth={stroke} />;
+  if (name === "live") return <LayoutList size={size} color={color} strokeWidth={stroke} />;
   if (name === "reopen") return <RotateCcw size={size} color={color} strokeWidth={stroke} />;
   if (name === "delete") return <Trash2 size={size} color={color} strokeWidth={stroke} />;
   return <DoorOpen size={size} color={color} strokeWidth={stroke} />;
