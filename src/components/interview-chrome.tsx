@@ -18,6 +18,7 @@ export function InterviewChrome({
   children,
   footer,
   supportTip = false,
+  hideProgress = false,
 }: {
   step: number;
   total: number;
@@ -29,9 +30,11 @@ export function InterviewChrome({
   children: React.ReactNode;
   footer: React.ReactNode;
   supportTip?: boolean;
+  /** Hide “N of M” + progress bar (loading screens, host live board). */
+  hideProgress?: boolean;
 }) {
   const reduce = useReducedMotion();
-  const progress = (step / total) * 100;
+  const progress = total > 0 ? (step / total) * 100 : 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -49,19 +52,25 @@ export function InterviewChrome({
           ) : (
             <span className="size-11" />
           )}
-          <p className="min-w-0 flex-1 text-center text-[12px] font-medium text-ink-soft">
-            {step} of {total}
-          </p>
+          {hideProgress ? (
+            <span className="min-w-0 flex-1" />
+          ) : (
+            <p className="min-w-0 flex-1 text-center text-[12px] font-medium text-ink-soft">
+              {step} of {total}
+            </p>
+          )}
           <span className="size-11" />
         </div>
-        <div className="h-[2px] overflow-hidden rounded-full bg-border">
-          <motion.div
-            className="h-full origin-left bg-primary"
-            initial={false}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: reduce ? 0 : 0.35, ease }}
-          />
-        </div>
+        {hideProgress ? null : (
+          <div className="h-[2px] overflow-hidden rounded-full bg-border">
+            <motion.div
+              className="h-full origin-left bg-primary"
+              initial={false}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: reduce ? 0 : 0.35, ease }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -93,7 +102,7 @@ export function InterviewChrome({
         </AnimatePresence>
       </div>
 
-      <div className="shrink-0 border-t border-border bg-background px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="shrink-0 border-t border-[#D4CDC3] bg-[#EDE8E1] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
         {footer}
         {supportTip ? <HostSupportTip /> : null}
       </div>

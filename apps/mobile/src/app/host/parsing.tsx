@@ -34,8 +34,9 @@ export default function HostParsing() {
   return (
     <AppShell>
       <InterviewChrome
-        step={3}
-        total={9}
+        step={2}
+        total={8}
+        hideProgress
         kicker="Reading"
         title="Looking over every pour…"
         onBack={() => router.back()}

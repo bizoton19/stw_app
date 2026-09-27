@@ -112,7 +112,7 @@ export default function HostCapture() {
     <AppShell>
       <InterviewChrome
         step={2}
-        total={9}
+        total={8}
         kicker="The receipt"
         title="How should we add the tab?"
         onBack={() => router.back()}

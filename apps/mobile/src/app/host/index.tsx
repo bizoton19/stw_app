@@ -64,7 +64,7 @@ export default function HostReady() {
     <AppShell>
       <InterviewChrome
         step={1}
-        total={9}
+        total={8}
         title="Ready to split this check?"
         onBack={() => router.back()}
         onHome={goHostDesk}

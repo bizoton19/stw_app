@@ -89,8 +89,8 @@ export default function HostPay() {
     return (
       <AppShell>
         <InterviewChrome
-          step={8}
-          total={9}
+          step={7}
+          total={8}
           kicker="Getting paid"
           title="Look right?"
           onBack={() => setConfirming(false)}
@@ -149,8 +149,8 @@ export default function HostPay() {
   return (
     <AppShell>
       <InterviewChrome
-        step={8}
-        total={9}
+        step={7}
+        total={8}
         kicker="Getting paid"
         title="How should people pay you?"
         onBack={() => router.back()}

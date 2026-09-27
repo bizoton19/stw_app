@@ -73,8 +73,8 @@ export default function HostPour() {
   return (
     <AppShell>
       <InterviewChrome
-        step={6}
-        total={9}
+        step={5}
+        total={8}
         kicker={anyResolve ? "Quick check" : "Bottles"}
         title={anyResolve ? "Could this be a shared bottle?" : "How should people claim these?"}
         onBack={() => router.back()}

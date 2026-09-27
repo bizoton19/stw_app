@@ -39,8 +39,8 @@ export default function HostShare() {
   return (
     <AppShell>
       <InterviewChrome
-        step={9}
-        total={9}
+        step={8}
+        total={8}
         kicker="Share"
         title="Send this. They claim what they consumed."
         sparse

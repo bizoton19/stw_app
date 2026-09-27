@@ -59,6 +59,10 @@ const ORDER: Step[] = [
   "share",
 ];
 
+/** Real interview steps — parsing is a loading screen, not counted. */
+const COUNTED: Step[] = ORDER.filter((s) => s !== "parsing");
+const TOTAL_STEPS = COUNTED.length;
+
 const COPY: Record<Step, { kicker: string; title: string }> = {
   ready: { kicker: "", title: "Ready to split this check?" },
   capture: { kicker: "The receipt", title: "How should we add the tab?" },
@@ -182,7 +186,7 @@ export function HostInterview() {
   };
   const itemSubtotal = items.reduce((s, i) => s + i.totalCents, 0);
   const feeTotal = fees.reduce((s, f) => s + f.amountCents, 0);
-  const stepIndex = ORDER.indexOf(step) + 1;
+  const stepIndex = step === "parsing" ? 0 : COUNTED.indexOf(step) + 1;
   const candidates = pourCandidates(items);
 
   function go(next: Step) {
@@ -1175,7 +1179,8 @@ export function HostInterview() {
   return (
     <InterviewChrome
       step={stepIndex}
-      total={8}
+      total={TOTAL_STEPS}
+      hideProgress={step === "parsing"}
       kicker={
         step === "pour" && candidates.some((row) => row.needsResolve)
           ? "Quick check"

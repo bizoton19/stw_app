@@ -158,9 +158,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 8,
-    backgroundColor: "#EDE8E1",
+    backgroundColor: colors.chrome,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#D4CDC3",
+    borderTopColor: colors.chromeBorder,
     // Soft lift so it reads as chrome, not page content.
     shadowColor: "#2A241C",
     shadowOffset: { width: 0, height: -2 },

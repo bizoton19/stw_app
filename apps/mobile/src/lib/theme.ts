@@ -4,6 +4,9 @@ export const colors = {
   inkSoft: "#7A7268",
   muted: "#8A847C",
   border: "#E6E0D8",
+  /** Sticky bottom chrome (interview footer + host tab bar) — warmer than paper. */
+  chrome: "#EDE8E1",
+  chromeBorder: "#D4CDC3",
   merlot: "#6E2E35",
   merlotFg: "#FBF8F5",
   /** Selected claim lines — bottle green, contrasts merlot CTAs on warm paper. */

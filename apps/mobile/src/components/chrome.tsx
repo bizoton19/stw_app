@@ -329,15 +329,17 @@ const styles = StyleSheet.create({
   childrenFill: { flex: 1, minHeight: 0, marginTop: 8 },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.paper,
+    borderTopColor: colors.chromeBorder,
+    backgroundColor: colors.chrome,
     paddingHorizontal: 20,
     paddingTop: 12,
     gap: 6,
-    ...Platform.select({
-      android: { elevation: 4 },
-      default: {},
-    }),
+    // Match host desk / live-board bottom nav contrast.
+    shadowColor: "#2A241C",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 4,
   },
   footerHint: {
     textAlign: "center",

@@ -282,8 +282,8 @@ export default function HostItems() {
   return (
     <AppShell>
       <InterviewChrome
-        step={5}
-        total={9}
+        step={4}
+        total={8}
         kicker={t("items.kicker")}
         title={t("items.title")}
         onBack={() => router.back()}
