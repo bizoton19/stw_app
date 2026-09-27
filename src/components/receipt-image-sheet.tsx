@@ -100,17 +100,17 @@ export function ReceiptImageSheet({
             <X className="size-5 text-[#2A241C]" strokeWidth={2.25} />
           </button>
         </div>
-        <div className="overflow-hidden rounded-xl bg-[#1a1612]">
+        <div className="overflow-auto overscroll-contain rounded-xl bg-[#1a1612] touch-pan-y">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={src}
             alt="Tab photo"
-            className="mx-auto max-h-[min(70dvh,520px)] w-full object-contain select-none"
+            className="mx-auto max-h-[min(70dvh,520px)] w-full origin-center object-contain select-none"
             draggable={false}
           />
         </div>
         <p className="mt-3 text-center text-[13px] font-semibold text-[#6B635A]">
-          Hold the photo to save · Tap outside or ✕ to close
+          Pinch to zoom · Hold to save · Tap outside or ✕ to close
         </p>
       </div>
     </div>,

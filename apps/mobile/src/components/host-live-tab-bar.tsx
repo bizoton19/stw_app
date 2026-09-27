@@ -27,6 +27,8 @@ export function HostLiveTabBar({
   onClose,
   onReopen,
   onDelete,
+  /** Sit under a primary CTA with a clear gap (My Claims screen). */
+  stacked = false,
 }: {
   onHome: () => void;
   onClaims: () => void;
@@ -39,6 +41,7 @@ export function HostLiveTabBar({
   onReopen: () => void;
   /** Shown next to Reopen when the tab is closed. */
   onDelete?: () => void;
+  stacked?: boolean;
 }) {
   const middle: Tab =
     mode === "claims"
@@ -100,7 +103,10 @@ export function HostLiveTabBar({
   }
 
   return (
-    <View style={styles.bar} accessibilityRole="tablist">
+    <View
+      style={[styles.bar, stacked && styles.barStacked]}
+      accessibilityRole="tablist"
+    >
       {tabs.map((tab) => (
         <PressScale
           key={tab.key}
@@ -161,6 +167,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 4,
+  },
+  barStacked: {
+    marginTop: 14,
+    // Claim CTA sits above — drop the competing top shadow.
+    shadowOpacity: 0,
+    elevation: 0,
   },
   tab: {
     flex: 1,

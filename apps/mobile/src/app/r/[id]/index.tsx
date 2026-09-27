@@ -140,6 +140,7 @@ function PickBoard() {
   const hostTabBar = flow.isHost ? (
     <HostLiveTabBar
       mode="claims"
+      stacked
       onHome={goHostDesk}
       onClaims={() => undefined}
       onLiveBoard={goLiveBoard}

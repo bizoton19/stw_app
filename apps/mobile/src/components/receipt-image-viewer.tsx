@@ -28,6 +28,8 @@ import { hapticImpact } from "@/lib/haptics";
 import { colors } from "@/lib/theme";
 
 const DISMISS_Y = 120;
+const MIN_SCALE = 1;
+const MAX_SCALE = 4;
 
 export function ReceiptImageButton({
   receiptId,
@@ -53,8 +55,8 @@ export function ReceiptImageButton({
 }
 
 /**
- * Bottom sheet for the tab photo — swipe down or ✕ to close.
- * No download button; long-press the image to save/share via the system sheet.
+ * Bottom sheet for the tab photo — swipe handle / ✕ to close.
+ * Pinch or double-tap to zoom; long-press to save/share (no download button).
  */
 export function ReceiptImageSheet({
   receiptId,
@@ -66,15 +68,34 @@ export function ReceiptImageSheet({
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const { height: winH } = useWindowDimensions();
-  const translateY = useSharedValue(0);
+  const { height: winH, width: winW } = useWindowDimensions();
+  const sheetTY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const savedTx = useSharedValue(0);
+  const savedTy = useSharedValue(0);
   const [sharing, setSharing] = useState(false);
   const uri = `${getApiUrl()}/api/receipts/${receiptId}/image`;
-  const imageH = Math.min(520, Math.max(280, winH * 0.55));
+  const imageH = Math.min(560, Math.max(300, winH * 0.58));
+
+  function resetZoom() {
+    scale.value = 1;
+    savedScale.value = 1;
+    tx.value = 0;
+    ty.value = 0;
+    savedTx.value = 0;
+    savedTy.value = 0;
+  }
 
   useEffect(() => {
-    if (!visible) translateY.value = 0;
-  }, [visible, translateY]);
+    if (!visible) {
+      sheetTY.value = 0;
+      resetZoom();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only on open/close
+  }, [visible]);
 
   function close() {
     onClose();
@@ -99,23 +120,94 @@ export function ReceiptImageSheet({
     }
   }
 
-  const pan = Gesture.Pan()
+  const dismissPan = Gesture.Pan()
     .activeOffsetY(8)
     .onUpdate((e) => {
-      translateY.value = Math.max(0, e.translationY);
+      // Only dismiss when not zoomed in.
+      if (scale.value > 1.05) return;
+      sheetTY.value = Math.max(0, e.translationY);
     })
     .onEnd((e) => {
+      if (scale.value > 1.05) {
+        sheetTY.value = withSpring(0, { damping: 22, stiffness: 280 });
+        return;
+      }
       if (e.translationY > DISMISS_Y || e.velocityY > 900) {
-        translateY.value = withTiming(600, { duration: 180 }, () => {
+        sheetTY.value = withTiming(600, { duration: 180 }, () => {
           runOnJS(close)();
         });
       } else {
-        translateY.value = withSpring(0, { damping: 22, stiffness: 280 });
+        sheetTY.value = withSpring(0, { damping: 22, stiffness: 280 });
       }
     });
 
+  const pinch = Gesture.Pinch()
+    .onUpdate((e) => {
+      const next = savedScale.value * e.scale;
+      scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+      if (scale.value <= 1.02) {
+        scale.value = withSpring(1);
+        savedScale.value = 1;
+        tx.value = withSpring(0);
+        ty.value = withSpring(0);
+        savedTx.value = 0;
+        savedTy.value = 0;
+      }
+    });
+
+  const imagePan = Gesture.Pan()
+    .averageTouches(true)
+    .onUpdate((e) => {
+      if (scale.value <= 1.02) return;
+      tx.value = savedTx.value + e.translationX;
+      ty.value = savedTy.value + e.translationY;
+    })
+    .onEnd(() => {
+      savedTx.value = tx.value;
+      savedTy.value = ty.value;
+    });
+
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      if (scale.value > 1.1) {
+        scale.value = withSpring(1);
+        savedScale.value = 1;
+        tx.value = withSpring(0);
+        ty.value = withSpring(0);
+        savedTx.value = 0;
+        savedTy.value = 0;
+      } else {
+        scale.value = withSpring(2.4);
+        savedScale.value = 2.4;
+      }
+    });
+
+  const longPress = Gesture.LongPress()
+    .minDuration(350)
+    .onStart(() => {
+      runOnJS(holdToSave)();
+    });
+
+  const imageGestures = Gesture.Simultaneous(
+    pinch,
+    imagePan,
+    Gesture.Exclusive(doubleTap, longPress),
+  );
+
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: sheetTY.value }],
+  }));
+
+  const imageStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: tx.value },
+      { translateY: ty.value },
+      { scale: scale.value },
+    ],
   }));
 
   return (
@@ -135,7 +227,7 @@ export function ReceiptImageSheet({
             { paddingBottom: Math.max(insets.bottom, 16) },
           ]}
         >
-          <GestureDetector gesture={pan}>
+          <GestureDetector gesture={dismissPan}>
             <Animated.View>
               <View style={styles.handle} accessibilityElementsHidden />
               <View style={styles.head}>
@@ -152,23 +244,24 @@ export function ReceiptImageSheet({
             </Animated.View>
           </GestureDetector>
 
-          <Pressable
-            onLongPress={() => void holdToSave()}
-            delayLongPress={350}
-            accessibilityLabel="Tab photo. Hold to save or share."
-            accessibilityHint="Long press to save or share"
-            style={[styles.frame, { height: imageH }]}
-          >
-            <Image source={{ uri }} style={styles.image} resizeMode="contain" />
-            {sharing ? (
-              <View style={styles.sharingOverlay}>
-                <ActivityIndicator color="#F6F4F1" />
-              </View>
-            ) : null}
-          </Pressable>
+          <GestureDetector gesture={imageGestures}>
+            <Animated.View
+              style={[styles.frame, { height: imageH, width: winW - 32 }]}
+              accessibilityLabel="Tab photo. Pinch to zoom, double-tap to zoom, hold to save."
+            >
+              <Animated.View style={[styles.imageWrap, imageStyle]}>
+                <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+              </Animated.View>
+              {sharing ? (
+                <View style={styles.sharingOverlay}>
+                  <ActivityIndicator color="#F6F4F1" />
+                </View>
+              ) : null}
+            </Animated.View>
+          </GestureDetector>
 
           <Text style={styles.hint}>
-            Hold the photo to save it · Swipe down or tap ✕ to close
+            Pinch or double-tap to zoom · Hold to save · Swipe handle to close
           </Text>
         </Animated.View>
       </View>
@@ -241,7 +334,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
     backgroundColor: "#1a1612",
+    alignSelf: "center",
+  },
+  imageWrap: {
     width: "100%",
+    height: "100%",
   },
   image: { width: "100%", height: "100%" },
   sharingOverlay: {
