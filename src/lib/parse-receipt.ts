@@ -1,7 +1,14 @@
 import type { ParseResult } from "./types";
 import { parseReceiptStub } from "./vision-stub";
 
-export type ParseReason = "ok" | "no_key" | "no_image" | "failed" | "empty" | "timeout";
+export type ParseReason =
+  | "ok"
+  | "no_key"
+  | "no_image"
+  | "failed"
+  | "empty"
+  | "timeout"
+  | "not_receipt";
 export type ParseSource = "vision" | "stub";
 export type ParseMeta = { source: ParseSource; reason: ParseReason };
 
@@ -13,8 +20,10 @@ export type ReceiptImage = {
 };
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-/** Hard ceiling around the whole vision attempt (client often dies ~60–300s otherwise). */
+/** Hard ceiling around the whole vision extract attempt (client often dies ~60–300s otherwise). */
 export const VISION_TIMEOUT_MS = 40_000;
+/** Short gate before extract — fail-open on timeout so real receipts still parse. */
+export const CLASSIFY_TIMEOUT_MS = 12_000;
 const EMPTY_PARSE: ParseResult = { restaurant: "", receiptDate: null, items: [], fees: [] };
 
 export function hasOpenRouterKey(): boolean {
@@ -25,6 +34,16 @@ function logVisionParse(fields: Record<string, unknown>) {
   console.log(
     JSON.stringify({
       event: "vision.parse",
+      ts: new Date().toISOString(),
+      ...fields,
+    }),
+  );
+}
+
+function logVisionClassify(fields: Record<string, unknown>) {
+  console.log(
+    JSON.stringify({
+      event: "vision.classify",
       ts: new Date().toISOString(),
       ...fields,
     }),
@@ -72,9 +91,44 @@ export async function parseReceiptImage(
     return { result: EMPTY_PARSE, parse: { source: "stub", reason: "no_key" } };
   }
 
-  const started = Date.now();
-  const { parseReceiptVision, visionModel } = await import("./vision");
+  const { classifyReceiptVision, parseReceiptVision, visionModel } = await import("./vision");
   const model = visionModel();
+
+  const classifyStarted = Date.now();
+  try {
+    const classify = await Promise.race([
+      classifyReceiptVision(image),
+      new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(Object.assign(new Error("classify_timeout"), { code: "timeout" })),
+          CLASSIFY_TIMEOUT_MS,
+        );
+      }),
+    ]);
+    logVisionClassify({
+      receiptId,
+      model,
+      isReceipt: classify.isReceipt,
+      ms: Date.now() - classifyStarted,
+      imageBytes: image.bytes.length,
+    });
+    if (!classify.isReceipt) {
+      return { result: EMPTY_PARSE, parse: { source: "vision", reason: "not_receipt" } };
+    }
+  } catch (err) {
+    // Fail-open: a flaky classifier should not block a real tab from extracting.
+    const message = err instanceof Error ? err.message : String(err);
+    logVisionClassify({
+      receiptId,
+      model,
+      reason: "classify_failed",
+      ms: Date.now() - classifyStarted,
+      imageBytes: image.bytes.length,
+      detail: message.slice(0, 200),
+    });
+  }
+
+  const started = Date.now();
   try {
     const result = await Promise.race([
       parseReceiptVision(image),

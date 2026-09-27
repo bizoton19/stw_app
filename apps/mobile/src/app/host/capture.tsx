@@ -135,6 +135,7 @@ export default function HostCapture() {
         }
         supportTip
       >
+        {draft.error ? <Text style={styles.error}>{draft.error}</Text> : null}
         <View style={[styles.list, !hasImage && styles.listEmpty]}>
           <ChoiceRow
             size={hasImage ? "default" : "large"}
@@ -184,6 +185,13 @@ export default function HostCapture() {
 }
 
 const styles = StyleSheet.create({
+  error: {
+    color: colors.danger,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
   list: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   listEmpty: {
     borderTopWidth: 0,

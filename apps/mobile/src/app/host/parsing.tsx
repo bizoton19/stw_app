@@ -16,10 +16,16 @@ export default function HostParsing() {
     if (started.current) return;
     started.current = true;
     void (async () => {
+      let reason: string | null = null;
       try {
-        await draft.runParse();
+        const result = await draft.runParse();
+        reason = result?.reason ?? null;
       } catch {
         // runParse already maps transport errors; if create/parse throws, still continue.
+      }
+      if (reason === "not_receipt") {
+        router.replace("/host/capture");
+        return;
       }
       router.replace("/host/restaurant");
     })();

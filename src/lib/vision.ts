@@ -1,7 +1,15 @@
 import "server-only";
 
 import type { ParseResult } from "./types";
-import { salvageJsonObject, validateParse } from "./vision-stub";
+import {
+  interpretClassifyPayload,
+  salvageJsonObject,
+  validateParse,
+  type ReceiptClassifyResult,
+} from "./vision-stub";
+
+export type { ReceiptClassifyResult };
+export { interpretClassifyPayload };
 
 export const OPENROUTER_VISION_MODEL = "google/gemini-2.5-flash";
 
@@ -58,7 +66,29 @@ Return JSON only, matching the schema.
 - fees: tax, VAT, gratuity/tip/service, admin, delivery, surcharges only when they are ADDED on top of the item subtotal. If the printed total equals the item sum (VAT-inclusive prices), omit included tax from fees.
 - Never put Subtotal, Total, Grand Total, Amount Due, Change, Cash, or card-tender lines in items or fees.
 - Numbers only: no currency symbols, no thousands separators.
-- If the image is not a receipt or is unreadable, return restaurant as "", receiptDate as null, and empty items and fees arrays.`;
+- If the image is unreadable, return restaurant as "", receiptDate as null, and empty items and fees arrays.`;
+
+const CLASSIFY_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    isReceipt: { type: "boolean" },
+  },
+  required: ["isReceipt"],
+} as const;
+
+const CLASSIFY_PROMPT = `You classify images for a restaurant check-splitting app.
+
+Return JSON only, matching the schema.
+isReceipt must be true only when the image clearly shows a restaurant, bar, cafe, or similar venue receipt, bill, itemized tab, or payment check (paper photo or digital screenshot of a check).
+isReceipt must be false for menus, food/drink photos, people, landscapes, random documents, blank/black images, product packaging, or anything that is not a payment receipt/tab.`;
+
+type VisionImage = {
+  name: string;
+  type: string;
+  size: number;
+  bytes: Buffer;
+};
 
 function dataUrl(image: { type: string; bytes: Buffer }): string {
   const mime = image.type && image.type.startsWith("image/") ? image.type : "image/jpeg";
@@ -88,20 +118,22 @@ export function visionModel(): string {
   return process.env.OPENROUTER_VISION_MODEL?.trim() || OPENROUTER_VISION_MODEL;
 }
 
-export async function parseReceiptVision(image: {
-  name: string;
-  type: string;
-  size: number;
-  bytes: Buffer;
-}): Promise<ParseResult> {
+async function openRouterVisionJson(opts: {
+  image: VisionImage;
+  system: string;
+  userText: string;
+  schemaName: string;
+  schema: object;
+  maxTokens: number;
+  abortMs: number;
+}): Promise<string> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) {
     throw new Error("missing_openrouter_key");
   }
   const model = visionModel();
   const controller = new AbortController();
-  /** Slightly under the outer Promise.race so AbortSignal fires first when possible. */
-  const timer = setTimeout(() => controller.abort(), 38_000);
+  const timer = setTimeout(() => controller.abort(), opts.abortMs);
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -115,26 +147,23 @@ export async function parseReceiptVision(image: {
       body: JSON.stringify({
         model,
         temperature: 0,
-        max_tokens: 2048,
+        max_tokens: opts.maxTokens,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: opts.system },
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: "Read this receipt photo. Extract restaurant name, line items, and fees.",
-              },
-              { type: "image_url", image_url: { url: dataUrl(image) } },
+              { type: "text", text: opts.userText },
+              { type: "image_url", image_url: { url: dataUrl(opts.image) } },
             ],
           },
         ],
         response_format: {
           type: "json_schema",
           json_schema: {
-            name: "receipt_parse",
+            name: opts.schemaName,
             strict: true,
-            schema: RECEIPT_SCHEMA,
+            schema: opts.schema,
           },
         },
         provider: { require_parameters: true },
@@ -151,11 +180,7 @@ export async function parseReceiptVision(image: {
     if (!text.trim()) {
       throw new Error("empty_model_response");
     }
-    try {
-      return validateParse(JSON.parse(text));
-    } catch {
-      return validateParse(salvageJsonObject(text));
-    }
+    return text;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
       throw Object.assign(new Error("vision_timeout"), { code: "timeout" });
@@ -163,5 +188,37 @@ export async function parseReceiptVision(image: {
     throw err;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+export async function classifyReceiptVision(image: VisionImage): Promise<ReceiptClassifyResult> {
+  /** Slightly under the outer Promise.race so AbortSignal fires first when possible. */
+  const text = await openRouterVisionJson({
+    image,
+    system: CLASSIFY_PROMPT,
+    userText: "Is this image a restaurant/bar receipt or tab? Answer with the JSON schema only.",
+    schemaName: "receipt_classify",
+    schema: CLASSIFY_SCHEMA,
+    maxTokens: 64,
+    abortMs: 11_000,
+  });
+  return interpretClassifyPayload(text);
+}
+
+export async function parseReceiptVision(image: VisionImage): Promise<ParseResult> {
+  /** Slightly under the outer Promise.race so AbortSignal fires first when possible. */
+  const text = await openRouterVisionJson({
+    image,
+    system: SYSTEM_PROMPT,
+    userText: "Read this receipt photo. Extract restaurant name, line items, and fees.",
+    schemaName: "receipt_parse",
+    schema: RECEIPT_SCHEMA,
+    maxTokens: 2048,
+    abortMs: 38_000,
+  });
+  try {
+    return validateParse(JSON.parse(text));
+  } catch {
+    return validateParse(salvageJsonObject(text));
   }
 }

@@ -301,6 +301,12 @@ export function HostInterview() {
         body: form,
         hostToken: token,
       });
+      if (parse?.reason === "not_receipt") {
+        setError("That doesn’t look like a receipt or tab. Please upload a photo of the check.");
+        setDirection(-1);
+        setStep("capture");
+        return;
+      }
       applyReceipt(receipt);
       // Leave venue unset — host confirms from suggestions on the restaurant step.
       if (parse?.reason === "empty") {
@@ -426,6 +432,7 @@ export function HostInterview() {
   } else if (step === "capture") {
     body = (
       <>
+        {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
         <div className="border-t border-border">
           <Choice
             icon={<Camera className="size-5" />}

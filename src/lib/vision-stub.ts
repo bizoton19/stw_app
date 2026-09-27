@@ -30,6 +30,22 @@ export function salvageJsonObject(text: string): unknown {
   return JSON.parse(text.slice(start, end + 1));
 }
 
+export type ReceiptClassifyResult = { isReceipt: boolean };
+
+/** Pure helper — turns model JSON into a classify result. */
+export function interpretClassifyPayload(text: string): ReceiptClassifyResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    raw = salvageJsonObject(text);
+  }
+  if (raw && typeof raw === "object" && "isReceipt" in raw) {
+    return { isReceipt: Boolean((raw as { isReceipt: unknown }).isReceipt) };
+  }
+  throw new Error("invalid_classify_response");
+}
+
 function wholeQty(raw: unknown): number {
   const n = typeof raw === "string" ? Number(raw.trim()) : Number(raw);
   if (!Number.isFinite(n) || n < 0.5) {

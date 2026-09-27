@@ -74,7 +74,7 @@ type HostDraft = {
   togglePaymentMethod: (method: PayMethod) => void;
   setPaymentHandle: (method: PayMethod, handle: string) => void;
   setNote: (v: string) => void;
-  runParse: () => Promise<void>;
+  runParse: () => Promise<{ reason: string } | null>;
   recordParseReview: (choice: ParseReviewChoice) => Promise<void>;
   publish: () => Promise<void>;
   clearSavedDraft: () => Promise<void>;
@@ -262,7 +262,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     return created.receiptId;
   }, [receiptId]);
 
-  const runParse = useCallback(async () => {
+  const runParse = useCallback(async (): Promise<{ reason: string } | null> => {
     draftEpochRef.current += 1;
     setError(null);
     try {
@@ -272,22 +272,28 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         image,
         hostToken: getHostToken(id),
       });
+      const reason = parse?.reason ?? "ok";
+      if (reason === "not_receipt") {
+        setError("That doesn’t look like a receipt or tab. Please upload a photo of the check.");
+        return { reason };
+      }
       applyReceipt(receipt);
       // Belt-and-suspenders if a late hydrate tried to restore an old pin.
       setVenue(null);
-      if (parse?.reason === "empty") {
+      if (reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
-      } else if (parse?.reason === "failed") {
+      } else if (reason === "failed") {
         setError("Couldn't read that photo. Add the lines on the next screens.");
-      } else if (parse?.reason === "timeout") {
+      } else if (reason === "timeout") {
         setError("Reading timed out. Try a clearer photo, or add the lines yourself.");
-      } else if (parse?.reason === "no_key") {
+      } else if (reason === "no_key") {
         setError("Scanning isn't configured here. Add the lines on the next screens.");
-      } else if (parse?.reason === "no_image") {
+      } else if (reason === "no_image") {
         setError("No photo attached. Add the lines on the next screens.");
       } else {
         setError(null);
       }
+      return { reason };
     } catch (err) {
       const code =
         (err as { code?: string; message?: string }).code ??
@@ -299,6 +305,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
           "Couldn't finish reading that photo (connection dropped). Try again, or add the lines yourself.",
         );
       }
+      return null;
     }
   }, [applyReceipt, ensureDraft, image]);
 
