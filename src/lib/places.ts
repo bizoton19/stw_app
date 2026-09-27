@@ -78,7 +78,7 @@ export async function mapboxAutocomplete(input: {
       code: unauthorized ? "places_unauthorized" : "places_upstream",
       status: unauthorized ? res.status : 502,
       message: unauthorized
-        ? "Mapbox token is invalid or missing Search scopes. Create a new public token and set MAPBOX_ACCESS_TOKEN."
+        ? "Mapbox token is invalid or revoked. Paste a fresh default public token (pk.) as MAPBOX_ACCESS_TOKEN."
         : "Mapbox place search failed.",
       detail: text.slice(0, 200),
     });
