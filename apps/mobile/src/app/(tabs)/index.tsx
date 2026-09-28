@@ -352,7 +352,7 @@ export default function HomeScreen() {
                     Snap the check, confirm the lines, share a claim link. Tax and tip follow what
                     people ordered.
                   </Text>
-                  <PrimaryButton onPress={() => startWith("camera")}>
+                  <PrimaryButton onPress={() => router.push("/host")}>
                     Start a tab
                   </PrimaryButton>
                 </View>
@@ -446,16 +446,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     letterSpacing: -0.35,
   },
-  newBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: colors.merlot,
-  },
-  newBtnText: { fontSize: 14, fontWeight: "700", color: colors.merlotFg },
   topActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   iconBtn: {
     width: 44,
@@ -471,16 +461,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.merlot,
     borderColor: colors.merlot,
   },
-  emptyActions: { marginTop: 4, gap: 8 },
-  emptyUpload: {
-    height: 48,
-    borderRadius: 999,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  emptyUploadText: { fontSize: 15, fontWeight: "600", color: colors.ink },
   list: { flex: 1, minHeight: 0 },
   listContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, flexGrow: 1 },
   heroWrap: { marginBottom: 8 },

@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
 
-/** Old Create-tab deep link — new tabs start from Home camera / upload. */
+/** Old Create-tab deep link — host flow lives at /host. */
 export default function CreateTab() {
-  return <Redirect href="/" />;
+  return <Redirect href="/host" />;
 }

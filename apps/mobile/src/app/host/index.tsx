@@ -1,25 +1,21 @@
-import { useEffect } from "react";
 import { Alert, Image, StyleSheet, Text, View } from "react-native";
-import { Redirect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { useHostDraft, resumePathForDraft } from "@/context/host-draft";
 import { loadHostDraft } from "@/lib/host-draft-store";
 import { colors } from "@/lib/theme";
 
-/**
- * Resume gate only — new tabs start from Home (camera / upload).
- * Keeps the table graphic when an unfinished draft needs Continue vs Start fresh.
- */
+const BEATS = [
+  { n: "1", label: "Snap / upload the check" },
+  { n: "2", label: "Confirm the items" },
+  { n: "3", label: "Share the claim link" },
+];
+
 export default function HostReady() {
   const router = useRouter();
   const draft = useHostDraft();
   const canResume = draft.ready && draft.hasSavedProgress;
-
-  useEffect(() => {
-    if (!draft.ready || canResume) return;
-    router.replace("/host/capture");
-  }, [draft.ready, canResume, router]);
 
   async function resume() {
     const saved = await loadHostDraft();
@@ -44,6 +40,10 @@ export default function HostReady() {
   }
 
   function startFresh() {
+    if (!canResume) {
+      router.push("/host/capture");
+      return;
+    }
     Alert.alert(
       "Start a new tab?",
       "This clears the unfinished draft saved on this phone.",
@@ -53,25 +53,11 @@ export default function HostReady() {
           text: "Start fresh",
           style: "destructive",
           onPress: () => {
-            void draft.clearSavedDraft().then(() => router.replace("/host/capture"));
+            void draft.clearSavedDraft().then(() => router.push("/host/capture"));
           },
         },
       ],
     );
-  }
-
-  if (!draft.ready) {
-    return (
-      <AppShell>
-        <View style={styles.loading}>
-          <Text style={styles.loadingText}>Opening…</Text>
-        </View>
-      </AppShell>
-    );
-  }
-
-  if (!canResume) {
-    return <Redirect href="/host/capture" />;
   }
 
   return (
@@ -85,8 +71,16 @@ export default function HostReady() {
         sparse
         footer={
           <View>
-            <PrimaryButton onPress={() => void resume()}>Continue unfinished tab</PrimaryButton>
-            <QuietButton onPress={startFresh}>Start fresh instead</QuietButton>
+            {canResume ? (
+              <>
+                <PrimaryButton onPress={() => void resume()}>Continue unfinished tab</PrimaryButton>
+                <QuietButton onPress={startFresh}>Start fresh instead</QuietButton>
+              </>
+            ) : (
+              <PrimaryButton onPress={() => router.push("/host/capture")}>
+                Yes — start with the receipt
+              </PrimaryButton>
+            )}
           </View>
         }
         supportTip
@@ -101,8 +95,20 @@ export default function HostReady() {
             />
           </View>
           <Text style={styles.lead}>
-            You have an unfinished tab on this phone — pick up where you left off, or start fresh.
+            {canResume
+              ? "You have an unfinished tab on this phone — pick up where you left off, or start fresh."
+              : "One photo, a short review, then a link for the table."}
           </Text>
+          <View style={styles.beats}>
+            {BEATS.map((beat) => (
+              <View key={beat.n} style={styles.beat}>
+                <View style={styles.beatN}>
+                  <Text style={styles.beatNText}>{beat.n}</Text>
+                </View>
+                <Text style={styles.beatLabel}>{beat.label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       </InterviewChrome>
     </AppShell>
@@ -110,24 +116,52 @@ export default function HostReady() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingText: { fontSize: 14, color: colors.muted },
-  hero: { alignItems: "center", gap: 20 },
+  hero: { alignItems: "center", paddingTop: 4, gap: 18 },
+  /** Match the asset (4:3) so the person + full receipt stay in frame. */
   heroFrame: {
     width: "100%",
-    maxWidth: 320,
-    aspectRatio: 1,
-    borderRadius: 20,
+    aspectRatio: 4 / 3,
+    borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "#EDE8E1",
+    backgroundColor: colors.border,
   },
-  heroImage: { width: "100%", height: "100%" },
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
   lead: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: "500",
+    fontSize: 17,
+    lineHeight: 26,
     color: colors.inkSoft,
     textAlign: "center",
-    paddingHorizontal: 8,
+    maxWidth: 300,
+    fontWeight: "500",
   },
+  beats: { width: "100%", gap: 14, marginTop: 4 },
+  beat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: "#FFFcf8",
+  },
+  beatN: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "rgba(110, 46, 53, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  beatNText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.merlot,
+  },
+  beatLabel: { fontSize: 16, fontWeight: "600", color: colors.ink, flex: 1 },
 });
