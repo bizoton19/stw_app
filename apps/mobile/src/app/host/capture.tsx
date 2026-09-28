@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Alert, Image, Platform, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
@@ -16,8 +16,11 @@ import { colors } from "@/lib/theme";
 export default function HostCapture() {
   const router = useRouter();
   const draft = useHostDraft();
+  const { launch } = useLocalSearchParams<{ launch?: string }>();
+  const autoLaunch = launch === "camera" || launch === "library";
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   const consumedShareRef = useRef(false);
+  const autoStartedRef = useRef(false);
   const hasImage = Boolean(draft.image);
 
   useEffect(() => {
@@ -34,13 +37,13 @@ export default function HostCapture() {
     resetShareIntent(false);
   }, [draft.setPick, hasShareIntent, resetShareIntent, shareIntent.files]);
 
-  async function takePhoto() {
+  async function takePhoto(continueAfter = false) {
     if (Platform.OS === "web" || !Device.isDevice) {
       Alert.alert(
         "Camera needs a real phone",
         "Simulators and Expo web don't have a working camera. Pick from the library instead.",
       );
-      await pickLibrary("camera");
+      await pickLibrary("camera", continueAfter);
       return;
     }
     const perm = await ImagePicker.requestCameraPermissionsAsync();
@@ -64,9 +67,13 @@ export default function HostCapture() {
       fileName: asset.fileName,
       mimeType: asset.mimeType,
     });
+    if (continueAfter) router.replace("/host/parsing");
   }
 
-  async function pickLibrary(mode: "camera" | "library" = "library") {
+  async function pickLibrary(
+    mode: "camera" | "library" = "library",
+    continueAfter = false,
+  ) {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted && Platform.OS !== "web") {
       Alert.alert("Photos need permission", "Allow photo access to continue.");
@@ -84,7 +91,16 @@ export default function HostCapture() {
       fileName: asset.fileName,
       mimeType: asset.mimeType,
     });
+    if (continueAfter) router.replace("/host/parsing");
   }
+
+  useEffect(() => {
+    if (!draft.ready || !autoLaunch || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    if (launch === "camera") void takePhoto(true);
+    else void pickLibrary("library", true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot shortcut from Home
+  }, [draft.ready, autoLaunch, launch]);
 
   function replaceImage() {
     if (draft.pickMode === "camera") {
@@ -114,7 +130,7 @@ export default function HostCapture() {
         step={2}
         total={8}
         kicker="The receipt"
-        title="How should we add the tab?"
+        title={autoLaunch && !hasImage ? "Add the tab…" : "How should we add the tab?"}
         onBack={() => router.back()}
         onHome={goHostDesk}
         sparse={!hasImage}
@@ -123,7 +139,9 @@ export default function HostCapture() {
             <FooterHint>
               {draft.image
                 ? "Tap the photo above if you need a different shot."
-                : "From Photos you can also Share → Split the Wine."}
+                : autoLaunch
+                  ? "Opening your camera or library…"
+                  : "From Photos you can also Share → Split the Wine."}
             </FooterHint>
             <PrimaryButton
               disabled={draft.pickMode === null || !draft.image}
@@ -136,37 +154,39 @@ export default function HostCapture() {
         supportTip
       >
         {draft.error ? <Text style={styles.error}>{draft.error}</Text> : null}
-        <View style={[styles.list, !hasImage && styles.listEmpty]}>
-          <ChoiceRow
-            size={hasImage ? "default" : "large"}
-            showCheck={false}
-            icon={<Camera size={iconSize} color={iconColor} strokeWidth={2.25} />}
-            title="Take a photo"
-            hint={
-              Platform.OS === "web"
-                ? "Uses the system picker here. Real camera on iOS and Android."
-                : "Opens the device camera"
-            }
-            onPress={() => void takePhoto()}
-          />
-          <ChoiceRow
-            size={hasImage ? "default" : "large"}
-            showCheck={false}
-            icon={<ImageIcon size={iconSize} color={iconColor} strokeWidth={2.25} />}
-            title="Choose from library"
-            hint="JPEG, PNG, or a screenshot"
-            onPress={() => void pickLibrary()}
-          />
-          {draft.pickMode === "share" && draft.image ? (
+        {!autoLaunch || hasImage ? (
+          <View style={[styles.list, !hasImage && styles.listEmpty]}>
             <ChoiceRow
+              size={hasImage ? "default" : "large"}
               showCheck={false}
-              icon={<Share2 size={20} color={colors.ink} />}
-              title="Shared from Photos"
-              hint="Opened from the system share sheet"
-              onPress={() => undefined}
+              icon={<Camera size={iconSize} color={iconColor} strokeWidth={2.25} />}
+              title="Take a photo"
+              hint={
+                Platform.OS === "web"
+                  ? "Uses the system picker here. Real camera on iOS and Android."
+                  : "Opens the device camera"
+              }
+              onPress={() => void takePhoto()}
             />
-          ) : null}
-        </View>
+            <ChoiceRow
+              size={hasImage ? "default" : "large"}
+              showCheck={false}
+              icon={<ImageIcon size={iconSize} color={iconColor} strokeWidth={2.25} />}
+              title="Choose from library"
+              hint="JPEG, PNG, or a screenshot"
+              onPress={() => void pickLibrary()}
+            />
+            {draft.pickMode === "share" && draft.image ? (
+              <ChoiceRow
+                showCheck={false}
+                icon={<Share2 size={20} color={colors.ink} />}
+                title="Shared from Photos"
+                hint="Opened from the system share sheet"
+                onPress={() => undefined}
+              />
+            ) : null}
+          </View>
+        ) : null}
         {draft.image ? (
           <PressScale
             accessibilityLabel="Replace receipt photo"

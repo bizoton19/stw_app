@@ -10,7 +10,7 @@ import { HostSupportTip } from "@/components/host-support-tip";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { WineMark } from "@/components/wine-mark";
-import { hostPayments } from "@/lib/host-pay";
+import { hostPayments, validateHostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
 import { openHostPayWeb, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
@@ -43,6 +43,10 @@ export function SettleView({
   const [payLater, setPayLater] = useState(false);
   const [saveHint, setSaveHint] = useState<string | null>(null);
   const [canShare, setCanShare] = useState(false);
+  const [editingPay, setEditingPay] = useState(false);
+  const [payDraft, setPayDraft] = useState<HostPayment[]>([]);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
   const isHost = Boolean(getHostToken(receipt.id));
   const guest = getGuest(receipt.id);
   const payments = hostPayments(receipt.hostInfo);
@@ -135,6 +139,38 @@ export function SettleView({
       }
     } finally {
       setPaying(null);
+    }
+  }
+
+  async function savePayHandles() {
+    const checked = validateHostPayments(payDraft);
+    if (!checked.ok) {
+      setPayError(checked.message);
+      return;
+    }
+    const token = getHostToken(receipt.id);
+    if (!token) {
+      setPayError("Host session missing — reopen with ?host=1 from your device.");
+      return;
+    }
+    setPayBusy(true);
+    setPayError(null);
+    try {
+      const note = receipt.hostInfo?.note;
+      await api(`/api/receipts/${receipt.id}/host-info`, {
+        method: "PUT",
+        hostToken: token,
+        body: JSON.stringify({
+          payments: checked.payments,
+          ...(note ? { note } : {}),
+        }),
+      });
+      await onChange?.();
+      setEditingPay(false);
+    } catch (err) {
+      setPayError((err as Error).message || "Couldn't save pay handles.");
+    } finally {
+      setPayBusy(false);
     }
   }
 
@@ -468,22 +504,87 @@ export function SettleView({
 
         {isHost && payments.length > 0 ? (
           <div className="mt-6 mb-2">
-            <p className="mb-2.5 text-[13px] font-semibold text-ink-soft">Your pay handles</p>
-            <ul className="space-y-2.5">
-              {payments.map((payment) => (
-                <li key={payment.method} className="flex items-center gap-3">
-                  <PayMethodIcon method={payment.method} size={36} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold">
-                      {PAY_METHOD_META[payment.method].label}
+            <div className="mb-2.5 flex items-center justify-between gap-3">
+              <p className="text-[13px] font-semibold text-ink-soft">Your pay handles</p>
+              {!editingPay ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPayDraft(payments.map((p) => ({ ...p })));
+                    setPayError(null);
+                    setEditingPay(true);
+                  }}
+                  className="pressable text-[13px] font-semibold text-primary"
+                >
+                  Edit
+                </button>
+              ) : null}
+            </div>
+            {editingPay ? (
+              <div className="space-y-3">
+                {payDraft.map((payment) => (
+                  <label key={payment.method} className="flex items-start gap-3">
+                    <PayMethodIcon method={payment.method} size={36} />
+                    <span className="min-w-0 flex-1">
+                      <span className="mb-1 block text-[13px] font-semibold">
+                        {PAY_METHOD_META[payment.method].label}
+                      </span>
+                      <input
+                        value={payment.handle}
+                        onChange={(e) => {
+                          const handle = e.target.value;
+                          setPayDraft((prev) =>
+                            prev.map((row) =>
+                              row.method === payment.method ? { ...row, handle } : row,
+                            ),
+                          );
+                        }}
+                        className="h-11 w-full rounded-xl border border-border bg-white px-3 text-[15px]"
+                        placeholder={PAY_METHOD_META[payment.method].hint}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                      />
                     </span>
-                    <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
-                      {payment.handle}
+                  </label>
+                ))}
+                {payError ? (
+                  <p className="text-[13px] text-destructive">{payError}</p>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={payBusy}
+                  onClick={() => void savePayHandles()}
+                  className="pressable inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-50"
+                >
+                  {payBusy ? "Saving…" : "Save handles"}
+                </button>
+                <QuietButton
+                  disabled={payBusy}
+                  onClick={() => {
+                    setEditingPay(false);
+                    setPayError(null);
+                  }}
+                >
+                  Cancel
+                </QuietButton>
+              </div>
+            ) : (
+              <ul className="space-y-2.5">
+                {payments.map((payment) => (
+                  <li key={payment.method} className="flex items-center gap-3">
+                    <PayMethodIcon method={payment.method} size={36} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-semibold">
+                        {PAY_METHOD_META[payment.method].label}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
+                        {payment.handle}
+                      </span>
                     </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ) : null}
       </div>

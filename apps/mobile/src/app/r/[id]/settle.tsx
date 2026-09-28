@@ -3,8 +3,9 @@ import { Alert, ScrollView, Share, StyleSheet, Switch, Text, View } from "react-
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Banknote, ChevronDown, ChevronUp } from "lucide-react-native";
-import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
+import { Field } from "@/components/field";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { IconActionButton } from "@/components/icon-action-button";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
@@ -13,14 +14,16 @@ import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { useClaimFlow } from "@/context/claim-flow";
+import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
 import { registerHostClaimPush } from "@/lib/host-push";
-import { hostPayments } from "@/lib/host-pay";
+import { hostPayments, validateHostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
+import { getHostToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
-import type { HostPayment } from "@/lib/types";
+import type { HostPayment, PublicReceipt } from "@/lib/types";
 import { goHostDesk } from "@/lib/navigation";
 import { colors } from "@/lib/theme";
 
@@ -35,6 +38,10 @@ export default function SettleScreen() {
   const [qrOpen, setQrOpen] = useState(false);
   const [showTotalDetails, setShowTotalDetails] = useState(false);
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
+  const [editingPay, setEditingPay] = useState(false);
+  const [payDraft, setPayDraft] = useState<HostPayment[]>([]);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!flow.isHost || !receipt?.id || receipt.status === "finalized") return;
@@ -65,6 +72,7 @@ export default function SettleScreen() {
     : undefined;
   const restaurant = receipt.restaurant || "the check";
   const place = receipt.restaurant?.trim() || "Tonight’s check";
+  const hostNote = receipt.hostInfo?.note;
   const hostName =
     flow.isHost && flow.guest?.name.trim() ? flow.guest.name.trim() : "the host";
   const claimParams = flow.isHost
@@ -115,6 +123,44 @@ export default function SettleScreen() {
         },
       ],
     );
+  }
+
+  function beginEditPay() {
+    setPayDraft(payments.map((p) => ({ ...p })));
+    setPayError(null);
+    setEditingPay(true);
+  }
+
+  async function savePayHandles() {
+    const checked = validateHostPayments(payDraft);
+    if (!checked.ok) {
+      setPayError(checked.message);
+      return;
+    }
+    const token = getHostToken(receiptId);
+    if (!token) {
+      setPayError("Host session missing — reopen this tab from Home.");
+      return;
+    }
+    setPayBusy(true);
+    setPayError(null);
+    try {
+      const note = hostNote;
+      await api<{ receipt: PublicReceipt }>(`/api/receipts/${receiptId}/host-info`, {
+        method: "PUT",
+        hostToken: token,
+        body: JSON.stringify({
+          payments: checked.payments,
+          ...(note ? { note } : {}),
+        }),
+      });
+      await flow.refresh();
+      setEditingPay(false);
+    } catch (err) {
+      setPayError((err as Error).message || "Couldn't save pay handles.");
+    } finally {
+      setPayBusy(false);
+    }
   }
 
   const footer = flow.isHost ? (
@@ -427,22 +473,67 @@ export default function SettleScreen() {
           </ScrollView>
         )}
 
-        {flow.isHost && payments.length > 0 ? (
+        {flow.isHost && (payments.length > 0 || editingPay) ? (
           <View style={styles.payHostNote}>
-            <Text style={styles.peopleTitle}>Your pay handles</Text>
-            {payments.map((payment) => (
-              <View key={payment.method} style={styles.payHandleRow}>
-                <PayMethodIcon method={payment.method} size={36} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.payHandleLabel}>
-                    {PAY_METHOD_META[payment.method].label}
-                  </Text>
-                  <Text style={styles.payHandleValue} numberOfLines={1}>
-                    {payment.handle}
-                  </Text>
-                </View>
+            <View style={styles.payHostHead}>
+              <Text style={styles.peopleTitle}>Your pay handles</Text>
+              {!editingPay ? (
+                <PressScale haptic="select" onPress={beginEditPay} accessibilityLabel="Edit pay handles">
+                  <Text style={styles.payEditLink}>Edit</Text>
+                </PressScale>
+              ) : null}
+            </View>
+            {editingPay ? (
+              <View style={{ gap: 8 }}>
+                {payDraft.map((payment) => (
+                  <View key={payment.method} style={styles.payHandleRow}>
+                    <PayMethodIcon method={payment.method} size={36} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Field
+                        label={PAY_METHOD_META[payment.method].label}
+                        value={payment.handle}
+                        onChangeText={(handle) => {
+                          setPayDraft((prev) =>
+                            prev.map((row) =>
+                              row.method === payment.method ? { ...row, handle } : row,
+                            ),
+                          );
+                        }}
+                        autoCapitalize="none"
+                        placeholder={PAY_METHOD_META[payment.method].hint}
+                      />
+                    </View>
+                  </View>
+                ))}
+                {payError ? <Text style={styles.err}>{payError}</Text> : null}
+                <PrimaryButton busy={payBusy} onPress={() => void savePayHandles()}>
+                  Save handles
+                </PrimaryButton>
+                <QuietButton
+                  disabled={payBusy}
+                  onPress={() => {
+                    setEditingPay(false);
+                    setPayError(null);
+                  }}
+                >
+                  Cancel
+                </QuietButton>
               </View>
-            ))}
+            ) : (
+              payments.map((payment) => (
+                <View key={payment.method} style={styles.payHandleRow}>
+                  <PayMethodIcon method={payment.method} size={36} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.payHandleLabel}>
+                      {PAY_METHOD_META[payment.method].label}
+                    </Text>
+                    <Text style={styles.payHandleValue} numberOfLines={1}>
+                      {payment.handle}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
           </View>
         ) : null}
       </InterviewChrome>
@@ -648,6 +739,13 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, fontWeight: "700", color: colors.ink },
   amount: { fontSize: 24, fontWeight: "800", fontVariant: ["tabular-nums"], color: colors.ink },
   payHostNote: { marginTop: 8, marginBottom: 16, gap: 10 },
+  payHostHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  payEditLink: { fontSize: 14, fontWeight: "700", color: colors.merlot },
   payHandleRow: {
     flexDirection: "row",
     alignItems: "center",

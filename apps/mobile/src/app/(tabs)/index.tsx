@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ChevronRight, Plus, Trash2 } from "lucide-react-native";
+import { ChevronRight, Camera, ImageIcon, Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
 import { AppShell, PrimaryButton } from "@/components/chrome";
@@ -102,6 +102,27 @@ export default function HomeScreen() {
     router.push(resumePathForDraft(draft) as never);
   }
 
+  function startWith(launch: "camera" | "library") {
+    const go = () => {
+      void clearHostDraft().then(() => {
+        setDraft(null);
+        router.push({ pathname: "/host/capture", params: { launch } });
+      });
+    };
+    if (!draft) {
+      go();
+      return;
+    }
+    Alert.alert(
+      "Start a new tab?",
+      "This clears the unfinished draft saved on this phone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Start fresh", style: "destructive", onPress: go },
+      ],
+    );
+  }
+
   function confirmDiscardDraft() {
     Alert.alert(
       "Discard draft?",
@@ -174,15 +195,24 @@ export default function HomeScreen() {
               {active || draft ? "Your tabs" : "Ready when you are"}
             </Text>
           </View>
-          <PressScale
-            haptic="select"
-            accessibilityLabel="Create a new tab"
-            onPress={() => router.push("/host")}
-            style={styles.newBtn}
-          >
-            <Plus size={18} color={colors.merlotFg} strokeWidth={2.5} />
-            <Text style={styles.newBtnText}>New</Text>
-          </PressScale>
+          <View style={styles.topActions}>
+            <PressScale
+              haptic="select"
+              accessibilityLabel="Upload receipt from library"
+              onPress={() => startWith("library")}
+              style={styles.iconBtn}
+            >
+              <ImageIcon size={22} color={colors.ink} strokeWidth={2.25} />
+            </PressScale>
+            <PressScale
+              haptic="select"
+              accessibilityLabel="Snap a receipt photo"
+              onPress={() => startWith("camera")}
+              style={[styles.iconBtn, styles.iconBtnPrimary]}
+            >
+              <Camera size={22} color={colors.merlotFg} strokeWidth={2.25} />
+            </PressScale>
+          </View>
         </View>
 
         <FlatList
@@ -322,9 +352,20 @@ export default function HomeScreen() {
                     Snap the check, confirm the lines, share a claim link. Tax and tip follow what
                     people ordered.
                   </Text>
-                  <PrimaryButton onPress={() => router.push("/host")}>
-                    Start a tab
-                  </PrimaryButton>
+                  <View style={styles.emptyActions}>
+                    <PrimaryButton onPress={() => startWith("camera")}>
+                      Snap the check
+                    </PrimaryButton>
+                    <PressScale
+                      haptic="select"
+                      onPress={() => startWith("library")}
+                      style={styles.emptyUpload}
+                      accessibilityLabel="Upload from library"
+                    >
+                      <ImageIcon size={18} color={colors.ink} strokeWidth={2.25} />
+                      <Text style={styles.emptyUploadText}>Upload from library</Text>
+                    </PressScale>
+                  </View>
                 </View>
               ) : null}
 
@@ -426,6 +467,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.merlot,
   },
   newBtnText: { fontSize: 14, fontWeight: "700", color: colors.merlotFg },
+  topActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFcf8",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  iconBtnPrimary: {
+    backgroundColor: colors.merlot,
+    borderColor: colors.merlot,
+  },
+  emptyActions: { marginTop: 4, gap: 8 },
+  emptyUpload: {
+    height: 48,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  emptyUploadText: { fontSize: 15, fontWeight: "600", color: colors.ink },
   list: { flex: 1, minHeight: 0 },
   listContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, flexGrow: 1 },
   heroWrap: { marginBottom: 8 },

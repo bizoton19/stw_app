@@ -75,6 +75,8 @@ git log --reverse -1 --format='%aI %s'
 - Host interview: drop loading from step count; footer chrome contrast
 - Web guest: settle after ≥1 claim; **pay later** with Copy link + Share/Save
 - Progress stats doc + Cursor rule to keep milestones current
+- Host desk: camera + upload shortcuts (skip beginner guide); edit pay handles after publish
+- Web brand mark matches official tilted merlot bottle icon
 
 ## How to extend this file
 
