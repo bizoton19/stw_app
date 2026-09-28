@@ -339,6 +339,7 @@ export function ClaimBoard({
       <InterviewChrome
         step={qtyStep}
         total={totalSteps}
+        hideProgress
         kicker={receipt.restaurant || "The check"}
         title="How many of each?"
         stepKey="qty"

@@ -31,6 +31,7 @@ export function JoinGuest({
     <InterviewChrome
       step={1}
       total={3}
+      hideProgress
       kicker={place}
       title={isHost ? "You're hosting — claim under what name?" : `Here is the tab for ${place}`}
       stepKey="join"
