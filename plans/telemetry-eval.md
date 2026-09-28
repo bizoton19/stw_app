@@ -1,10 +1,12 @@
 # Vision telemetry & model eval plan
 
-Status: friend-test. Prefer Railway built-ins first; add app JSON logs next; golden-set eval only when swapping models.
+Status: friend-test. Prefer Railway built-ins first; vision JSON logs next; **usage funnel** (publish / claim / finalize) for product health; golden-set eval only when swapping models.
 
 ## Goal
 
-Know how long OpenRouter takes per receipt parse, whether it succeeded, and later whether a new model is actually better — without standing up Datadog/Sentry yet.
+1. Know how long OpenRouter takes per receipt parse and whether it succeeded.  
+2. Know whether friend-test tabs get claims and get closed (product funnel).  
+3. Later, whether a new vision model is actually better — without Datadog/Sentry yet.
 
 ---
 
