@@ -7,6 +7,7 @@ describe("agent scope", () => {
     assert.equal(isClearlyOffTopic("tip was cash 20%"), false);
     assert.equal(isClearlyOffTopic("what’s the tax on this check?"), false);
     assert.equal(isClearlyOffTopic("how much is the Cabernet line?"), false);
+    assert.equal(isClearlyOffTopic("what is this admin fee for?"), false);
     assert.equal(isLikelyOnTopic("split the bottle into glasses"), true);
   });
 

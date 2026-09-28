@@ -20,7 +20,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X } from "lucide-react-native";
+import { Bot, X } from "lucide-react-native";
 import { PressScale } from "@/components/press-scale";
 import {
   requestAgentTurn,
@@ -182,12 +182,17 @@ export function HostAgentSheet({
               </View>
             </GestureDetector>
 
-            <View style={styles.header}>
-              <Text style={styles.agentLabel}>Assistant</Text>
-              <PressScale onPress={close} accessibilityLabel="Close" style={styles.closeBtn}>
-                <X size={18} color={colors.inkSoft} />
-              </PressScale>
-            </View>
+              <View style={styles.header}>
+                <View style={styles.headerLeft}>
+                  <View style={styles.headerIcon}>
+                    <Bot size={16} color={colors.merlot} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.agentLabel}>Check assistant</Text>
+                </View>
+                <PressScale onPress={close} accessibilityLabel="Close" style={styles.closeBtn}>
+                  <X size={18} color={colors.inkSoft} />
+                </PressScale>
+              </View>
 
             <ScrollView
               keyboardShouldPersistTaps="handled"
@@ -298,11 +303,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: space.sm,
   },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(110, 46, 53, 0.08)",
+  },
   agentLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
     color: colors.merlot,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   closeBtn: { padding: 6 },
   loading: { paddingVertical: 28, alignItems: "center", gap: 8 },

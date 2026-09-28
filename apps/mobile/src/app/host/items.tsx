@@ -13,6 +13,7 @@ import { goHostDesk } from "@/lib/navigation";
 import { Swipeable } from "react-native-gesture-handler";
 import { ChevronDown, RotateCcw, Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, QuietButton } from "@/components/chrome";
+import { AssistantEntry } from "@/components/assistant-entry";
 import { HostAgentSheet } from "@/components/host-agent-sheet";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
@@ -504,14 +505,12 @@ export default function HostItems() {
           {t("items.addLine")}
         </QuietButton>
         {draft.receiptId ? (
-          <QuietButton
+          <AssistantEntry
             onPress={() => {
               stopEditing();
               setAgentOpen(true);
             }}
-          >
-            Assistant
-          </QuietButton>
+          />
         ) : null}
       </InterviewChrome>
       {draft.receiptId ? (

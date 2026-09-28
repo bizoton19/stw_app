@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import { Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { AssistantEntry } from "@/components/assistant-entry";
 import { HostAgentSheet } from "@/components/host-agent-sheet";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
@@ -161,7 +162,7 @@ export default function HostFees() {
           {t("fees.add")}
         </QuietButton>
         {draft.receiptId ? (
-          <QuietButton onPress={() => setAgentOpen(true)}>Assistant</QuietButton>
+          <AssistantEntry onPress={() => setAgentOpen(true)} />
         ) : null}
       </InterviewChrome>
       {draft.receiptId ? (

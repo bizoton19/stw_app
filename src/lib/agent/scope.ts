@@ -12,7 +12,7 @@ const OFF_TOPIC =
 
 /** Strong on-topic signals for this product. */
 const ON_TOPIC =
-  /\b(tip|gratuity|cash\s*tip|tax|vat|mwst|sales\s*tax|fee|subtotal|total|owe|owed|split|claim|item|line|bottle|glass|pour|wine|drink|food|receipt|check|tab|venmo|cash\s*app|paypal|zelle|pay|handle|qty|quantity|price|cost|percent|%|dollar|\$|math|add|sum|remaining|unclaimed|restaurant|venue|place|service\s*charge|how much|what(?:'s| is) (?:still |left )?on|merge|remove|delete|edit|wrong|missing|blank)\b/i;
+  /\b(tip|gratuity|cash\s*tip|tax|vat|mwst|sales\s*tax|fee|admin|surcharge|service\s*charge|svc|subtotal|total|owe|owed|split|claim|item|line|bottle|glass|pour|wine|drink|food|receipt|check|tab|venmo|cash\s*app|paypal|zelle|pay|handle|qty|quantity|price|cost|percent|%|dollar|\$|math|add|sum|remaining|unclaimed|restaurant|venue|place|how much|what(?:'s| is| for)|why|merge|remove|delete|edit|wrong|missing|blank)\b/i;
 
 export function offTopicRefusal(): string {
   return OFF_TOPIC_REFUSAL;
