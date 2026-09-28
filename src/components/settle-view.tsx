@@ -63,6 +63,10 @@ export function SettleView({
     : undefined;
   const canPayLater = !isHost && Boolean(mine && mine.totalCents > 0);
 
+  useEffect(() => {
+    setCanShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
+  }, []);
+
   async function reopen() {
     const token = getHostToken(receipt.id);
     setBusy(true);
@@ -158,10 +162,10 @@ export function SettleView({
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         await navigator.share({ title, text, url });
-        setSaveHint("Shared — open that saved link when you’re ready to pay.");
+        setSaveHint("Shared — open that saved link when you're ready to pay.");
         return;
       } catch (err) {
-        // User cancelled the sheet — don’t fall through as an error.
+        // User cancelled the sheet — don't fall through as an error.
         if ((err as { name?: string }).name === "AbortError") return;
       }
     }
@@ -169,8 +173,6 @@ export function SettleView({
   }
 
   if (payLater && canPayLater) {
-    const canShare =
-      typeof navigator !== "undefined" && typeof navigator.share === "function";
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
