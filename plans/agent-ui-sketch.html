@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Split the Wine — in-app agent UI sketch</title>
+  <style>
+    :root {
+      --paper: #f6f4f1;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #e7e5e4;
+      --merlot: #7a1f2b;
+      --sheet: #fffcf8;
+      --bg: #e8e4df;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      gap: 24px;
+      padding: 32px 16px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    .note {
+      max-width: 320px;
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--muted);
+      text-align: center;
+    }
+    .note strong { color: var(--ink); font-weight: 600; }
+    .phone {
+      width: 320px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(28, 25, 23, 0.08);
+    }
+    .status {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 18px 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .body { padding: 8px 18px 12px; min-height: 210px; }
+    .kicker {
+      margin: 0 0 6px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .title {
+      margin: 0 0 14px;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid var(--line);
+      font-size: 14px;
+    }
+    .row span:last-child { color: var(--muted); }
+    .dim { opacity: 0.4; }
+    .sheet {
+      background: var(--sheet);
+      border-top: 1px solid var(--line);
+      border-radius: 20px 20px 0 0;
+      padding: 10px 16px 18px;
+      box-shadow: 0 -8px 24px rgba(28, 25, 23, 0.06);
+    }
+    .handle {
+      width: 36px;
+      height: 4px;
+      margin: 0 auto 12px;
+      border-radius: 999px;
+      background: var(--line);
+    }
+    .agent-label {
+      margin: 0 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--merlot);
+    }
+    .agent-copy {
+      margin: 0 0 12px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .card strong {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn {
+      flex: 1;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: default;
+    }
+    .btn-primary {
+      background: var(--merlot);
+      color: #fff;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .compose {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      align-items: center;
+    }
+    .compose input {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: #fff;
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .compose button {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <p class="note">
+    <strong>In-app agent</strong> = bottom sheet over the current screen,
+    short copy + action cards — not a full chat thread.
+  </p>
+
+  <div class="phone" aria-label="Mockup of Review items with agent sheet">
+    <div class="status"><span>9:41</span><span>Split the Wine</span></div>
+    <div class="body">
+      <p class="kicker">3 of 8</p>
+      <h1 class="title">Review items</h1>
+      <div class="row"><span>Negroni</span><span>$16</span></div>
+      <div class="row"><span>Fries</span><span>$9</span></div>
+      <div class="row"><span>Cabernet bottle</span><span>$68</span></div>
+      <div class="row dim"><span>…</span><span></span></div>
+    </div>
+    <div class="sheet">
+      <div class="handle" aria-hidden="true"></div>
+      <p class="agent-label">Assistant</p>
+      <p class="agent-copy">Parse looks clean. Tip is blank — add 20% ($18.60) and keep going?</p>
+      <div class="card"><strong>Set tip to $18.60</strong>20% of food and drink</div>
+      <div class="card"><strong>Split bottle into glasses</strong>Cabernet · 5 pours</div>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost">Edit list</button>
+        <button type="button" class="btn btn-primary">Apply and continue</button>
+      </div>
+      <div class="compose">
+        <input type="text" value="tip was cash 20%" readonly aria-label="Short reply" />
+        <button type="button" aria-label="Send">↑</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
