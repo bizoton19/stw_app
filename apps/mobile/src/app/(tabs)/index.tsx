@@ -356,7 +356,14 @@ export default function HomeScreen() {
                     Start a tab
                   </PrimaryButton>
                 </View>
-              ) : null}
+              ) : (
+                <View style={styles.startTabWrap}>
+                  <PrimaryButton onPress={() => router.push("/host")}>Start a tab</PrimaryButton>
+                  <Text style={styles.startTabHint}>
+                    Guided path — or use the camera / upload icons above for a quick snap.
+                  </Text>
+                </View>
+              )}
 
               {others.length > 0 ? (
                 <Text style={styles.sectionLabel}>Recent</Text>
@@ -547,6 +554,15 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 20, fontWeight: "700", color: colors.ink, letterSpacing: -0.3 },
   emptyBody: { fontSize: 15, lineHeight: 22, color: colors.muted },
+  startTabWrap: { marginTop: 8, marginBottom: 4, gap: 8 },
+  startTabHint: {
+    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "500",
+    color: colors.inkSoft,
+    paddingHorizontal: 8,
+  },
   sectionLabel: {
     marginTop: 20,
     marginBottom: 4,

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Image, Platform, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
@@ -21,7 +21,10 @@ export default function HostCapture() {
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   const consumedShareRef = useRef(false);
   const autoStartedRef = useRef(false);
+  const [autoTried, setAutoTried] = useState(false);
   const hasImage = Boolean(draft.image);
+  /** After Home shortcut cancels camera/library, fall back to normal pick UI. */
+  const showPickChoices = !autoLaunch || hasImage || autoTried;
 
   useEffect(() => {
     if (consumedShareRef.current) return;
@@ -52,6 +55,7 @@ export default function HostCapture() {
         "Camera needs permission",
         "Allow the camera to photograph the tab, or pick from your library.",
       );
+      if (continueAfter) setAutoTried(true);
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -60,7 +64,10 @@ export default function HostCapture() {
       exif: false,
       cameraType: ImagePicker.CameraType.back,
     });
-    if (result.canceled || !result.assets[0]) return;
+    if (result.canceled || !result.assets[0]) {
+      if (continueAfter) setAutoTried(true);
+      return;
+    }
     const asset = result.assets[0];
     draft.setPick("camera", {
       uri: asset.uri,
@@ -77,6 +84,7 @@ export default function HostCapture() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted && Platform.OS !== "web") {
       Alert.alert("Photos need permission", "Allow photo access to continue.");
+      if (continueAfter) setAutoTried(true);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -84,7 +92,10 @@ export default function HostCapture() {
       quality: 0.7,
       exif: false,
     });
-    if (result.canceled || !result.assets[0]) return;
+    if (result.canceled || !result.assets[0]) {
+      if (continueAfter) setAutoTried(true);
+      return;
+    }
     const asset = result.assets[0];
     draft.setPick(mode, {
       uri: asset.uri,
@@ -130,7 +141,11 @@ export default function HostCapture() {
         step={2}
         total={8}
         kicker="The receipt"
-        title={autoLaunch && !hasImage ? "Add the tab…" : "How should we add the tab?"}
+        title={
+          autoLaunch && !hasImage && !autoTried
+            ? "Add the tab…"
+            : "How should we add the tab?"
+        }
         onBack={() => router.back()}
         onHome={goHostDesk}
         sparse={!hasImage}
@@ -139,7 +154,7 @@ export default function HostCapture() {
             <FooterHint>
               {draft.image
                 ? "Tap the photo above if you need a different shot."
-                : autoLaunch
+                : autoLaunch && !autoTried
                   ? "Opening your camera or library…"
                   : "From Photos you can also Share → Split the Wine."}
             </FooterHint>
@@ -154,7 +169,7 @@ export default function HostCapture() {
         supportTip
       >
         {draft.error ? <Text style={styles.error}>{draft.error}</Text> : null}
-        {!autoLaunch || hasImage ? (
+        {showPickChoices ? (
           <View style={[styles.list, !hasImage && styles.listEmpty]}>
             <ChoiceRow
               size={hasImage ? "default" : "large"}
