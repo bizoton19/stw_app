@@ -51,7 +51,7 @@ export default function HostParsing() {
         supportTip
       >
         <View style={styles.center}>
-          <WineMarkBusy size={72} />
+          <WineMarkBusy size={140} />
           <Text style={styles.copy}>
             Reading the check. You’ll review every line next — and pick the place yourself.
           </Text>
