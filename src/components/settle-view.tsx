@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Banknote, Bookmark, ChevronLeft } from "lucide-react";
+import { Banknote, ChevronLeft, Copy, Share2 } from "lucide-react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
 import { HostSupportTip } from "@/components/host-support-tip";
@@ -41,7 +41,8 @@ export function SettleView({
   const [message, setMessage] = useState<string | null>(null);
   const [showTotalDetails, setShowTotalDetails] = useState(false);
   const [payLater, setPayLater] = useState(false);
-  const [bookmarkHint, setBookmarkHint] = useState<string | null>(null);
+  const [saveHint, setSaveHint] = useState<string | null>(null);
+  const [canShare, setCanShare] = useState(false);
   const isHost = Boolean(getHostToken(receipt.id));
   const guest = getGuest(receipt.id);
   const payments = hostPayments(receipt.hostInfo);
@@ -133,22 +134,43 @@ export function SettleView({
     }
   }
 
-  async function bookmarkSettleLink() {
-    const url =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/r/${receipt.id}/settle`
-        : `/r/${receipt.id}/settle`;
+  function settleUrl() {
+    if (typeof window === "undefined") return `/r/${receipt.id}/settle`;
+    return `${window.location.origin}/r/${receipt.id}/settle`;
+  }
+
+  async function copySettleLink() {
+    const url = settleUrl();
     try {
       await navigator.clipboard.writeText(url);
-      setBookmarkHint(
-        "Link copied. Bookmark this page in your browser (★ or Cmd/Ctrl+D) so you can reopen it.",
-      );
+      setSaveHint("Link copied — paste it in Notes or Messages so you can come back.");
     } catch {
-      setBookmarkHint(`Copy this link and bookmark it: ${url}`);
+      setSaveHint(`Copy this link: ${url}`);
     }
   }
 
+  async function shareSettleLink() {
+    const url = settleUrl();
+    const title = receipt.restaurant
+      ? `Pay ${receipt.restaurant} — Split the Wine`
+      : "Pay later — Split the Wine";
+    const text = "Reopen this link to pay the host.";
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, text, url });
+        setSaveHint("Shared — open that saved link when you’re ready to pay.");
+        return;
+      } catch (err) {
+        // User cancelled the sheet — don’t fall through as an error.
+        if ((err as { name?: string }).name === "AbortError") return;
+      }
+    }
+    await copySettleLink();
+  }
+
   if (payLater && canPayLater) {
+    const canShare =
+      typeof navigator !== "undefined" && typeof navigator.share === "function";
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">
@@ -158,7 +180,7 @@ export function SettleView({
               aria-label="Back to settle payment"
               onClick={() => {
                 setPayLater(false);
-                setBookmarkHint(null);
+                setSaveHint(null);
               }}
               className="pressable flex size-11 items-center justify-center rounded-full"
             >
@@ -172,26 +194,43 @@ export function SettleView({
             Pay later — no problem
           </h1>
           <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-            Bookmark this link and come back when you&apos;re ready. You&apos;ll find the
+            Save this link and come back when you&apos;re ready. You&apos;ll find the
             host&apos;s payment handles here.
           </p>
 
-          <button
-            type="button"
-            onClick={() => void bookmarkSettleLink()}
-            className="pressable mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
-          >
-            <Bookmark className="size-4" strokeWidth={2.25} aria-hidden />
-            Bookmark
-          </button>
-          {bookmarkHint ? (
+          <div className="mt-6 space-y-2">
+            {canShare ? (
+              <button
+                type="button"
+                onClick={() => void shareSettleLink()}
+                className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
+              >
+                <Share2 className="size-4" strokeWidth={2.25} aria-hidden />
+                Share / Save
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void copySettleLink()}
+              className={`pressable flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold ${
+                canShare
+                  ? "text-foreground"
+                  : "bg-primary text-primary-foreground"
+              }`}
+            >
+              <Copy className="size-4" strokeWidth={2.25} aria-hidden />
+              Copy link
+            </button>
+          </div>
+          {saveHint ? (
             <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
-              {bookmarkHint}
+              {saveHint}
             </p>
           ) : (
             <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
-              Saves a copy of this settle link so you can revisit the host&apos;s pay
-              handles.
+              {canShare
+                ? "On your phone, share to Messages or Notes — or Add to Home Screen from the share sheet when available."
+                : "Paste the link somewhere you’ll find it later, then reopen it to pay."}
             </p>
           )}
 
