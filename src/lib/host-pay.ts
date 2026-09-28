@@ -1,4 +1,5 @@
 import type { HostInfo, HostPayment, PayMethod } from "./types";
+import { validateEmail, validatePhoneFlexible, validatePhoneNational } from "./contact";
 
 export const PAY_METHODS: PayMethod[] = [
   "venmo",
@@ -77,9 +78,6 @@ export function primaryHostPayment(info?: HostInfo | null): HostPayment | null {
   return hostPayments(info)[0] ?? null;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_RE = /^\+?[\d\s().-]{7,}$/;
-const HT_PHONE_RE = /^(?:\+?509[\s.-]?)?\d{8}$/;
 const VENMO_RE = /^@?[A-Za-z0-9_-]{1,30}$/;
 const CASH_RE = /^\$?[A-Za-z0-9_]{1,20}$/;
 const PAYPAL_ME_RE = /^(?:https?:\/\/)?(?:www\.)?paypal\.me\/[A-Za-z0-9_-]+\/?$/i;
@@ -104,20 +102,29 @@ export function validatePaymentHandle(
         return { ok: false, message: "Cash App looks like $cashtag (letters, numbers, or _)." };
       }
       return { ok: true };
-    case "zelle":
-      if (EMAIL_RE.test(value) || PHONE_RE.test(value.replace(/\s/g, ""))) return { ok: true };
-      return { ok: false, message: "Zelle needs an email or phone number." };
+    case "zelle": {
+      if (validateEmail(value).ok) return { ok: true };
+      if (validatePhoneFlexible(value).ok) return { ok: true };
+      return { ok: false, message: "Zelle needs a valid email or phone (with country code)." };
+    }
     case "moncash":
     case "natcash": {
-      const digits = value.replace(/[\s().-]/g, "");
-      if (HT_PHONE_RE.test(digits) || PHONE_RE.test(value.replace(/\s/g, ""))) return { ok: true };
+      const national = value.replace(/^\+?509/, "");
+      const ht = validatePhoneNational(national, "HT");
+      if (ht.ok) return { ok: true };
+      const flex = validatePhoneFlexible(value);
+      if (flex.ok && flex.e164.startsWith("+509")) return { ok: true };
       return {
         ok: false,
         message: `${method === "moncash" ? "MonCash" : "Natcash"} needs a Haiti phone (+509…).`,
       };
     }
     case "paypal":
-      if (EMAIL_RE.test(value) || PAYPAL_ME_RE.test(value) || PAYPAL_USER_RE.test(value)) {
+      if (
+        validateEmail(value).ok ||
+        PAYPAL_ME_RE.test(value) ||
+        PAYPAL_USER_RE.test(value)
+      ) {
         return { ok: true };
       }
       return {

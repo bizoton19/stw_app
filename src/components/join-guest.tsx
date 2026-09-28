@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { ContinueButton, InterviewChrome } from "@/components/interview-chrome";
 import { HostMessage } from "@/components/host-message";
+import {
+  emptyContactField,
+  GuestContactField,
+  resolveGuestContact,
+} from "@/components/guest-contact-field";
 import { ReceiptImageButton } from "@/components/receipt-image-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +30,20 @@ export function JoinGuest({
 }) {
   const place = restaurant.trim() || "tonight’s check";
   const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  const [contactValue, setContactValue] = useState(emptyContactField);
+  const [contactError, setContactError] = useState<string | null>(null);
+
+  function submit() {
+    const resolved = resolveGuestContact(contactValue);
+    if (!resolved.ok) {
+      setContactError(resolved.message);
+      return;
+    }
+    setContactError(null);
+    const guest = { name: name.trim(), contact: resolved.contact };
+    saveGuest(receiptId, guest);
+    onJoined(guest);
+  }
 
   return (
     <InterviewChrome
@@ -36,14 +54,7 @@ export function JoinGuest({
       title={isHost ? "You're hosting — claim under what name?" : `Here is the tab for ${place}`}
       stepKey="join"
       footer={
-        <ContinueButton
-          disabled={!name.trim()}
-          onClick={() => {
-            const guest = { name: name.trim(), contact: contact.trim() };
-            saveGuest(receiptId, guest);
-            onJoined(guest);
-          }}
-        >
+        <ContinueButton disabled={!name.trim()} onClick={submit}>
           See the check
         </ContinueButton>
       }
@@ -66,16 +77,13 @@ export function JoinGuest({
         placeholder="Alex"
         autoComplete="name"
       />
-      <Label htmlFor="guest-contact" className="mt-4 mb-2 text-[13px] font-medium">
-        Contact <span className="font-normal text-muted-foreground">(optional)</span>
-      </Label>
-      <Input
-        id="guest-contact"
-        value={contact}
-        onChange={(e) => setContact(e.target.value)}
-        className="h-12 rounded-xl border-border bg-transparent text-base"
-        placeholder="phone, Venmo, or email"
-        autoComplete="tel"
+      <GuestContactField
+        value={contactValue}
+        onChange={(next) => {
+          setContactValue(next);
+          setContactError(null);
+        }}
+        error={contactError}
       />
     </InterviewChrome>
   );

@@ -5,6 +5,11 @@ import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
+import {
+  GuestContactField,
+  parseContactField,
+  resolveGuestContact,
+} from "@/components/guest-contact-field";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { HostMessage } from "@/components/host-message";
 import { PressScale } from "@/components/press-scale";
@@ -64,7 +69,20 @@ function JoinScreen() {
   const flow = useClaimFlow();
   const restaurant = flow.receipt?.restaurant?.trim() || "tonight’s check";
   const [name, setName] = useState(() => flow.guest?.name || "");
-  const [contact, setContact] = useState(() => flow.guest?.contact || "");
+  const [contactValue, setContactValue] = useState(() =>
+    parseContactField(flow.guest?.contact || ""),
+  );
+  const [contactError, setContactError] = useState<string | null>(null);
+
+  function submitJoin() {
+    const resolved = resolveGuestContact(contactValue);
+    if (!resolved.ok) {
+      setContactError(resolved.message);
+      return;
+    }
+    setContactError(null);
+    void flow.join({ name: name.trim(), contact: resolved.contact });
+  }
 
   return (
     <AppShell>
@@ -80,10 +98,7 @@ function JoinScreen() {
         }
         keyboard
         footer={
-          <PrimaryButton
-            disabled={!name.trim()}
-            onPress={() => void flow.join({ name: name.trim(), contact: contact.trim() })}
-          >
+          <PrimaryButton disabled={!name.trim()} onPress={submitJoin}>
             See the check
           </PrimaryButton>
         }
@@ -96,14 +111,13 @@ function JoinScreen() {
         </Text>
         <ReceiptImageButton receiptId={flow.receipt!.id} hasImage={flow.receipt?.hasImage} />
         <Field label="Name" value={name} onChangeText={setName} placeholder="Alex" autoComplete="name" />
-        <Field
-          label="Contact"
-          hint="(optional)"
-          value={contact}
-          onChangeText={setContact}
-          placeholder="phone, Venmo, or email"
-          autoComplete="tel"
-          keyboardType="default"
+        <GuestContactField
+          value={contactValue}
+          onChange={(next) => {
+            setContactValue(next);
+            setContactError(null);
+          }}
+          error={contactError}
         />
       </InterviewChrome>
     </AppShell>

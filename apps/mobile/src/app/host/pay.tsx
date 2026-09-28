@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { Field } from "@/components/field";
 import { PayMethodIcon } from "@/components/pay-method-icon";
+import { PhoneHandleField } from "@/components/phone-handle-field";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
 import { validateHostPayments, HOST_NOTE_MAX } from "@/lib/host-pay";
@@ -202,23 +203,33 @@ export default function HostPay() {
                   <PayMethodIcon method={payment.method} size={40} />
                   <Text style={styles.handleMethod}>{PAY_METHOD_META[payment.method].label}</Text>
                 </View>
-                <Field
-                  label={`Your ${PAY_METHOD_META[payment.method].hint}`}
-                  value={payment.handle}
-                  onChangeText={(handle) => {
-                    setError(null);
-                    draft.setPaymentHandle(payment.method, handle);
-                  }}
-                  placeholder={placeholderFor(payment.method)}
-                  autoCapitalize="none"
-                  keyboardType={
-                    payment.method === "moncash" || payment.method === "natcash"
-                      ? "phone-pad"
-                      : payment.method === "zelle" || payment.method === "paypal"
+                {payment.method === "moncash" || payment.method === "natcash" ? (
+                  <PhoneHandleField
+                    label={`Your ${PAY_METHOD_META[payment.method].hint}`}
+                    value={payment.handle}
+                    defaultIso="HT"
+                    onChange={(handle) => {
+                      setError(null);
+                      draft.setPaymentHandle(payment.method, handle);
+                    }}
+                  />
+                ) : (
+                  <Field
+                    label={`Your ${PAY_METHOD_META[payment.method].hint}`}
+                    value={payment.handle}
+                    onChangeText={(handle) => {
+                      setError(null);
+                      draft.setPaymentHandle(payment.method, handle);
+                    }}
+                    placeholder={placeholderFor(payment.method)}
+                    autoCapitalize="none"
+                    keyboardType={
+                      payment.method === "zelle" || payment.method === "paypal"
                         ? "email-address"
                         : "default"
-                  }
-                />
+                    }
+                  />
+                )}
               </View>
             ))}
           </View>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -49,6 +49,9 @@ export function HostAgentSheet({
 }) {
   const insets = useSafeAreaInsets();
   const sheetTY = useSharedValue(0);
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [cards, setCards] = useState<AgentCard[]>([]);
@@ -58,25 +61,36 @@ export function HostAgentSheet({
 
   const load = useCallback(
     async (userMessage?: string) => {
+      if (!hostToken) {
+        setError("Host session missing — go back and open this tab from Home.");
+        return;
+      }
       setBusy(true);
       setError(null);
       try {
         const res = await requestAgentTurn({
           receiptId,
           hostToken,
-          snapshot,
+          snapshot: snapshotRef.current,
           message: userMessage,
         });
         setMessage(res.message);
         setCards(res.cards);
         setSelected(new Set(res.cards.map((c) => c.id)));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "request_failed");
+        const msg = err instanceof Error ? err.message : "request_failed";
+        setError(
+          msg === "forbidden"
+            ? "Host session expired — restart from the receipt photo."
+            : msg === "not_found"
+              ? "This draft isn’t on the API yet — is the local server running?"
+              : `Couldn’t reach assistant (${msg}). Is npm run dev on :43147?`,
+        );
       } finally {
         setBusy(false);
       }
     },
-    [hostToken, receiptId, snapshot],
+    [hostToken, receiptId],
   );
 
   useEffect(() => {
@@ -84,14 +98,23 @@ export function HostAgentSheet({
       sheetTY.value = 0;
       setCompose("");
       setError(null);
+      setMessage("");
+      setCards([]);
       return;
     }
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when opened
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once per visible
   }, [visible]);
 
   function close() {
     onClose();
+  }
+
+  function sendCompose() {
+    const text = compose.trim();
+    if (!text || busy) return;
+    setCompose("");
+    void load(text);
   }
 
   function toggleCard(id: string) {
@@ -112,6 +135,7 @@ export function HostAgentSheet({
     close();
   }
 
+  // Pan only on the handle — not the compose field (was swallowing taps).
   const dismissPan = Gesture.Pan()
     .activeOffsetY(8)
     .onUpdate((e) => {
@@ -145,97 +169,98 @@ export function HostAgentSheet({
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboard}
         >
-          <GestureDetector gesture={dismissPan}>
-            <Animated.View
-              style={[
-                styles.sheet,
-                sheetStyle,
-                { paddingBottom: Math.max(insets.bottom, 16) },
-              ]}
-            >
-              <View style={styles.handle} />
-              <View style={styles.header}>
-                <Text style={styles.agentLabel}>Assistant</Text>
-                <PressScale onPress={close} accessibilityLabel="Close" style={styles.closeBtn}>
-                  <X size={18} color={colors.inkSoft} />
-                </PressScale>
+          <Animated.View
+            style={[
+              styles.sheet,
+              sheetStyle,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
+          >
+            <GestureDetector gesture={dismissPan}>
+              <View style={styles.handleHit}>
+                <View style={styles.handle} />
               </View>
+            </GestureDetector>
 
-              {busy && !message ? (
+            <View style={styles.header}>
+              <Text style={styles.agentLabel}>Assistant</Text>
+              <PressScale onPress={close} accessibilityLabel="Close" style={styles.closeBtn}>
+                <X size={18} color={colors.inkSoft} />
+              </PressScale>
+            </View>
+
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+            >
+              {busy && !message && !error ? (
                 <View style={styles.loading}>
                   <ActivityIndicator color={colors.merlot} />
+                  <Text style={styles.loadingText}>Thinking…</Text>
                 </View>
-              ) : (
-                <ScrollView
-                  keyboardShouldPersistTaps="handled"
-                  style={styles.scroll}
-                  contentContainerStyle={styles.scrollContent}
-                >
-                  {error ? <Text style={styles.error}>{error}</Text> : null}
-                  {message ? <Text style={styles.copy}>{message}</Text> : null}
-                  {cards.map((card) => {
-                    const on = selected.has(card.id);
-                    return (
-                      <Pressable
-                        key={card.id}
-                        onPress={() => toggleCard(card.id)}
-                        style={[styles.card, on ? styles.cardOn : null]}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: on }}
-                      >
-                        <Text style={styles.cardTitle}>{card.title}</Text>
-                        <Text style={styles.cardDetail}>{card.detail}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              )}
+              ) : null}
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {message ? <Text style={styles.copy}>{message}</Text> : null}
+              {busy && message ? (
+                <Text style={styles.loadingText}>Updating…</Text>
+              ) : null}
+              {cards.map((card) => {
+                const on = selected.has(card.id);
+                return (
+                  <Pressable
+                    key={card.id}
+                    onPress={() => toggleCard(card.id)}
+                    style={[styles.card, on ? styles.cardOn : null]}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: on }}
+                  >
+                    <Text style={styles.cardTitle}>{card.title}</Text>
+                    <Text style={styles.cardDetail}>{card.detail}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
 
-              <View style={styles.actions}>
-                <PressScale onPress={close} style={styles.btnGhost}>
-                  <Text style={styles.btnGhostText}>Edit list</Text>
-                </PressScale>
-                <PressScale
-                  onPress={apply}
-                  disabled={busy || selected.size === 0}
-                  style={[styles.btnPrimary, selected.size === 0 ? styles.btnDisabled : null]}
-                >
-                  <Text style={styles.btnPrimaryText}>Apply</Text>
-                </PressScale>
-              </View>
+            <View style={styles.actions}>
+              <PressScale onPress={close} style={styles.btnGhost}>
+                <Text style={styles.btnGhostText}>Edit list</Text>
+              </PressScale>
+              <PressScale
+                onPress={apply}
+                disabled={busy || selected.size === 0}
+                style={[styles.btnPrimary, selected.size === 0 ? styles.btnDisabled : null]}
+              >
+                <Text style={styles.btnPrimaryText}>Apply</Text>
+              </PressScale>
+            </View>
 
-              <View style={styles.compose}>
-                <TextInput
-                  value={compose}
-                  onChangeText={setCompose}
-                  placeholder="Ask about tip, tax, or a line…"
-                  placeholderTextColor={colors.muted}
-                  style={styles.composeInput}
-                  editable={!busy}
-                  returnKeyType="send"
-                  onSubmitEditing={() => {
-                    const text = compose.trim();
-                    if (!text || busy) return;
-                    setCompose("");
-                    void load(text);
-                  }}
-                />
-                <PressScale
-                  disabled={busy || !compose.trim()}
-                  onPress={() => {
-                    const text = compose.trim();
-                    if (!text) return;
-                    setCompose("");
-                    void load(text);
-                  }}
-                  style={styles.sendBtn}
-                  accessibilityLabel="Send"
-                >
+            <View style={styles.compose}>
+              <TextInput
+                value={compose}
+                onChangeText={setCompose}
+                placeholder="Ask about tip, tax, or a line…"
+                placeholderTextColor={colors.muted}
+                style={styles.composeInput}
+                editable={!busy}
+                returnKeyType="send"
+                blurOnSubmit={false}
+                onSubmitEditing={sendCompose}
+              />
+              <PressScale
+                disabled={busy || !compose.trim()}
+                onPress={sendCompose}
+                style={styles.sendBtn}
+                accessibilityLabel="Send"
+              >
+                {busy ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
                   <Text style={styles.sendText}>↑</Text>
-                </PressScale>
-              </View>
-            </Animated.View>
-          </GestureDetector>
+                )}
+              </PressScale>
+            </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -259,13 +284,13 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
+  handleHit: { paddingVertical: 8, marginBottom: 2 },
   handle: {
     alignSelf: "center",
     width: 36,
     height: 4,
     borderRadius: 999,
     backgroundColor: colors.border,
-    marginBottom: space.md,
   },
   header: {
     flexDirection: "row",
@@ -280,7 +305,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   closeBtn: { padding: 6 },
-  loading: { paddingVertical: 36, alignItems: "center" },
+  loading: { paddingVertical: 28, alignItems: "center", gap: 8 },
+  loadingText: {
+    fontSize: 12,
+    color: colors.muted,
+    marginBottom: space.sm,
+  },
   scroll: { flexGrow: 0 },
   scrollContent: { paddingBottom: space.sm, gap: space.sm },
   copy: {
