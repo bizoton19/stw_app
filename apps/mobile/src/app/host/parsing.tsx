@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     minHeight: 280,
   },
   copy: {
-    marginTop: 32,
+    marginTop: 40,
     maxWidth: 300,
     textAlign: "center",
     fontSize: 16,
