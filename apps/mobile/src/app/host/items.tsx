@@ -13,12 +13,15 @@ import { goHostDesk } from "@/lib/navigation";
 import { Swipeable } from "react-native-gesture-handler";
 import { ChevronDown, RotateCcw, Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, QuietButton } from "@/components/chrome";
+import { HostAgentSheet } from "@/components/host-agent-sheet";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft, type DraftItem } from "@/context/host-draft";
+import type { AgentCard } from "@/lib/agent-api";
 import { t } from "@/lib/i18n";
 import { centsToLabel, unitPriceCents } from "@/lib/money";
 import { pourCandidates } from "@/lib/pour";
+import { getHostToken } from "@/lib/session";
 import type { ParseReviewChoice } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
@@ -220,10 +223,80 @@ export default function HostItems() {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [agentOpen, setAgentOpen] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canContinue =
     activeItems.length > 0 && !activeItems.some((i) => !i.name.trim() || i.qty < 1);
+
+  const agentSnapshot = useMemo(
+    () => ({
+      restaurant: draft.restaurant,
+      items: activeItems.map((i) => ({
+        id: i.id,
+        name: i.name,
+        qty: i.qty,
+        totalCents: i.totalCents,
+        kind: i.kind ?? null,
+        pour: i.pour ?? null,
+      })),
+      fees: draft.fees.map((f) => ({
+        id: f.id,
+        name: f.name,
+        amountCents: f.amountCents,
+      })),
+    }),
+    [activeItems, draft.fees, draft.restaurant],
+  );
+
+  function applyAgentCards(cards: AgentCard[]) {
+    for (const card of cards) {
+      if (card.kind === "set_tip") {
+        const amountCents = Math.max(0, Math.floor(Number(card.payload.amountCents) || 0));
+        const name =
+          typeof card.payload.name === "string" && card.payload.name.trim()
+            ? card.payload.name.trim()
+            : "Tip";
+        const amountInput = (amountCents / 100).toFixed(2);
+        draft.setFees((prev) => {
+          const tipIdx = prev.findIndex((f) => /\b(tip|gratuity)\b/i.test(f.name));
+          if (tipIdx >= 0) {
+            return prev.map((f, i) =>
+              i === tipIdx ? { ...f, name, amountCents, amountInput } : f,
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: `new_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+              name,
+              amountCents,
+              amountInput,
+            },
+          ];
+        });
+      }
+      if (card.kind === "set_pour") {
+        const itemId = String(card.payload.itemId ?? "");
+        const glasses = Math.max(
+          2,
+          Math.floor(Number(card.payload.glassesPerPrintedUnit) || 0),
+        );
+        if (!itemId || glasses < 2) continue;
+        draft.setItems((prev) =>
+          prev.map((row) =>
+            row.id === itemId
+              ? {
+                  ...row,
+                  pour: { mode: "glasses" as const, glassesPerPrintedUnit: glasses },
+                }
+              : row,
+          ),
+        );
+      }
+    }
+    flashToast("Assistant updates applied");
+  }
 
   function stopEditing() {
     setEditingId(null);
@@ -430,7 +503,27 @@ export default function HostItems() {
         >
           {t("items.addLine")}
         </QuietButton>
+        {draft.receiptId ? (
+          <QuietButton
+            onPress={() => {
+              stopEditing();
+              setAgentOpen(true);
+            }}
+          >
+            Assistant
+          </QuietButton>
+        ) : null}
       </InterviewChrome>
+      {draft.receiptId ? (
+        <HostAgentSheet
+          visible={agentOpen}
+          onClose={() => setAgentOpen(false)}
+          receiptId={draft.receiptId}
+          hostToken={getHostToken(draft.receiptId)}
+          snapshot={agentSnapshot}
+          onApplyCards={applyAgentCards}
+        />
+      ) : null}
     </AppShell>
   );
 }

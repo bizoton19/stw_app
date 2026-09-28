@@ -1,9 +1,20 @@
 # Agent replacement plan — Split the Wine
 
-Status: speculative product / architecture plan. Not a build ticket.  
+Status: **Phase 0–1 in progress on branch `in-app-agent`.**  
 Updated: 28 Sep 2026  
 Related: [requirements.md](./requirements.md), [ui-flows.md](./ui-flows.md), [phase-3-voice.md](./phase-3-voice.md), [guest-first-reconcile.md](./guest-first-reconcile.md)  
 UI sketch (open in browser): [agent-ui-sketch.html](./agent-ui-sketch.html)
+
+### Shipped on `in-app-agent` (Phase 0–1 slice)
+
+| Piece | Where |
+|---|---|
+| Heuristics + Flash phrasing | `src/lib/agent/*` |
+| Host API | `POST /api/receipts/[id]/agent` (`x-host-token`) |
+| Mobile sheet | `HostAgentSheet` on host **Items** + **Fees** (“Assistant”) |
+| Cost caps | `AGENT_MAX_*` + `OPENROUTER_AGENT_MODEL` in `.env.example` |
+
+Draft stays on-device until publish; agent returns **cards**; host taps **Apply**. Guest claim board unchanged.
 
 ---
 

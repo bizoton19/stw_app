@@ -1,21 +1,77 @@
+import { useMemo, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import { Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { HostAgentSheet } from "@/components/host-agent-sheet";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
+import type { AgentCard } from "@/lib/agent-api";
 import { t } from "@/lib/i18n";
 import { centsToLabel } from "@/lib/money";
+import { getHostToken } from "@/lib/session";
 import { colors } from "@/lib/theme";
 
 export default function HostFees() {
   const router = useRouter();
   const draft = useHostDraft();
+  const [agentOpen, setAgentOpen] = useState(false);
   const itemSubtotal = draft.items
     .filter((i) => !i.removed)
     .reduce((s, i) => s + i.totalCents, 0);
   const feeTotal = draft.fees.reduce((s, f) => s + f.amountCents, 0);
+
+  const agentSnapshot = useMemo(
+    () => ({
+      restaurant: draft.restaurant,
+      items: draft.items
+        .filter((i) => !i.removed)
+        .map((i) => ({
+          id: i.id,
+          name: i.name,
+          qty: i.qty,
+          totalCents: i.totalCents,
+          kind: i.kind ?? null,
+          pour: i.pour ?? null,
+        })),
+      fees: draft.fees.map((f) => ({
+        id: f.id,
+        name: f.name,
+        amountCents: f.amountCents,
+      })),
+    }),
+    [draft.fees, draft.items, draft.restaurant],
+  );
+
+  function applyAgentCards(cards: AgentCard[]) {
+    for (const card of cards) {
+      if (card.kind !== "set_tip") continue;
+      const amountCents = Math.max(0, Math.floor(Number(card.payload.amountCents) || 0));
+      const name =
+        typeof card.payload.name === "string" && card.payload.name.trim()
+          ? card.payload.name.trim()
+          : "Tip";
+      const amountInput = (amountCents / 100).toFixed(2);
+      draft.setFees((prev) => {
+        const tipIdx = prev.findIndex((f) => /\b(tip|gratuity)\b/i.test(f.name));
+        if (tipIdx >= 0) {
+          return prev.map((f, i) =>
+            i === tipIdx ? { ...f, name, amountCents, amountInput } : f,
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: `new_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+            name,
+            amountCents,
+            amountInput,
+          },
+        ];
+      });
+    }
+  }
 
   return (
     <AppShell>
@@ -104,7 +160,20 @@ export default function HostFees() {
         >
           {t("fees.add")}
         </QuietButton>
+        {draft.receiptId ? (
+          <QuietButton onPress={() => setAgentOpen(true)}>Assistant</QuietButton>
+        ) : null}
       </InterviewChrome>
+      {draft.receiptId ? (
+        <HostAgentSheet
+          visible={agentOpen}
+          onClose={() => setAgentOpen(false)}
+          receiptId={draft.receiptId}
+          hostToken={getHostToken(draft.receiptId)}
+          snapshot={agentSnapshot}
+          onApplyCards={applyAgentCards}
+        />
+      ) : null}
     </AppShell>
   );
 }
