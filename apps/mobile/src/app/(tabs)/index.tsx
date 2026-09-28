@@ -352,20 +352,9 @@ export default function HomeScreen() {
                     Snap the check, confirm the lines, share a claim link. Tax and tip follow what
                     people ordered.
                   </Text>
-                  <View style={styles.emptyActions}>
-                    <PrimaryButton onPress={() => startWith("camera")}>
-                      Snap the check
-                    </PrimaryButton>
-                    <PressScale
-                      haptic="select"
-                      onPress={() => startWith("library")}
-                      style={styles.emptyUpload}
-                      accessibilityLabel="Upload from library"
-                    >
-                      <ImageIcon size={18} color={colors.ink} strokeWidth={2.25} />
-                      <Text style={styles.emptyUploadText}>Upload from library</Text>
-                    </PressScale>
-                  </View>
+                  <PrimaryButton onPress={() => startWith("camera")}>
+                    Start a tab
+                  </PrimaryButton>
                 </View>
               ) : null}
 
