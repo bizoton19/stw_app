@@ -411,6 +411,7 @@ export function ClaimBoard({
     <InterviewChrome
       step={pickStep}
       total={totalSteps}
+      hideProgress
       kicker={receipt.restaurant || "The check"}
       title="What did you have?"
       stepKey="pick"
@@ -426,6 +427,9 @@ export function ClaimBoard({
         </p>
       ) : null}
       <HostMessage note={note} />
+      {receipt.hasImage ? (
+        <ReceiptImageButton receiptId={receipt.id} hasImage />
+      ) : null}
       {totals.unclaimedItemCents > 0 ? (
         <p className="mb-3 text-[14px] font-bold tabular-nums text-foreground">
           Still on the table · {centsToLabel(totals.unclaimedItemCents)}
