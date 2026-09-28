@@ -15,6 +15,7 @@ export type AgentTurnResponse = {
   cards: AgentCard[];
   model: string | null;
   usedLlm: boolean;
+  onTopic: boolean;
   turn: number;
   turnsRemaining: number;
 };

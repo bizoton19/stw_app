@@ -5,27 +5,46 @@ import {
   agentModel,
   hasOpenRouterKey,
 } from "@/lib/agent/config";
-import type { AgentCard } from "@/lib/agent/heuristics";
+import type { AgentCard, AgentSnapshot } from "@/lib/agent/heuristics";
+import { offTopicRefusal } from "@/lib/agent/scope";
 
-const SYSTEM = `You help a restaurant-check host in Split the Wine.
-You only phrase short copy and optionally pick which suggested cards to show.
-Never invent money amounts. Never claim items for guests. Never send payments.
-Return JSON only matching the schema.
-- message: one or two short sentences for the bottom sheet.
-- keepCardIds: subset of the provided card ids to show (empty = show none).
-If the user asks something you cannot do with the cards, say so briefly and keep useful cards.`;
+const SYSTEM = `You are the Split the Wine host assistant for ONE restaurant/bar check.
+
+IN SCOPE only (answer these):
+- Line items on this draft (names, qty, prices, food vs drink)
+- Fees on this draft (tax, tip, service, cash tip left blank)
+- Simple math from THIS data (subtotals, 15/18/20% tip, split of a line)
+- Bottle vs glasses / pour suggestions
+- What is missing or looks wrong on the draft
+- Clarifying questions about the draft data
+- Local tax/tip customs only as brief help for entering fees on THIS check (not legal advice)
+
+OUT OF SCOPE (refuse — set onTopic false, keepCardIds [], short refusal):
+- General chat, jokes, weather, news, coding, politics, other apps
+- Topics unrelated to splitting THIS check
+- Inventing items/fees that are not on the draft or suggested cards
+- Claiming items for guests, sending money, or Venmo/Cash App login help beyond “enter your handle in Pay”
+
+Rules:
+- Never invent money amounts not grounded in the draft numbers or suggested cards.
+- Prefer asking a short clarifying question when the draft is ambiguous.
+- message: 1–3 short sentences.
+- onTopic: false when the host asks anything outside IN SCOPE.
+- keepCardIds: only ids from the provided list that still help; empty if refusing or none apply.
+Return JSON only.`;
 
 const RESPONSE_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
+    onTopic: { type: "boolean" },
     message: { type: "string" },
     keepCardIds: {
       type: "array",
       items: { type: "string" },
     },
   },
-  required: ["message", "keepCardIds"],
+  required: ["onTopic", "message", "keepCardIds"],
 } as const;
 
 function contentText(message: unknown): string {
@@ -61,20 +80,52 @@ function salvageJson(text: string): unknown {
   }
 }
 
+function moneyLabel(cents: number): string {
+  const dollars = cents / 100;
+  return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;
+}
+
+function draftContext(snapshot: AgentSnapshot): string {
+  const items = snapshot.items.slice(0, 40);
+  const fees = snapshot.fees.slice(0, 20);
+  const itemSum = items.reduce((s, i) => s + Math.max(0, i.totalCents), 0);
+  const feeSum = fees.reduce((s, f) => s + Math.max(0, f.amountCents), 0);
+  const itemLines = items
+    .map(
+      (i) =>
+        `- [${i.id}] ${i.name} ×${i.qty} ${moneyLabel(i.totalCents)}` +
+        (i.kind ? ` (${i.kind})` : "") +
+        (i.pour?.mode === "glasses"
+          ? ` [glasses×${i.pour.glassesPerPrintedUnit}]`
+          : ""),
+    )
+    .join("\n");
+  const feeLines = fees
+    .map((f) => `- [${f.id}] ${f.name}: ${moneyLabel(f.amountCents)}`)
+    .join("\n");
+  return [
+    `Venue: ${snapshot.restaurant?.trim() || "(unknown)"}`,
+    `Item subtotal: ${moneyLabel(itemSum)} · Fees: ${moneyLabel(feeSum)} · Grand: ${moneyLabel(itemSum + feeSum)}`,
+    `Items (${items.length}):`,
+    itemLines || "(none)",
+    `Fees (${fees.length}):`,
+    feeLines || "(none)",
+  ].join("\n");
+}
+
 export type AgentLlmResult = {
+  onTopic: boolean;
   message: string;
   keepCardIds: string[];
   model: string;
 };
 
 /**
- * One cheap Flash call to phrase heuristics — not a free-form tool loop.
+ * One cheap Flash call scoped to this draft — not a general chatbot.
  */
 export async function phraseAgentTurn(opts: {
   cards: AgentCard[];
-  restaurant?: string;
-  itemCount: number;
-  feeCount: number;
+  snapshot: AgentSnapshot;
   userMessage?: string;
   abortMs?: number;
 }): Promise<AgentLlmResult | null> {
@@ -87,9 +138,8 @@ export async function phraseAgentTurn(opts: {
     .map((c) => `- id=${c.id} | ${c.title} | ${c.detail}`)
     .join("\n");
   const userText = [
-    `Venue: ${opts.restaurant?.trim() || "(unknown)"}`,
-    `Items: ${opts.itemCount}, fees: ${opts.feeCount}`,
-    `Suggested cards:`,
+    draftContext(opts.snapshot),
+    `Suggested action cards:`,
     cardLines || "(none)",
     opts.userMessage?.trim()
       ? `Host said: ${opts.userMessage.trim()}`
@@ -108,7 +158,7 @@ export async function phraseAgentTurn(opts: {
       },
       body: JSON.stringify({
         model,
-        temperature: 0.2,
+        temperature: 0.1,
         max_tokens: agentMaxTokens(),
         messages: [
           { role: "system", content: SYSTEM },
@@ -133,17 +183,24 @@ export async function phraseAgentTurn(opts: {
       throw new Error(payload.error?.message || `openrouter_${res.status}`);
     }
     const raw = salvageJson(contentText(payload.choices?.[0]?.message)) as {
+      onTopic?: unknown;
       message?: unknown;
       keepCardIds?: unknown;
     };
+    const onTopic = raw.onTopic !== false;
     const message =
       typeof raw.message === "string" && raw.message.trim()
         ? raw.message.trim().slice(0, 400)
-        : "Here are a few fixes you can apply.";
-    const keepCardIds = Array.isArray(raw.keepCardIds)
-      ? raw.keepCardIds.filter((id): id is string => typeof id === "string")
-      : opts.cards.map((c) => c.id);
-    return { message, keepCardIds, model };
+        : onTopic
+          ? "Here are a few fixes you can apply."
+          : offTopicRefusal();
+    const keepCardIds =
+      onTopic && Array.isArray(raw.keepCardIds)
+        ? raw.keepCardIds.filter((id): id is string => typeof id === "string")
+        : onTopic
+          ? opts.cards.map((c) => c.id)
+          : [];
+    return { onTopic, message, keepCardIds, model };
   } catch {
     return null;
   } finally {

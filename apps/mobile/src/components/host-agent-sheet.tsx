@@ -208,7 +208,7 @@ export function HostAgentSheet({
                 <TextInput
                   value={compose}
                   onChangeText={setCompose}
-                  placeholder="tip was cash 20%"
+                  placeholder="Ask about tip, tax, or a line…"
                   placeholderTextColor={colors.muted}
                   style={styles.composeInput}
                   editable={!busy}

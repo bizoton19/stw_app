@@ -13,8 +13,9 @@ UI sketch (open in browser): [agent-ui-sketch.html](./agent-ui-sketch.html)
 | Host API | `POST /api/receipts/[id]/agent` (`x-host-token`) |
 | Mobile sheet | `HostAgentSheet` on host **Items** + **Fees** (“Assistant”) |
 | Cost caps | `AGENT_MAX_*` + `OPENROUTER_AGENT_MODEL` in `.env.example` |
+| **Scope lock** | `src/lib/agent/scope.ts` — only tab items/fees/tax/tip/math; regex gate + model `onTopic` |
 
-Draft stays on-device until publish; agent returns **cards**; host taps **Apply**. Guest claim board unchanged.
+Draft stays on-device until publish; agent returns **cards**; host taps **Apply**. Guest claim board unchanged. Off-topic chat is refused.
 
 ---
 
