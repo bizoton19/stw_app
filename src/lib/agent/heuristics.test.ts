@@ -1,5 +1,7 @@
-import type { AgentCard } from "@/lib/agent/heuristics";
-import { heuristicCards } from "@/lib/agent/heuristics";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { AgentCard } from "./heuristics";
+import { heuristicCards } from "./heuristics";
 
 describe("heuristicCards", () => {
   it("suggests 20% tip when tip fee is missing", () => {
@@ -12,8 +14,8 @@ describe("heuristicCards", () => {
       fees: [{ id: "f1", name: "Tax", amountCents: 200 }],
     });
     const tip = cards.find((c) => c.kind === "set_tip");
-    expect(tip).toBeTruthy();
-    expect((tip as AgentCard).payload.amountCents).toBe(500);
+    assert.ok(tip);
+    assert.equal((tip as AgentCard).payload.amountCents, 500);
   });
 
   it("skips tip when tip already set", () => {
@@ -21,6 +23,6 @@ describe("heuristicCards", () => {
       items: [{ id: "i1", name: "Beer", qty: 1, totalCents: 1000, kind: "drink", pour: null }],
       fees: [{ id: "f1", name: "Tip", amountCents: 200 }],
     });
-    expect(cards.some((c) => c.kind === "set_tip")).toBe(false);
+    assert.equal(cards.some((c) => c.kind === "set_tip"), false);
   });
 });
