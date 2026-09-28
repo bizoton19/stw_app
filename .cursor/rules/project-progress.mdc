@@ -1,0 +1,16 @@
+---
+description: Keep plans/project-progress-stats.md updated after major milestones
+alwaysApply: true
+---
+
+# Project progress stats
+
+After shipping a **major** feature or friend-test milestone (not every tiny fix):
+
+1. Update [`plans/project-progress-stats.md`](plans/project-progress-stats.md):
+   - Refresh **Snapshot** (`git rev-list --count HEAD`, latest commit time, elapsed from start **2026-09-20 13:41 −04:00**).
+   - Add a short bullet under today’s day section (or create a new `### Day N — …` heading).
+2. Write **product outcomes**, not raw commit subjects.
+3. Skip noise: typos, renames, one-line CSS, plan-only doc tweaks unless they are themselves the milestone.
+
+If the user asks “how long did this take?” or for progress stats, read that file first and refresh the snapshot numbers from git before answering.
