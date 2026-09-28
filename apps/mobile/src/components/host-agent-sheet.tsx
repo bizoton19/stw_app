@@ -134,24 +134,14 @@ export function HostAgentSheet({
     [hostToken, receiptId, scrollToEnd],
   );
 
-  useEffect(() => {
-    if (!visible) {
-      sheetTY.value = 0;
-      setCompose("");
-      setError(null);
-      setLines([]);
-      setCards([]);
-      setSelected(new Set());
-      setBusy(false);
-      return;
-    }
-    resetAgentTurns(receiptId);
-    void runTurn();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once per visible
-  }, [visible]);
-
   function close() {
     onClose();
+  }
+
+  function animateClose() {
+    sheetTY.value = withTiming(560, { duration: 200 }, (finished) => {
+      if (finished) runOnJS(close)();
+    });
   }
 
   function sendCompose() {
@@ -176,18 +166,38 @@ export function HostAgentSheet({
       void hapticImpact("medium");
       onApplyCards(chosen);
     }
-    close();
+    animateClose();
   }
 
+  useEffect(() => {
+    if (!visible) {
+      sheetTY.value = 0;
+      setCompose("");
+      setError(null);
+      setLines([]);
+      setCards([]);
+      setSelected(new Set());
+      setBusy(false);
+      return;
+    }
+    // Slide up from below — real bottom sheet, not a full-screen jump.
+    sheetTY.value = 520;
+    sheetTY.value = withSpring(0, { damping: 22, stiffness: 240 });
+    resetAgentTurns(receiptId);
+    void runTurn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once per visible
+  }, [visible]);
+
   const dismissPan = Gesture.Pan()
-    .activeOffsetY(8)
+    .activeOffsetY(10)
+    .failOffsetX([-40, 40])
     .onUpdate((e) => {
       sheetTY.value = Math.max(0, e.translationY);
     })
     .onEnd((e) => {
       if (e.translationY > DISMISS_Y || e.velocityY > 900) {
-        sheetTY.value = withTiming(600, { duration: 180 }, () => {
-          runOnJS(close)();
+        sheetTY.value = withTiming(560, { duration: 180 }, (finished) => {
+          if (finished) runOnJS(close)();
         });
       } else {
         sheetTY.value = withSpring(0, { damping: 22, stiffness: 280 });
@@ -198,19 +208,31 @@ export function HostAgentSheet({
     transform: [{ translateY: sheetTY.value }],
   }));
 
+  const scrimStyle = useAnimatedStyle(() => {
+    const t = Math.min(1, sheetTY.value / 400);
+    return { opacity: 1 - t * 0.85 };
+  });
+
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent
-      onRequestClose={close}
+      onRequestClose={animateClose}
       statusBarTranslucent
     >
-      <View style={styles.scrim}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Dismiss" />
+      <View style={styles.scrimRoot}>
+        <Animated.View style={[styles.scrimFill, scrimStyle]}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={animateClose}
+            accessibilityLabel="Dismiss assistant"
+          />
+        </Animated.View>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.keyboard}
+          pointerEvents="box-none"
         >
           <Animated.View
             style={[
@@ -220,22 +242,28 @@ export function HostAgentSheet({
             ]}
           >
             <GestureDetector gesture={dismissPan}>
-              <View style={styles.handleHit}>
-                <View style={styles.handle} />
-              </View>
-            </GestureDetector>
-
-            <View style={styles.header}>
-              <View style={styles.headerLeft}>
-                <View style={styles.headerIcon}>
-                  <Bot size={16} color={colors.merlot} strokeWidth={2} />
+              <Animated.View style={styles.dragRegion}>
+                <View style={styles.handle} accessibilityElementsHidden />
+                <View style={styles.header}>
+                  <View style={styles.headerLeft}>
+                    <View style={styles.headerIcon}>
+                      <Bot size={16} color={colors.merlot} strokeWidth={2} />
+                    </View>
+                    <View>
+                      <Text style={styles.agentLabel}>Check assistant</Text>
+                      <Text style={styles.swipeHint}>Swipe down to close</Text>
+                    </View>
+                  </View>
+                  <PressScale
+                    onPress={animateClose}
+                    accessibilityLabel="Close"
+                    style={styles.closeBtn}
+                  >
+                    <X size={18} color={colors.inkSoft} />
+                  </PressScale>
                 </View>
-                <Text style={styles.agentLabel}>Check assistant</Text>
-              </View>
-              <PressScale onPress={close} accessibilityLabel="Close" style={styles.closeBtn}>
-                <X size={18} color={colors.inkSoft} />
-              </PressScale>
-            </View>
+              </Animated.View>
+            </GestureDetector>
 
             <ScrollView
               ref={scrollRef}
@@ -243,6 +271,7 @@ export function HostAgentSheet({
               style={styles.scroll}
               contentContainerStyle={styles.scrollContent}
               onContentSizeChange={scrollToEnd}
+              nestedScrollEnabled
             >
               {lines.length === 0 && busy ? (
                 <View style={styles.loading}>
@@ -299,7 +328,7 @@ export function HostAgentSheet({
             </ScrollView>
 
             <View style={styles.actions}>
-              <PressScale onPress={close} style={styles.btnGhost}>
+              <PressScale onPress={animateClose} style={styles.btnGhost}>
                 <Text style={styles.btnGhostText}>Edit list</Text>
               </PressScale>
               <PressScale
@@ -344,10 +373,13 @@ export function HostAgentSheet({
 }
 
 const styles = StyleSheet.create({
-  scrim: {
+  scrimRoot: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(42, 36, 28, 0.35)",
+  },
+  scrimFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(42, 36, 28, 0.45)",
   },
   keyboard: { width: "100%" },
   sheet: {
@@ -355,18 +387,31 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: space.lg,
-    paddingTop: space.sm,
-    maxHeight: "78%",
+    paddingTop: 4,
+    maxHeight: "82%",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#2A241C",
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: -4 },
+      },
+      android: { elevation: 12 },
+    }),
   },
-  handleHit: { paddingVertical: 8, marginBottom: 2 },
+  dragRegion: {
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
   handle: {
     alignSelf: "center",
-    width: 36,
-    height: 4,
+    width: 40,
+    height: 5,
     borderRadius: 999,
-    backgroundColor: colors.border,
+    backgroundColor: colors.chromeBorder,
+    marginBottom: 10,
   },
   header: {
     flexDirection: "row",
@@ -374,7 +419,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: space.sm,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
   headerIcon: {
     width: 28,
     height: 28,
@@ -388,6 +433,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.merlot,
     letterSpacing: 0.1,
+  },
+  swipeHint: {
+    marginTop: 1,
+    fontSize: 11,
+    color: colors.muted,
   },
   closeBtn: { padding: 6 },
   loading: { paddingVertical: 28, alignItems: "center", gap: 8 },
