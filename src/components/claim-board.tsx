@@ -315,6 +315,14 @@ export function ClaimBoard({
               ? "Claim it"
               : `Claim ${activeQueued.length}`}
       </ContinueButton>
+      {!isHost && mine && mine.totalCents > 0 ? (
+        <Link
+          href={`/r/${receipt.id}/settle`}
+          className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium text-foreground"
+        >
+          Settle Payment
+        </Link>
+      ) : null}
       {isHost ? (
         <QuietButton
           disabled={busy || !getHostToken(receipt.id)}

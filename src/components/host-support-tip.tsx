@@ -2,7 +2,7 @@
 
 import { HandCoins } from "lucide-react";
 
-/** Quiet host tip — opens marketing /support. */
+/** Quiet tip — opens marketing /support (host interview + guest pay-later). */
 export function HostSupportTip() {
   return (
     <p className="pt-1 text-center text-[13px] text-muted-foreground">
