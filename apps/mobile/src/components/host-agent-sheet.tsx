@@ -24,6 +24,7 @@ import { Bot, X } from "lucide-react-native";
 import { PressScale } from "@/components/press-scale";
 import {
   requestAgentTurn,
+  resetAgentTurns,
   type AgentCard,
   type AgentSnapshot,
 } from "@/lib/agent-api";
@@ -31,6 +32,16 @@ import { hapticImpact } from "@/lib/haptics";
 import { colors, space } from "@/lib/theme";
 
 const DISMISS_Y = 120;
+
+type ChatLine = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+};
+
+function lineId() {
+  return `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+}
 
 export function HostAgentSheet({
   visible,
@@ -51,22 +62,38 @@ export function HostAgentSheet({
   const sheetTY = useSharedValue(0);
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
+  const scrollRef = useRef<ScrollView>(null);
+  const reqSeq = useRef(0);
 
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const [lines, setLines] = useState<ChatLine[]>([]);
   const [cards, setCards] = useState<AgentCard[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [compose, setCompose] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(
+  const scrollToEnd = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+  }, []);
+
+  const runTurn = useCallback(
     async (userMessage?: string) => {
       if (!hostToken) {
         setError("Host session missing — go back and open this tab from Home.");
         return;
       }
+
+      const seq = ++reqSeq.current;
       setBusy(true);
       setError(null);
+
+      if (userMessage) {
+        setLines((prev) => [...prev, { id: lineId(), role: "user", text: userMessage }]);
+        scrollToEnd();
+      }
+
       try {
         const res = await requestAgentTurn({
           receiptId,
@@ -74,23 +101,37 @@ export function HostAgentSheet({
           snapshot: snapshotRef.current,
           message: userMessage,
         });
-        setMessage(res.message);
+        if (seq !== reqSeq.current) return;
+        setLines((prev) => [
+          ...prev,
+          { id: lineId(), role: "assistant", text: res.message },
+        ]);
         setCards(res.cards);
         setSelected(new Set(res.cards.map((c) => c.id)));
+        scrollToEnd();
       } catch (err) {
+        if (seq !== reqSeq.current) return;
         const msg = err instanceof Error ? err.message : "request_failed";
-        setError(
+        const friendly =
           msg === "forbidden"
             ? "Host session expired — restart from the receipt photo."
             : msg === "not_found"
-              ? "This draft isn’t on the API yet — is the local server running?"
-              : `Couldn’t reach assistant (${msg}). Is npm run dev on :43147?`,
-        );
+              ? "This draft isn’t on the API — check the server."
+              : msg === "request_failed" || msg.includes("404") || msg.includes("Cannot POST")
+                ? "Assistant isn’t on this API yet. Use local npm run dev, or wait for deploy."
+                : `Couldn’t reach assistant (${msg}).`;
+        setError(friendly);
+        setLines((prev) => [
+          ...prev,
+          { id: lineId(), role: "assistant", text: friendly },
+        ]);
+        if (userMessage) setCompose(userMessage);
+        scrollToEnd();
       } finally {
-        setBusy(false);
+        if (seq === reqSeq.current) setBusy(false);
       }
     },
-    [hostToken, receiptId],
+    [hostToken, receiptId, scrollToEnd],
   );
 
   useEffect(() => {
@@ -98,11 +139,14 @@ export function HostAgentSheet({
       sheetTY.value = 0;
       setCompose("");
       setError(null);
-      setMessage("");
+      setLines([]);
       setCards([]);
+      setSelected(new Set());
+      setBusy(false);
       return;
     }
-    void load();
+    resetAgentTurns(receiptId);
+    void runTurn();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open once per visible
   }, [visible]);
 
@@ -114,7 +158,7 @@ export function HostAgentSheet({
     const text = compose.trim();
     if (!text || busy) return;
     setCompose("");
-    void load(text);
+    void runTurn(text);
   }
 
   function toggleCard(id: string) {
@@ -135,7 +179,6 @@ export function HostAgentSheet({
     close();
   }
 
-  // Pan only on the handle — not the compose field (was swallowing taps).
   const dismissPan = Gesture.Pan()
     .activeOffsetY(8)
     .onUpdate((e) => {
@@ -182,34 +225,62 @@ export function HostAgentSheet({
               </View>
             </GestureDetector>
 
-              <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                  <View style={styles.headerIcon}>
-                    <Bot size={16} color={colors.merlot} strokeWidth={2} />
-                  </View>
-                  <Text style={styles.agentLabel}>Check assistant</Text>
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <View style={styles.headerIcon}>
+                  <Bot size={16} color={colors.merlot} strokeWidth={2} />
                 </View>
-                <PressScale onPress={close} accessibilityLabel="Close" style={styles.closeBtn}>
-                  <X size={18} color={colors.inkSoft} />
-                </PressScale>
+                <Text style={styles.agentLabel}>Check assistant</Text>
               </View>
+              <PressScale onPress={close} accessibilityLabel="Close" style={styles.closeBtn}>
+                <X size={18} color={colors.inkSoft} />
+              </PressScale>
+            </View>
 
             <ScrollView
+              ref={scrollRef}
               keyboardShouldPersistTaps="handled"
               style={styles.scroll}
               contentContainerStyle={styles.scrollContent}
+              onContentSizeChange={scrollToEnd}
             >
-              {busy && !message && !error ? (
+              {lines.length === 0 && busy ? (
                 <View style={styles.loading}>
                   <ActivityIndicator color={colors.merlot} />
                   <Text style={styles.loadingText}>Thinking…</Text>
                 </View>
               ) : null}
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              {message ? <Text style={styles.copy}>{message}</Text> : null}
-              {busy && message ? (
-                <Text style={styles.loadingText}>Updating…</Text>
+
+              {lines.map((line) => (
+                <View
+                  key={line.id}
+                  style={[
+                    styles.bubble,
+                    line.role === "user" ? styles.bubbleUser : styles.bubbleBot,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.bubbleText,
+                      line.role === "user" ? styles.bubbleTextUser : null,
+                    ]}
+                  >
+                    {line.text}
+                  </Text>
+                </View>
+              ))}
+
+              {busy && lines.length > 0 ? (
+                <View style={styles.typing}>
+                  <ActivityIndicator color={colors.merlot} size="small" />
+                  <Text style={styles.loadingText}>Thinking…</Text>
+                </View>
               ) : null}
+
+              {error && lines.length === 0 ? (
+                <Text style={styles.error}>{error}</Text>
+              ) : null}
+
               {cards.map((card) => {
                 const on = selected.has(card.id);
                 return (
@@ -320,18 +391,41 @@ const styles = StyleSheet.create({
   },
   closeBtn: { padding: 6 },
   loading: { paddingVertical: 28, alignItems: "center", gap: 8 },
+  typing: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 4,
+  },
   loadingText: {
     fontSize: 12,
     color: colors.muted,
-    marginBottom: space.sm,
   },
-  scroll: { flexGrow: 0 },
-  scrollContent: { paddingBottom: space.sm, gap: space.sm },
-  copy: {
+  scroll: { flexGrow: 0, maxHeight: 320 },
+  scrollContent: { paddingBottom: space.sm, gap: 8 },
+  bubble: {
+    maxWidth: "92%",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  bubbleUser: {
+    alignSelf: "flex-end",
+    backgroundColor: colors.merlot,
+  },
+  bubbleBot: {
+    alignSelf: "flex-start",
+    backgroundColor: "#fff",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  bubbleText: {
     fontSize: 14,
     lineHeight: 20,
     color: colors.ink,
-    marginBottom: space.sm,
+  },
+  bubbleTextUser: {
+    color: colors.merlotFg,
   },
   error: {
     fontSize: 13,
