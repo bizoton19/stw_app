@@ -9,7 +9,7 @@ Living log of how fast this product came together. Update after major milestones
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
 | **This snapshot** | 2026-09-27 20:12 −04:00 |
 | **Elapsed** | **~7 days** |
-| **Commits on `main`** | **188** |
+| **Commits on `main`** | **189** |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -74,6 +74,7 @@ git log --reverse -1 --format='%aI %s'
 - Official pay logos on web + host handle rows
 - Host interview: drop loading from step count; footer chrome contrast
 - Web guest: settle after ≥1 claim; **pay later** with Copy link + Share/Save
+- Progress stats doc + Cursor rule to keep milestones current
 
 ## How to extend this file
 
