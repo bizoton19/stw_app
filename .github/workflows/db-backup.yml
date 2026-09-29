@@ -1,0 +1,60 @@
+# Daily Postgres logical backup (schema split_the_wine → object storage)
+#
+# Requires repo secrets (Settings → Secrets and variables → Actions):
+#   DATABASE_URL                      Railway Postgres URL reachable from the internet
+#                                     (TCP Proxy / public URL — private-only URLs fail here)
+#   OBJECT_STORAGE_BUCKET
+#   OBJECT_STORAGE_ENDPOINT
+#   OBJECT_STORAGE_ACCESS_KEY_ID
+#   OBJECT_STORAGE_SECRET_ACCESS_KEY
+# Optional:
+#   OBJECT_STORAGE_REGION             default auto
+#   OBJECT_STORAGE_FORCE_PATH_STYLE   true if path-style required
+#   BACKUP_RETENTION_DAYS             default 14
+#
+# See plans/db-backups.md for restore + Railway private-network notes.
+
+name: DB backup
+
+on:
+  schedule:
+    # 06:15 UTC daily (~2:15 AM Eastern)
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          # AWS CLI v2 is preinstalled on ubuntu-latest runners
+
+      - name: Dump and upload
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OBJECT_STORAGE_BUCKET: ${{ secrets.OBJECT_STORAGE_BUCKET }}
+          OBJECT_STORAGE_ENDPOINT: ${{ secrets.OBJECT_STORAGE_ENDPOINT }}
+          OBJECT_STORAGE_ACCESS_KEY_ID: ${{ secrets.OBJECT_STORAGE_ACCESS_KEY_ID }}
+          OBJECT_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.OBJECT_STORAGE_SECRET_ACCESS_KEY }}
+          OBJECT_STORAGE_REGION: ${{ secrets.OBJECT_STORAGE_REGION }}
+          OBJECT_STORAGE_FORCE_PATH_STYLE: ${{ secrets.OBJECT_STORAGE_FORCE_PATH_STYLE }}
+          BACKUP_RETENTION_DAYS: ${{ secrets.BACKUP_RETENTION_DAYS }}
+          DB_SCHEMA: split_the_wine
+          BACKUP_PREFIX: db-backups
+        run: |
+          chmod +x scripts/backup-db.sh
+          ./scripts/backup-db.sh
