@@ -11,7 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import { Swipeable } from "react-native-gesture-handler";
-import { ChevronDown, RotateCcw, Trash2 } from "lucide-react-native";
+import { RotateCcw, Trash2 } from "lucide-react-native";
 import { AppShell, InterviewChrome, QuietButton } from "@/components/chrome";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
@@ -21,8 +21,6 @@ import { centsToLabel, unitPriceCents } from "@/lib/money";
 import { pourCandidates } from "@/lib/pour";
 import type { ParseReviewChoice } from "@/lib/types";
 import { colors } from "@/lib/theme";
-
-type MenuSide = "yes" | "no" | null;
 
 function ItemRow({
   item,
@@ -214,7 +212,6 @@ export default function HostItems() {
     [draft.items],
   );
   const subtotal = activeItems.reduce((s, i) => s + i.totalCents, 0);
-  const [menu, setMenu] = useState<MenuSide>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [choice, setChoice] = useState<ParseReviewChoice | null>(null);
   const [busy, setBusy] = useState(false);
@@ -260,23 +257,16 @@ export default function HostItems() {
 
   async function applyChoice(next: ParseReviewChoice, opts?: { continue?: boolean }) {
     stopEditing();
-    setMenu(null);
     setChoice(next);
     setBusy(true);
     try {
       await draft.recordParseReview(next);
-      if (next === "remove_items") setHint(t("items.tipRemove"));
-      else if (next === "needs_edits") setHint(t("items.tipInaccuracies"));
+      if (next === "needs_edits") setHint(t("items.tipInaccuracies"));
       else setHint(null);
       if (opts?.continue) goAfterItems();
     } finally {
       setBusy(false);
     }
-  }
-
-  function openMenu(side: MenuSide) {
-    stopEditing();
-    setMenu((m) => (m === side ? null : side));
   }
 
   return (
@@ -301,73 +291,34 @@ export default function HostItems() {
               {t("items.subtotal", { amount: centsToLabel(subtotal) })}
             </Text>
             <Text style={styles.reviewLabel}>{t("items.looksGoodLabel")}</Text>
-            {menu === "yes" ? (
-              <View style={styles.menu}>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={busy || !canContinue}
-                  onPress={() => void applyChoice("looks_good", { continue: true })}
-                  style={styles.menuItem}
-                >
-                  <Text style={styles.menuText}>{t("items.looksGoodChoice")}</Text>
-                </Pressable>
-                <View style={styles.menuDivider} />
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={busy}
-                  onPress={() => void applyChoice("remove_items")}
-                  style={styles.menuItem}
-                >
-                  <Text style={styles.menuText}>{t("items.needRemove")}</Text>
-                </Pressable>
-              </View>
-            ) : null}
-            {menu === "no" ? (
-              <View style={styles.menu}>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={busy}
-                  onPress={() => void applyChoice("needs_edits")}
-                  style={styles.menuItem}
-                >
-                  <Text style={styles.menuText}>{t("items.needsEdits")}</Text>
-                </Pressable>
-              </View>
-            ) : null}
             <View style={styles.footerRow}>
               <PressScale
-                disabled={busy}
-                onPress={() => openMenu("yes")}
+                disabled={busy || !canContinue}
+                onPress={() => void applyChoice("looks_good", { continue: true })}
                 style={[
                   styles.halfBtn,
-                  choice === "looks_good" || choice === "remove_items"
-                    ? styles.halfBtnSelected
-                    : null,
+                  choice === "looks_good" ? styles.halfBtnSelected : null,
+                  (busy || !canContinue) && styles.halfBtnDisabled,
                 ]}
                 accessibilityLabel={t("items.yes")}
+                accessibilityRole="button"
               >
                 <Text style={styles.halfText}>{t("items.yes")}</Text>
-                <ChevronDown
-                  size={16}
-                  color={colors.ink}
-                  style={{ transform: [{ rotate: menu === "yes" ? "180deg" : "0deg" }] }}
-                />
               </PressScale>
               <PressScale
                 disabled={busy}
-                onPress={() => openMenu("no")}
-                style={[styles.halfBtn, choice === "needs_edits" ? styles.halfBtnSelected : null]}
+                onPress={() => void applyChoice("needs_edits")}
+                style={[
+                  styles.halfBtn,
+                  choice === "needs_edits" ? styles.halfBtnSelected : null,
+                ]}
                 accessibilityLabel={t("items.no")}
+                accessibilityRole="button"
               >
                 <Text style={styles.halfText}>{t("items.no")}</Text>
-                <ChevronDown
-                  size={16}
-                  color={colors.ink}
-                  style={{ transform: [{ rotate: menu === "no" ? "180deg" : "0deg" }] }}
-                />
               </PressScale>
             </View>
-            {choice === "looks_good" ? null : choice ? (
+            {choice === "needs_edits" ? (
               <PressScale
                 disabled={busy || !canContinue}
                 onPress={() => {
@@ -399,11 +350,8 @@ export default function HostItems() {
             key={item.id}
             item={item}
             editing={editingId === item.id}
-            highlightTrash={choice === "remove_items"}
-            onEdit={() => {
-              setMenu(null);
-              setEditingId(item.id);
-            }}
+            highlightTrash={false}
+            onEdit={() => setEditingId(item.id)}
             onChange={(next) =>
               draft.setItems(draft.items.map((row) => (row.id === item.id ? next : row)))
             }
@@ -424,7 +372,6 @@ export default function HostItems() {
                 totalInput: "0.00",
               },
             ]);
-            setMenu(null);
             setEditingId(id);
           }}
         >
@@ -620,18 +567,8 @@ const styles = StyleSheet.create({
     borderColor: colors.merlot,
     backgroundColor: "rgba(110, 46, 53, 0.06)",
   },
+  halfBtnDisabled: { opacity: 0.4 },
   halfText: { color: colors.ink, fontSize: 15, fontWeight: "700" },
-  menu: {
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: "#fff",
-    overflow: "hidden",
-  },
-  menuItem: { paddingHorizontal: 14, paddingVertical: 14 },
-  menuText: { fontSize: 14, fontWeight: "600", color: colors.ink, lineHeight: 20 },
-  menuDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   continueBtn: {
     marginTop: 8,
     height: 48,

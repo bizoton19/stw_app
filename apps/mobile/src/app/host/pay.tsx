@@ -1,7 +1,7 @@
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { Field } from "@/components/field";
 import { PayMethodIcon } from "@/components/pay-method-icon";
@@ -19,6 +19,7 @@ export default function HostPay() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   const methods = useMemo(() => payMethodsForRegion(), []);
   const regionHint = useMemo(() => {
@@ -52,16 +53,26 @@ export default function HostPay() {
     draft.togglePaymentMethod(method);
   }
 
+  function showValidationError(message: string) {
+    Keyboard.dismiss();
+    setError(message);
+    // Error sits in the sticky footer; also scroll up so handles stay in view.
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  }
+
   function goConfirm() {
     if (draft.payments.length === 0) {
-      setError("Tap at least one way people can pay you.");
+      showValidationError("Tap at least one way people can pay you.");
       return;
     }
     const result = validateHostPayments(draft.payments);
     if (!result.ok) {
-      setError(result.message);
+      showValidationError(result.message);
       return;
     }
+    Keyboard.dismiss();
     setError(null);
     setConfirming(true);
   }
@@ -156,16 +167,21 @@ export default function HostPay() {
         onBack={() => router.back()}
         onHome={goHostDesk}
         keyboard
+        scrollRef={scrollRef}
         footer={
-          <PrimaryButton onPress={goConfirm} disabled={draft.payments.length === 0}>
-            {handleRows.length === 0 ? "Select a payment method" : "Review payment info"}
-          </PrimaryButton>
+          <View>
+            {error ? (
+              <View style={styles.footerError} accessibilityLiveRegion="polite">
+                <Text style={styles.footerErrorText}>{error}</Text>
+              </View>
+            ) : null}
+            <PrimaryButton onPress={goConfirm} disabled={draft.payments.length === 0}>
+              {handleRows.length === 0 ? "Select a payment method" : "Review payment info"}
+            </PrimaryButton>
+          </View>
         }
         supportTip
       >
-        {error ? (
-          <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
-        ) : null}
         <Text style={styles.lead}>
           Tap every app you accept. Then add your handle for each.
           {regionHint ? `\n${regionHint}` : ""}
@@ -265,6 +281,22 @@ function placeholderFor(method: PayMethod): string {
 
 const styles = StyleSheet.create({
   lead: { fontSize: 14, lineHeight: 20, color: colors.muted, marginBottom: 14 },
+  footerError: {
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "rgba(110, 46, 53, 0.1)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(110, 46, 53, 0.35)",
+  },
+  footerErrorText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
+    color: colors.danger,
+    textAlign: "center",
+  },
   notice: {
     marginBottom: 16,
     paddingHorizontal: 14,

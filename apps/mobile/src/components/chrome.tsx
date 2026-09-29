@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import type { ReactNode, RefObject } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
 import { colors, type } from "@/lib/theme";
@@ -21,7 +22,7 @@ export function AppShell({
   children,
   meta,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   meta?: string;
 }) {
   return (
@@ -69,6 +70,8 @@ export function InterviewChrome({
   supportTip = false,
   /** Hide “N of M” + progress bar (host live board is not an interview step). */
   hideProgress = false,
+  /** Optional ref to the body ScrollView (scroll-to-error, etc.). */
+  scrollRef,
 }: {
   step: number;
   total: number;
@@ -77,14 +80,15 @@ export function InterviewChrome({
   onBack?: () => void;
   /** Jump to host desk without stacking Back through every step. */
   onHome?: () => void;
-  children: React.ReactNode;
-  footer: React.ReactNode;
+  children: ReactNode;
+  footer: ReactNode;
   keyboard?: boolean;
   dense?: boolean;
   sparse?: boolean;
   scroll?: boolean;
   supportTip?: boolean;
   hideProgress?: boolean;
+  scrollRef?: RefObject<ScrollView | null>;
 }) {
   const progress = (step / total) * 100;
   const heading = (
@@ -108,6 +112,7 @@ export function InterviewChrome({
 
   const body = scroll ? (
     <ScrollView
+      ref={scrollRef}
       style={styles.scroll}
       contentContainerStyle={[
         styles.scrollContent,
