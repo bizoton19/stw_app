@@ -43,56 +43,69 @@ Guests open the link in a browser (or the app if they have it), enter a display 
 
 ---
 
+## How do I invite guests to claim and pay me?
+
+After you publish the tab, the app gives you a **private claim link**. Anyone with that link can open the claim board, pick what they had, see what they owe, and open your payment app (Venmo, Cash App, PayPal, and so on).
+
+You don’t need their phone numbers. On the share screen, use **Copy**, **Share** (your phone’s share sheet), or **QR**.
+
+> Tip: for a mixed table (iPhones and Androids), **QR is usually fastest**. AirDrop and Nearby Share only work same-brand to same-brand.
+
+Interactive chooser (pick your host phone, see every option): [FAQ → How should I send the invite link?](./faq.html#send-link)
+
+### How should I send the invite link?
+
+Start with one fact: **which phone are you hosting from?** Every path below starts from that phone.
+
+#### Everyone at the table (mixed phones) — QR
+
+Works for iPhone and Android. No contacts needed.
+
+1. On the share screen, tap **QR**.
+2. Hold up the bright code or pass your phone.
+3. Guests scan with Camera and open the claim link.
+
+#### Other iPhones nearby — AirDrop
+
+Use this when you’re on iPhone and they’re on iPhone. (AirDrop, not AirPlay.)
+
+1. Ask them to turn AirDrop on (Contacts Only, or Everyone for 10 Minutes at dinner).
+2. Tap **Share** → **AirDrop**.
+3. Pick each person (often one by one).
+
+QR still works if AirDrop is slow.
+
+#### Other Androids nearby — Nearby Share / Quick Share
+
+Use this when you’re on Android and they’re on Android. The name varies by brand.
+
+1. Turn Bluetooth and Wi‑Fi on for both phones.
+2. Tap **Share** → **Nearby Share** / **Quick Share**.
+3. Pick their phone.
+
+If Nearby fails, show the QR.
+
+#### Cross-brand (iPhone ↔ Android) — no nearby path
+
+AirDrop and Nearby don’t cross brands. Use **QR**, or **Share** into Messages / WhatsApp / email if you already chat. **Copy** is the fallback.
+
+#### Quick reference
+
+| Your phone → Theirs | Nearby option? | What to use |
+|---|---|---|
+| Mixed table | No single nearby path | **QR** |
+| iPhone → iPhone | AirDrop | **Share → AirDrop**, or QR |
+| Android → Android | Nearby / Quick Share | **Share → Nearby**, or QR |
+| iPhone → Android | No | **QR** or a chat app |
+| Android → iPhone | No | **QR** or a chat app |
+
+The **Share** button opens your phone’s share sheet. Split the Wine doesn’t add a custom nearby system—**QR** is the universal path when the table is mixed.
+
+---
+
 ## How do I share the claim link at the table?
 
-There is one claim link. How you deliver it depends on **your phone** and **their phone**. There is **no** common nearby protocol that works from iPhone to Android or Android to iPhone—AirDrop and Nearby Share do not cross platforms.
-
-**User-centered flow (marketing / help UI):** one question — **Host phone?** (iPhone / Android) — then show **all paths** from that phone (QR for everyone, same-platform nearby, cross-platform fallback).
-
-Interactive prototype: [share-scenarios.html](./share-scenarios.html)
-
-
-### If the table is mixed (both kinds of phones)
-
-**Best: QR**
-
-1. Host taps **QR** on the share screen.
-2. Hold the bright code up or pass the phone.
-3. Everyone scans with Camera (iOS or Android).
-
-No contacts needed.
-
-### If you’re both on iPhone
-
-**Share → AirDrop** (not AirPlay)
-
-1. Guest: Control Center → AirDrop on (Contacts Only or Everyone for 10 Minutes).
-2. Host taps **Share** → **AirDrop** → their name.
-3. Often one person at a time.
-
-QR still works.
-
-### If you’re both on Android
-
-**Share → Nearby Share / Quick Share** (name varies by brand).
-
-Both need Bluetooth/Wi‑Fi on; pick the nearby device. QR if Nearby fails.
-
-### If you’re on iPhone and they’re on Android (or the reverse)
-
-**No nearby path.** Use **QR**, or **Share** into Messages / WhatsApp / email if you already chat. Copy link is the fallback.
-
-### Quick matrix
-
-| Your phone → Theirs | Nearby / AirDrop? | What to use |
-|---|---|---|
-| Either → mixed table | No single nearby path | **QR** |
-| iPhone → iPhone | AirDrop | **Share → AirDrop** or QR |
-| Android → Android | Nearby / Quick Share | **Share → Nearby** or QR |
-| iPhone → Android | No | **QR** or chat app |
-| Android → iPhone | No | **QR** or chat app |
-
-**Product rule:** the Share button opens the OS share sheet. Split the Wine does not invent a cross-platform nearby stack—QR is the universal “everyone at the table” path.
+Same as [How do I invite guests to claim and pay me?](#how-do-i-invite-guests-to-claim-and-pay-me). Use QR for a mixed table; AirDrop or Nearby only same-brand to same-brand.
 
 ---
 
