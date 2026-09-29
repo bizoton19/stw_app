@@ -13,6 +13,7 @@
       --line: #e6e0d8;
       --merlot: #6e2e35;
       --chrome: #ede8e1;
+      --card: #fffcf8;
     }
     * { box-sizing: border-box; }
     body {
@@ -23,7 +24,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       padding: 40px 24px 64px;
     }
-    .wrap { max-width: 960px; margin: 0 auto; }
+    .wrap { max-width: 560px; margin: 0 auto; }
     .eyebrow {
       font-size: 12px;
       font-weight: 600;
@@ -34,112 +35,109 @@
     }
     h1 {
       margin: 0 0 8px;
-      font-size: clamp(28px, 4vw, 36px);
+      font-size: clamp(28px, 4vw, 34px);
       line-height: 1.15;
       letter-spacing: -0.03em;
     }
     .lead {
       margin: 0 0 28px;
-      max-width: 54ch;
       font-size: 16px;
       line-height: 1.5;
       color: var(--soft);
     }
-    .track {
-      display: flex;
+    .chooser {
+      display: grid;
       gap: 16px;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      padding: 4px 2px 20px;
-      -webkit-overflow-scrolling: touch;
+      margin-bottom: 24px;
     }
-    .track::-webkit-scrollbar { height: 6px; }
-    .track::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
-    .card {
-      flex: 0 0 min(78vw, 280px);
-      scroll-snap-align: start;
-      background: #fffcf8;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px;
-      min-height: 240px;
+    @media (min-width: 520px) {
+      .chooser { grid-template-columns: 1fr 1fr; }
+    }
+    label {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-    }
-    @media (min-width: 900px) {
-      .track {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        overflow: visible;
-        scroll-snap-type: none;
-      }
-      .card {
-        flex: none;
-        width: auto;
-        min-height: 260px;
-      }
-      .dots { display: none; }
-    }
-    .card-kicker {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--merlot);
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-    .card h2 {
-      margin: 0;
-      font-size: 18px;
-      letter-spacing: -0.02em;
-      line-height: 1.25;
-    }
-    .badge {
-      align-self: flex-start;
-      font-size: 12px;
+      gap: 8px;
+      font-size: 13px;
       font-weight: 600;
+      color: var(--ink);
+    }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      height: 48px;
+      padding: 0 40px 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--card)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237A7268' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
+        no-repeat right 12px center;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    select:focus {
+      outline: 2px solid rgba(110, 46, 53, 0.35);
+      outline-offset: 1px;
+    }
+    .result {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--card);
+      padding: 20px;
+      min-height: 200px;
+    }
+    .result[hidden] { display: none; }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
       padding: 5px 10px;
       border-radius: 999px;
       border: 1px solid rgba(110, 46, 53, 0.25);
       background: rgba(110, 46, 53, 0.06);
       color: var(--merlot);
+      margin-bottom: 12px;
     }
-    .badge.muted {
+    .badge.warn {
       border-color: var(--line);
       background: var(--chrome);
       color: var(--soft);
     }
-    .card p {
-      margin: 0;
+    .result h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+    .result .why {
+      margin: 0 0 16px;
       font-size: 14px;
       line-height: 1.45;
       color: var(--soft);
-      flex: 1;
     }
-    .steps {
+    .result ol {
       margin: 0;
-      padding-left: 18px;
+      padding-left: 20px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .result li + li { margin-top: 6px; }
+    .alt {
+      margin: 16px 0 0;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
       font-size: 13px;
       line-height: 1.45;
-      color: var(--ink);
+      color: var(--muted);
     }
-    .dots {
-      display: flex;
-      justify-content: center;
-      gap: 6px;
-      margin-top: 4px;
+    .empty {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--soft);
     }
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 99px;
-      background: var(--line);
-      border: 0;
-      padding: 0;
-    }
-    .dot[aria-current="true"] { background: var(--merlot); width: 18px; }
     .note {
-      margin-top: 20px;
+      margin-top: 24px;
       font-size: 13px;
       line-height: 1.45;
       color: var(--muted);
@@ -151,108 +149,134 @@
     <p class="eyebrow">How to invite</p>
     <h1>Share the claim link</h1>
     <p class="lead">
-      One private link. How you deliver it depends on who’s at the table.
-      Swipe the cards — source copy lives in <code>FAQ.md</code>.
+      Tell us what you’re holding and what they’re holding.
+      We’ll give you the path that actually works.
     </p>
 
-    <div class="track" id="track" aria-label="Share scenarios">
-      <article class="card" data-i="0">
-        <span class="card-kicker">1 · Mixed table</span>
-        <h2>At the table</h2>
-        <span class="badge">Best: QR</span>
-        <p>iPhones and Androids together. No contacts needed.</p>
-        <ol class="steps">
-          <li>Host taps QR on share</li>
-          <li>Hold the code up or pass the phone</li>
-          <li>Everyone scans with Camera</li>
-        </ol>
-      </article>
-
-      <article class="card" data-i="1">
-        <span class="card-kicker">2 · Apple</span>
-        <h2>iPhone → iPhone</h2>
-        <span class="badge">Share → AirDrop</span>
-        <p>Not AirPlay. Both need AirDrop on (Everyone for 10 min works at dinner).</p>
-        <ol class="steps">
-          <li>Host taps Share</li>
-          <li>Choose AirDrop</li>
-          <li>Pick each person (often one by one)</li>
-        </ol>
-      </article>
-
-      <article class="card" data-i="2">
-        <span class="card-kicker">3 · Cross</span>
-        <h2>iPhone → Android</h2>
-        <span class="badge muted">No nearby path</span>
-        <p>AirDrop will not reach Android. Use QR or a chat you already share.</p>
-        <ol class="steps">
-          <li>Show QR, or</li>
-          <li>Share → Messages / WhatsApp, or</li>
-          <li>Copy link</li>
-        </ol>
-      </article>
-
-      <article class="card" data-i="3">
-        <span class="card-kicker">4 · Google</span>
-        <h2>Android → Android</h2>
-        <span class="badge">Share → Nearby</span>
-        <p>Nearby Share / Quick Share (name varies by brand). QR if Nearby flakes.</p>
-        <ol class="steps">
-          <li>Host taps Share</li>
-          <li>Nearby / Quick Share</li>
-          <li>Pick the nearby phone</li>
-        </ol>
-      </article>
-
-      <article class="card" data-i="4">
-        <span class="card-kicker">5 · Cross</span>
-        <h2>Android → iPhone</h2>
-        <span class="badge muted">No nearby path</span>
-        <p>Nearby will not reach iPhone. Same as the other cross case: QR or chat.</p>
-        <ol class="steps">
-          <li>Show QR, or</li>
-          <li>Share into WhatsApp / Messages, or</li>
-          <li>Copy link</li>
-        </ol>
-      </article>
+    <div class="chooser">
+      <label>
+        Your phone
+        <select id="from" aria-describedby="result">
+          <option value="">Select…</option>
+          <option value="iphone">iPhone</option>
+          <option value="android">Android</option>
+        </select>
+      </label>
+      <label>
+        They’re on
+        <select id="to">
+          <option value="">Select…</option>
+          <option value="iphone">iPhone</option>
+          <option value="android">Android</option>
+          <option value="mixed">Mixed table (both)</option>
+        </select>
+      </label>
     </div>
 
-    <div class="dots" id="dots" aria-hidden="true"></div>
+    <div class="result" id="result" role="status" aria-live="polite">
+      <p class="empty">Pick both options above.</p>
+    </div>
 
     <p class="note">
-      Product rule: Share opens the OS sheet. Split the Wine does not invent a
-      cross-platform nearby stack — QR is the universal table path.
+      AirDrop and Nearby Share don’t cross platforms. QR works for everyone at the table.
+      Source copy: <code>FAQ.md</code>.
     </p>
   </div>
 
   <script>
-    const track = document.getElementById("track");
-    const dots = document.getElementById("dots");
-    const cards = [...track.querySelectorAll(".card")];
-    cards.forEach((_, i) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "dot";
-      b.setAttribute("aria-label", "Go to card " + (i + 1));
-      b.addEventListener("click", () => {
-        cards[i].scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
-      });
-      dots.appendChild(b);
-    });
-    function sync() {
-      const left = track.scrollLeft;
-      let best = 0;
-      let bestDist = Infinity;
-      cards.forEach((c, i) => {
-        const d = Math.abs(c.offsetLeft - left);
-        if (d < bestDist) { bestDist = d; best = i; }
-      });
-      [...dots.children].forEach((d, i) => {
-        d.setAttribute("aria-current", i === best ? "true" : "false");
-      });
+    const paths = {
+      "iphone|mixed": {
+        badge: "Best for the table",
+        title: "Show the QR code",
+        why: "When phones are mixed, there’s no one nearby protocol. QR reaches everyone.",
+        steps: [
+          "On the share screen, tap QR",
+          "Hold the bright code up or pass your phone",
+          "Everyone scans with Camera",
+        ],
+        alt: "Also fine: Share into a group chat if you already have one.",
+      },
+      "android|mixed": {
+        badge: "Best for the table",
+        title: "Show the QR code",
+        why: "When phones are mixed, there’s no one nearby protocol. QR reaches everyone.",
+        steps: [
+          "On the share screen, tap QR",
+          "Hold the bright code up or pass your phone",
+          "Everyone scans with Camera",
+        ],
+        alt: "Also fine: Share into a group chat if you already have one.",
+      },
+      "iphone|iphone": {
+        badge: "Share → AirDrop",
+        title: "AirDrop the link",
+        why: "Same-platform nearby works. (AirPlay is for TVs — you want AirDrop.)",
+        steps: [
+          "Ask them to turn AirDrop on (Everyone for 10 Minutes is fine at dinner)",
+          "Tap Share on the claim link",
+          "Choose AirDrop and pick their name (often one by one)",
+        ],
+        alt: "QR still works if AirDrop doesn’t show them.",
+      },
+      "android|android": {
+        badge: "Share → Nearby",
+        title: "Nearby Share the link",
+        why: "Android → Android can use Nearby Share / Quick Share (name varies by brand).",
+        steps: [
+          "Both phones: Bluetooth and Wi‑Fi on",
+          "Tap Share on the claim link",
+          "Choose Nearby Share / Quick Share and pick their phone",
+        ],
+        alt: "QR still works if Nearby doesn’t find them.",
+      },
+      "iphone|android": {
+        badge: "No nearby path",
+        warn: true,
+        title: "Use QR (or a chat app)",
+        why: "AirDrop won’t reach Android. There’s no shared nearby protocol across brands.",
+        steps: [
+          "Best: tap QR and have them scan",
+          "Or Share → Messages / WhatsApp if you already chat",
+          "Or Copy and send the link however you can",
+        ],
+        alt: "Don’t hunt for AirDrop — it won’t list their Android.",
+      },
+      "android|iphone": {
+        badge: "No nearby path",
+        warn: true,
+        title: "Use QR (or a chat app)",
+        why: "Nearby Share won’t reach iPhone. There’s no shared nearby protocol across brands.",
+        steps: [
+          "Best: tap QR and have them scan",
+          "Or Share → WhatsApp / Messages if you already chat",
+          "Or Copy and send the link however you can",
+        ],
+        alt: "Don’t hunt for Nearby — it won’t list their iPhone.",
+      },
+    };
+
+    const fromEl = document.getElementById("from");
+    const toEl = document.getElementById("to");
+    const result = document.getElementById("result");
+
+    function render() {
+      const key = `${fromEl.value}|${toEl.value}`;
+      const path = paths[key];
+      if (!fromEl.value || !toEl.value || !path) {
+        result.innerHTML = `<p class="empty">Pick both options above.</p>`;
+        return;
+      }
+      result.innerHTML = `
+        <span class="badge${path.warn ? " warn" : ""}">${path.badge}</span>
+        <h2>${path.title}</h2>
+        <p class="why">${path.why}</p>
+        <ol>${path.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
+        <p class="alt">${path.alt}</p>
+      `;
     }
-    track.addEventListener("scroll", () => requestAnimationFrame(sync), { passive: true });
-    sync();
+
+    fromEl.addEventListener("change", render);
+    toEl.addEventListener("change", render);
   </script>
 </body>
 </html>
