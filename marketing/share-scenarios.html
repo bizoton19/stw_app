@@ -24,7 +24,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       padding: 40px 24px 64px;
     }
-    .wrap { max-width: 560px; margin: 0 auto; }
+    .wrap { max-width: 640px; margin: 0 auto; }
     .eyebrow {
       font-size: 12px;
       font-weight: 600;
@@ -40,18 +40,10 @@
       letter-spacing: -0.03em;
     }
     .lead {
-      margin: 0 0 28px;
+      margin: 0 0 24px;
       font-size: 16px;
       line-height: 1.5;
       color: var(--soft);
-    }
-    .chooser {
-      display: grid;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    @media (min-width: 520px) {
-      .chooser { grid-template-columns: 1fr 1fr; }
     }
     label {
       display: flex;
@@ -60,6 +52,8 @@
       font-size: 13px;
       font-weight: 600;
       color: var(--ink);
+      max-width: 280px;
+      margin-bottom: 28px;
     }
     select {
       appearance: none;
@@ -80,64 +74,54 @@
       outline: 2px solid rgba(110, 46, 53, 0.35);
       outline-offset: 1px;
     }
-    .result {
+    .paths { display: grid; gap: 14px; }
+    .path {
       border: 1px solid var(--line);
-      border-radius: 16px;
+      border-radius: 14px;
       background: var(--card);
-      padding: 20px;
-      min-height: 200px;
+      padding: 16px 18px;
     }
-    .result[hidden] { display: none; }
+    .path h2 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+    }
     .badge {
       display: inline-block;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      padding: 5px 10px;
+      padding: 4px 9px;
       border-radius: 999px;
       border: 1px solid rgba(110, 46, 53, 0.25);
       background: rgba(110, 46, 53, 0.06);
       color: var(--merlot);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-    .badge.warn {
+    .badge.soft {
       border-color: var(--line);
       background: var(--chrome);
       color: var(--soft);
     }
-    .result h2 {
-      margin: 0 0 8px;
-      font-size: 20px;
-      letter-spacing: -0.02em;
-    }
-    .result .why {
-      margin: 0 0 16px;
+    .path p {
+      margin: 0;
       font-size: 14px;
       line-height: 1.45;
       color: var(--soft);
     }
-    .result ol {
-      margin: 0;
-      padding-left: 20px;
-      font-size: 15px;
-      line-height: 1.5;
-    }
-    .result li + li { margin-top: 6px; }
-    .alt {
-      margin: 16px 0 0;
-      padding-top: 14px;
-      border-top: 1px solid var(--line);
-      font-size: 13px;
+    .path ol {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      font-size: 14px;
       line-height: 1.45;
-      color: var(--muted);
     }
+    .path li + li { margin-top: 4px; }
     .empty {
       margin: 0;
       font-size: 15px;
-      line-height: 1.5;
       color: var(--soft);
     }
     .note {
-      margin-top: 24px;
+      margin-top: 28px;
       font-size: 13px;
       line-height: 1.45;
       color: var(--muted);
@@ -149,134 +133,104 @@
     <p class="eyebrow">How to invite</p>
     <h1>Share the claim link</h1>
     <p class="lead">
-      Tell us what you’re holding and what they’re holding.
-      We’ll give you the path that actually works.
+      Pick the phone you’re hosting from. We’ll show every way to get the link to people at the table.
     </p>
 
-    <div class="chooser">
-      <label>
-        Your phone
-        <select id="from" aria-describedby="result">
-          <option value="">Select…</option>
-          <option value="iphone">iPhone</option>
-          <option value="android">Android</option>
-        </select>
-      </label>
-      <label>
-        They’re on
-        <select id="to">
-          <option value="">Select…</option>
-          <option value="iphone">iPhone</option>
-          <option value="android">Android</option>
-          <option value="mixed">Mixed table (both)</option>
-        </select>
-      </label>
-    </div>
+    <label>
+      Host phone
+      <select id="host" aria-controls="paths">
+        <option value="">Select…</option>
+        <option value="iphone">iPhone</option>
+        <option value="android">Android</option>
+      </select>
+    </label>
 
-    <div class="result" id="result" role="status" aria-live="polite">
-      <p class="empty">Pick both options above.</p>
+    <div class="paths" id="paths" role="region" aria-live="polite">
+      <p class="empty">Select your phone type above.</p>
     </div>
 
     <p class="note">
-      AirDrop and Nearby Share don’t cross platforms. QR works for everyone at the table.
-      Source copy: <code>FAQ.md</code>.
+      AirDrop and Nearby don’t cross brands. QR works for everyone.
     </p>
   </div>
 
   <script>
-    const paths = {
-      "iphone|mixed": {
-        badge: "Best for the table",
-        title: "Show the QR code",
-        why: "When phones are mixed, there’s no one nearby protocol. QR reaches everyone.",
-        steps: [
-          "On the share screen, tap QR",
-          "Hold the bright code up or pass your phone",
-          "Everyone scans with Camera",
-        ],
-        alt: "Also fine: Share into a group chat if you already have one.",
-      },
-      "android|mixed": {
-        badge: "Best for the table",
-        title: "Show the QR code",
-        why: "When phones are mixed, there’s no one nearby protocol. QR reaches everyone.",
-        steps: [
-          "On the share screen, tap QR",
-          "Hold the bright code up or pass your phone",
-          "Everyone scans with Camera",
-        ],
-        alt: "Also fine: Share into a group chat if you already have one.",
-      },
-      "iphone|iphone": {
-        badge: "Share → AirDrop",
-        title: "AirDrop the link",
-        why: "Same-platform nearby works. (AirPlay is for TVs — you want AirDrop.)",
-        steps: [
-          "Ask them to turn AirDrop on (Everyone for 10 Minutes is fine at dinner)",
-          "Tap Share on the claim link",
-          "Choose AirDrop and pick their name (often one by one)",
-        ],
-        alt: "QR still works if AirDrop doesn’t show them.",
-      },
-      "android|android": {
-        badge: "Share → Nearby",
-        title: "Nearby Share the link",
-        why: "Android → Android can use Nearby Share / Quick Share (name varies by brand).",
-        steps: [
-          "Both phones: Bluetooth and Wi‑Fi on",
-          "Tap Share on the claim link",
-          "Choose Nearby Share / Quick Share and pick their phone",
-        ],
-        alt: "QR still works if Nearby doesn’t find them.",
-      },
-      "iphone|android": {
-        badge: "No nearby path",
-        warn: true,
-        title: "Use QR (or a chat app)",
-        why: "AirDrop won’t reach Android. There’s no shared nearby protocol across brands.",
-        steps: [
-          "Best: tap QR and have them scan",
-          "Or Share → Messages / WhatsApp if you already chat",
-          "Or Copy and send the link however you can",
-        ],
-        alt: "Don’t hunt for AirDrop — it won’t list their Android.",
-      },
-      "android|iphone": {
-        badge: "No nearby path",
-        warn: true,
-        title: "Use QR (or a chat app)",
-        why: "Nearby Share won’t reach iPhone. There’s no shared nearby protocol across brands.",
-        steps: [
-          "Best: tap QR and have them scan",
-          "Or Share → WhatsApp / Messages if you already chat",
-          "Or Copy and send the link however you can",
-        ],
-        alt: "Don’t hunt for Nearby — it won’t list their iPhone.",
-      },
+    const byHost = {
+      iphone: [
+        {
+          badge: "Best for mixed tables",
+          title: "Anyone at the table → QR",
+          body: "Hold up the code or pass your phone. iPhone and Android both scan with Camera.",
+          steps: ["Tap QR on the share screen", "Show the bright code", "They scan"],
+        },
+        {
+          badge: "Share → AirDrop",
+          title: "Other iPhones → AirDrop",
+          body: "Same-platform nearby. Not AirPlay.",
+          steps: [
+            "They turn AirDrop on (Everyone for 10 Minutes is fine)",
+            "Tap Share → AirDrop",
+            "Pick them one by one",
+          ],
+        },
+        {
+          badge: "No nearby path",
+          soft: true,
+          title: "Android guests → QR or chat",
+          body: "AirDrop won’t reach Android. Use QR, or Share into Messages / WhatsApp if you already chat.",
+          steps: ["Show QR, or", "Share → Messages / WhatsApp, or", "Copy the link"],
+        },
+      ],
+      android: [
+        {
+          badge: "Best for mixed tables",
+          title: "Anyone at the table → QR",
+          body: "Hold up the code or pass your phone. iPhone and Android both scan with Camera.",
+          steps: ["Tap QR on the share screen", "Show the bright code", "They scan"],
+        },
+        {
+          badge: "Share → Nearby",
+          title: "Other Androids → Nearby Share",
+          body: "Nearby Share / Quick Share (name varies by brand).",
+          steps: [
+            "Bluetooth and Wi‑Fi on for both",
+            "Tap Share → Nearby / Quick Share",
+            "Pick their phone",
+          ],
+        },
+        {
+          badge: "No nearby path",
+          soft: true,
+          title: "iPhone guests → QR or chat",
+          body: "Nearby won’t reach iPhone. Use QR, or Share into WhatsApp / Messages if you already chat.",
+          steps: ["Show QR, or", "Share → WhatsApp / Messages, or", "Copy the link"],
+        },
+      ],
     };
 
-    const fromEl = document.getElementById("from");
-    const toEl = document.getElementById("to");
-    const result = document.getElementById("result");
+    const host = document.getElementById("host");
+    const paths = document.getElementById("paths");
 
     function render() {
-      const key = `${fromEl.value}|${toEl.value}`;
-      const path = paths[key];
-      if (!fromEl.value || !toEl.value || !path) {
-        result.innerHTML = `<p class="empty">Pick both options above.</p>`;
+      const list = byHost[host.value];
+      if (!list) {
+        paths.innerHTML = `<p class="empty">Select your phone type above.</p>`;
         return;
       }
-      result.innerHTML = `
-        <span class="badge${path.warn ? " warn" : ""}">${path.badge}</span>
-        <h2>${path.title}</h2>
-        <p class="why">${path.why}</p>
-        <ol>${path.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
-        <p class="alt">${path.alt}</p>
-      `;
+      paths.innerHTML = list
+        .map(
+          (p) => `
+        <article class="path">
+          <span class="badge${p.soft ? " soft" : ""}">${p.badge}</span>
+          <h2>${p.title}</h2>
+          <p>${p.body}</p>
+          <ol>${p.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
+        </article>`,
+        )
+        .join("");
     }
 
-    fromEl.addEventListener("change", render);
-    toEl.addEventListener("change", render);
+    host.addEventListener("change", render);
   </script>
 </body>
 </html>

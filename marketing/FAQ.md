@@ -47,12 +47,10 @@ Guests open the link in a browser (or the app if they have it), enter a display 
 
 There is one claim link. How you deliver it depends on **your phone** and **their phone**. There is **no** common nearby protocol that works from iPhone to Android or Android to iPhone—AirDrop and Nearby Share do not cross platforms.
 
-**User-centered flow (marketing / help UI):** ask two questions, then show one path—
-
-1. Your phone? → iPhone / Android
-2. They’re on? → iPhone / Android / Mixed table
+**User-centered flow (marketing / help UI):** one question — **Host phone?** (iPhone / Android) — then show **all paths** from that phone (QR for everyone, same-platform nearby, cross-platform fallback).
 
 Interactive prototype: [share-scenarios.html](./share-scenarios.html)
+
 
 ### If the table is mixed (both kinds of phones)
 
