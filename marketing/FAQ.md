@@ -45,11 +45,16 @@ Guests open the link in a browser (or the app if they have it), enter a display 
 
 ## How do I share the claim link at the table?
 
-There is one claim link. How you deliver it depends on who is sitting with you. There is **no** common nearby protocol that works from iPhone to Android or Android to iPhone—AirDrop and Nearby Share do not cross platforms.
+There is one claim link. How you deliver it depends on **your phone** and **their phone**. There is **no** common nearby protocol that works from iPhone to Android or Android to iPhone—AirDrop and Nearby Share do not cross platforms.
 
-Use these cards as the share playbook (and as the source for a marketing sliding-card UI):
+**User-centered flow (marketing / help UI):** ask two questions, then show one path—
 
-### Card 1 — At the table (mixed phones)
+1. Your phone? → iPhone / Android
+2. They’re on? → iPhone / Android / Mixed table
+
+Interactive prototype: [share-scenarios.html](./share-scenarios.html)
+
+### If the table is mixed (both kinds of phones)
 
 **Best: QR**
 
@@ -57,9 +62,9 @@ Use these cards as the share playbook (and as the source for a marketing sliding
 2. Hold the bright code up or pass the phone.
 3. Everyone scans with Camera (iOS or Android).
 
-No contacts needed. Works when the table is a mix of iPhones and Androids.
+No contacts needed.
 
-### Card 2 — iPhone → iPhone
+### If you’re both on iPhone
 
 **Share → AirDrop** (not AirPlay)
 
@@ -67,31 +72,23 @@ No contacts needed. Works when the table is a mix of iPhones and Androids.
 2. Host taps **Share** → **AirDrop** → their name.
 3. Often one person at a time.
 
-Also fine: Messages, or the same QR.
+QR still works.
 
-### Card 3 — iPhone → Android
+### If you’re both on Android
 
-**No AirDrop / no Nearby path.**
+**Share → Nearby Share / Quick Share** (name varies by brand).
 
-Use **QR**, or **Share** into Messages / WhatsApp / email if you already chat with them. Copy link is the fallback.
+Both need Bluetooth/Wi‑Fi on; pick the nearby device. QR if Nearby fails.
 
-### Card 4 — Android → Android
+### If you’re on iPhone and they’re on Android (or the reverse)
 
-**Share → Nearby Share / Quick Share** (name varies by phone brand).
-
-Both need Bluetooth/Wi‑Fi on; pick the nearby device. QR still works if Nearby fails.
-
-### Card 5 — Android → iPhone
-
-**No Nearby / no AirDrop path.**
-
-Use **QR**, or **Share** into a chat app you both have. Copy link is the fallback.
+**No nearby path.** Use **QR**, or **Share** into Messages / WhatsApp / email if you already chat. Copy link is the fallback.
 
 ### Quick matrix
 
-| From → To | Nearby / AirDrop? | What to use |
+| Your phone → Theirs | Nearby / AirDrop? | What to use |
 |---|---|---|
-| Any → mixed table | No single nearby path | **QR** |
+| Either → mixed table | No single nearby path | **QR** |
 | iPhone → iPhone | AirDrop | **Share → AirDrop** or QR |
 | Android → Android | Nearby / Quick Share | **Share → Nearby** or QR |
 | iPhone → Android | No | **QR** or chat app |
