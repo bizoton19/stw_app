@@ -2,6 +2,9 @@
   "name": "split-the-wine",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 43147",
     "build": "next build",
