@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   isOutingDayReached,
   promotePlanningToDraftIfDue,
-} from "./outing.ts";
+} from "./outing";
 
 test("isOutingDayReached uses receiptDate calendar day", () => {
   assert.equal(
