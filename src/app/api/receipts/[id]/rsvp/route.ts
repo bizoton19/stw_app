@@ -14,6 +14,7 @@ export async function POST(
       personName?: string;
       personContact?: string | null;
       inviteToken?: string | null;
+      note?: string | null;
     };
     if (!body.response) {
       return Response.json({ error: "invalid", message: "response required" }, { status: 400 });
@@ -23,6 +24,7 @@ export async function POST(
       personName: body.personName,
       personContact: body.personContact,
       inviteToken: body.inviteToken,
+      note: body.note,
     });
     return Response.json({ receipt });
   } catch (err) {

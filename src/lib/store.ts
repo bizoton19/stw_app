@@ -40,19 +40,10 @@ export async function rsvp(
     personName?: string;
     personContact?: string | null;
     inviteToken?: string | null;
+    note?: string | null;
   },
 ) {
   return usingDatabase() ? pg.rsvp(id, input) : memory.rsvp(id, input);
-}
-
-export async function addInvitees(
-  id: string,
-  hostToken: string | null,
-  people: { personName: string; personContact?: string | null }[],
-) {
-  return usingDatabase()
-    ? pg.addInvitees(id, hostToken, people)
-    : memory.addInvitees(id, hostToken, people);
 }
 
 export async function parseReceipt(

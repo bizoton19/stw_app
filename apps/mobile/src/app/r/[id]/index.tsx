@@ -68,24 +68,21 @@ export default function ClaimScreen() {
 function RsvpScreen() {
   const flow = useClaimFlow();
   const receipt = flow.receipt!;
-  const inviteMatch = flow.inviteToken
-    ? receipt.invitees?.find((row) => row.response === "invited")
-    : undefined;
   const already =
     receipt.invitees?.find(
       (row) =>
-        row.response !== "invited" &&
-        ((flow.inviteToken && inviteMatch && row.id === inviteMatch.id) ||
-          (flow.guest?.name &&
-            row.personName.toLowerCase() === flow.guest.name.toLowerCase())),
+        (row.response === "going" ||
+          row.response === "maybe" ||
+          row.response === "cant") &&
+        flow.guest?.name &&
+        row.personName.toLowerCase() === flow.guest.name.toLowerCase(),
     ) ?? null;
 
-  const [name, setName] = useState(
-    () => inviteMatch?.personName || flow.guest?.name || "",
-  );
+  const [name, setName] = useState(() => already?.personName || flow.guest?.name || "");
   const [contact, setContact] = useState(
-    () => inviteMatch?.personContact || flow.guest?.contact || "",
+    () => already?.personContact || flow.guest?.contact || "",
   );
+  const [note, setNote] = useState(() => already?.note || "");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(
     already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
@@ -108,23 +105,22 @@ function RsvpScreen() {
     receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
 
   async function submit(response: "going" | "maybe" | "cant") {
-    if (!flow.inviteToken && !name.trim()) {
+    if (!name.trim()) {
       setErr("Add your name so the host knows who’s in.");
       return;
     }
     setBusy(true);
     setErr(null);
     try {
-      const { receipt: next } = await postRsvp(receipt.id, {
+      await postRsvp(receipt.id, {
         response,
-        personName: name.trim() || undefined,
+        personName: name.trim(),
         personContact: contact.trim() || null,
-        inviteToken: flow.inviteToken || null,
+        note: note.trim() || null,
       });
-      await flow.join({ name: name.trim() || inviteMatch?.personName || "Guest", contact: contact.trim() });
+      await flow.join({ name: name.trim(), contact: contact.trim() });
       await flow.refresh();
       setDone(response);
-      void next;
       void hapticNotify("success");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
@@ -135,6 +131,14 @@ function RsvpScreen() {
   }
 
   const place = receipt.restaurant?.trim() || "the outing";
+  const thanks =
+    done === "going"
+      ? "You’re going — claim opens when the host uploads the check."
+      : done === "maybe"
+        ? "Got it — maybe. Change anytime below."
+        : done === "cant"
+          ? "Noted. You can change this anytime below."
+          : null;
 
   return (
     <AppShell meta="RSVP">
@@ -146,61 +150,53 @@ function RsvpScreen() {
         title={place}
         keyboard
         footer={
-          done ? (
-            <View>
-              <Text style={styles.rsvpThanks}>
-                {done === "going"
-                  ? "You’re going — claim opens when the host uploads the check."
-                  : done === "maybe"
-                    ? "Got it — maybe. You can change this anytime from this link."
-                    : "Noted. Thanks for letting them know."}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.rsvpActions}>
-              <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
-                Going
-              </PrimaryButton>
-              <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
-                Maybe
-              </QuietButton>
-              <QuietButton disabled={busy} onPress={() => void submit("cant")}>
-                Can’t
-              </QuietButton>
-            </View>
-          )
+          <View style={styles.rsvpActions}>
+            {thanks ? <Text style={styles.rsvpThanks}>{thanks}</Text> : null}
+            <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
+              {done === "going" ? "Still going" : "Going"}
+            </PrimaryButton>
+            <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
+              {done === "maybe" ? "Still maybe" : "Maybe"}
+            </QuietButton>
+            <QuietButton disabled={busy} onPress={() => void submit("cant")}>
+              {done === "cant" ? "Still can’t" : "Can’t"}
+            </QuietButton>
+          </View>
         }
       >
         <HostMessage note={hostNoteText(receipt.hostInfo)} />
         <Text style={styles.lead}>
-          {flow.inviteToken
-            ? "You’re invited. RSVP now — you’ll claim what you had after the check is up."
-            : "RSVP for this outing. The host will open claiming once the check is uploaded."}
+          RSVP for this outing. Same link for everyone — you can change your answer later.
         </Text>
         {goingCount > 0 ? (
           <Text style={styles.rsvpMeta}>{goingCount} going so far</Text>
         ) : null}
         {err ? <Text style={styles.err}>{err}</Text> : null}
-        {!done ? (
-          <>
-            <Field
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Alex"
-              autoComplete="name"
-            />
-            <Field
-              label="Contact"
-              hint="(optional)"
-              value={contact}
-              onChangeText={setContact}
-              placeholder="phone, Venmo, or email"
-              autoComplete="tel"
-              keyboardType="default"
-            />
-          </>
-        ) : null}
+        <Field
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Alex"
+          autoComplete="name"
+        />
+        <Field
+          label="Contact"
+          hint="(optional)"
+          value={contact}
+          onChangeText={setContact}
+          placeholder="phone, Venmo, or email"
+          autoComplete="tel"
+          keyboardType="default"
+        />
+        <Field
+          label="Note"
+          hint="(optional)"
+          value={note}
+          onChangeText={setNote}
+          placeholder="Bringing a +1, running late…"
+          multiline
+          style={{ minHeight: 72, height: undefined, paddingVertical: 12, textAlignVertical: "top" }}
+        />
       </InterviewChrome>
     </AppShell>
   );

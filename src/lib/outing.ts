@@ -76,6 +76,7 @@ export function newInvitee(input: {
   personName: string;
   personContact?: string | null;
   response?: InviteeResponse;
+  note?: string | null;
 }): Invitee {
   const personName = input.personName.trim();
   if (!personName) {
@@ -87,42 +88,48 @@ export function newInvitee(input: {
     personName,
     personContact: input.personContact?.trim() || null,
     inviteToken: randomUUID().replace(/-/g, ""),
-    response: input.response ?? "invited",
+    response: input.response ?? "going",
+    note: input.note?.trim() || null,
     inviteSentAt: null,
     updatedAt: now,
   };
 }
 
 /**
- * Public board: no tokens; hide Invited rows (except the viewer’s own personalized invite).
- * Going / Maybe / Can’t names stay visible without contact.
+ * Public board: only people who RSVP’d (going / maybe / can’t).
+ * No invite tokens or contacts.
  */
 export function publicInvitees(
   invitees: Invitee[] | undefined,
-  inviteToken?: string | null,
+  _inviteToken?: string | null,
 ): Invitee[] {
   if (!invitees?.length) return [];
-  const token = inviteToken?.trim() || "";
   return invitees
     .filter(
       (row) =>
-        row.response !== "invited" || (token.length > 0 && row.inviteToken === token),
+        row.response === "going" || row.response === "maybe" || row.response === "cant",
     )
     .map((row) => ({
       id: row.id,
       personName: row.personName,
-      personContact:
-        token && row.inviteToken === token ? row.personContact ?? null : null,
+      personContact: null,
       inviteToken: "",
       response: row.response,
+      note: row.note ?? null,
       inviteSentAt: null,
       updatedAt: row.updatedAt,
     }));
 }
 
-/** Host board: full roster including tokens for personalized share links. */
+/** Host board: same RSVP roster (notes visible; no unused Invited rows). */
 export function hostInvitees(invitees: Invitee[] | undefined): Invitee[] {
-  return invitees ? [...invitees] : [];
+  return publicInvitees(invitees);
+}
+
+function normalizeNote(note?: string | null): string | null {
+  if (note == null) return null;
+  const t = note.trim();
+  return t ? t.slice(0, 280) : null;
 }
 
 export function applyRsvp(
@@ -132,6 +139,7 @@ export function applyRsvp(
     personName?: string;
     personContact?: string | null;
     inviteToken?: string | null;
+    note?: string | null;
   },
 ): Invitee[] {
   const response = input.response;
@@ -141,6 +149,8 @@ export function applyRsvp(
   const list = invitees ? [...invitees] : [];
   const now = new Date().toISOString();
   const token = input.inviteToken?.trim();
+  const note = normalizeNote(input.note);
+  const noteProvided = input.note !== undefined;
 
   if (token) {
     const idx = list.findIndex((row) => row.inviteToken === token);
@@ -153,6 +163,7 @@ export function applyRsvp(
       personName: input.personName?.trim() || prev.personName,
       personContact: input.personContact?.trim() || prev.personContact || null,
       response,
+      note: noteProvided ? note : prev.note ?? null,
       updatedAt: now,
     };
     return list;
@@ -163,13 +174,15 @@ export function applyRsvp(
     throw Object.assign(new Error("name_required"), { code: "invalid" });
   }
   const existing = list.findIndex(
-    (row) => row.personName.toLowerCase() === name.toLowerCase() && row.response !== "invited",
+    (row) => row.personName.toLowerCase() === name.toLowerCase(),
   );
   if (existing >= 0) {
+    const prev = list[existing];
     list[existing] = {
-      ...list[existing],
-      personContact: input.personContact?.trim() || list[existing].personContact || null,
+      ...prev,
+      personContact: input.personContact?.trim() || prev.personContact || null,
       response,
+      note: noteProvided ? note : prev.note ?? null,
       updatedAt: now,
     };
     return list;
@@ -179,6 +192,7 @@ export function applyRsvp(
       personName: name,
       personContact: input.personContact,
       response,
+      note,
     }),
   );
   return list;

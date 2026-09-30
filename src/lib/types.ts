@@ -1,15 +1,17 @@
 export type ReceiptStatus = "planning" | "draft" | "open" | "finalized";
 
-/** Guest / host roster row for a planning outing (ephemeral with the tab). */
+/** Guest roster row for a planning outing (ephemeral with the tab). */
 export type InviteeResponse = "invited" | "going" | "maybe" | "cant";
 
 export type Invitee = {
   id: string;
   personName: string;
   personContact?: string | null;
-  /** Unguessable token for personalized /r/:id?invite= links. */
+  /** Legacy personalized-invite token; new flow uses one group link only. */
   inviteToken: string;
   response: InviteeResponse;
+  /** Optional note from the guest when they RSVP or change it. */
+  note?: string | null;
   inviteSentAt?: string | null;
   updatedAt: string;
 };

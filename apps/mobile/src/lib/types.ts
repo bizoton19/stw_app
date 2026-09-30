@@ -6,8 +6,11 @@ export type Invitee = {
   id: string;
   personName: string;
   personContact?: string | null;
+  /** Legacy personalized-invite token; new flow uses one group link only. */
   inviteToken: string;
   response: InviteeResponse;
+  /** Optional note from the guest when they RSVP or change it. */
+  note?: string | null;
   inviteSentAt?: string | null;
   updatedAt: string;
 };

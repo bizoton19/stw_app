@@ -1,6 +1,8 @@
 # Plan an outing (RSVP) + Tonight (receipt) — dual host paths
 
-Status: **implementing on branch `plan-an-outing`** — use Railway schema `split_the_wine_dev` (`DB_SCHEMA`).  
+Status: **on branch `plan-an-outing`** — Railway schema `split_the_wine_dev` (`DB_SCHEMA`).  
+**Product (2026-09-30):** one **group invite link** for everyone — no per-name invites. Host board shows people who RSVP **Going / Maybe / Can’t**, each with an optional note; guests can change RSVP + note anytime from the same link.
+
 Related: [ui-flows.md](./ui-flows.md), [phase-2-venue.md](./phase-2-venue.md), [expected-party-size.md](./expected-party-size.md), [guest-first-reconcile.md](./guest-first-reconcile.md), [requirements.md](./requirements.md) §0.
 
 ---
@@ -10,9 +12,9 @@ Related: [ui-flows.md](./ui-flows.md), [phase-2-venue.md](./phase-2-venue.md), [
 Give hosts **two ways to start the same outing**:
 
 1. **Tonight** (current) — already at the table with the check → snap → publish → share.  
-2. **Plan an outing** (new) — pick venue (+ time) → invite people → they **RSVP** → after the outing host **uploads the receipt into that space** → same claim / settle flow. Latecomers still get the same link.
+2. **Plan an outing** (new) — pick venue (+ time) → share one invite link → they **RSVP** → after the outing host **uploads the receipt into that space** → same claim / settle flow. Latecomers still get the same link.
 
-One space. One night. Two entrances. Optional **per-person invites** so the host board shows **Invited → Going** when someone opens their link and taps yes.
+One space. One night. Two entrances. Roster = who answered, not who was named in advance.
 
 ---
 

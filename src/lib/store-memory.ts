@@ -9,7 +9,6 @@ import {
   assertNoVenueDayConflict,
   canParseStatus,
   hostInvitees,
-  newInvitee,
   normalizePlanInput,
   publicInvitees,
   type PlanCreateInput,
@@ -18,7 +17,6 @@ import type {
   Claim,
   Fee,
   HostInfo,
-  Invitee,
   Item,
   LiveEvent,
   ParseResult,
@@ -719,6 +717,7 @@ export async function rsvp(
     personName?: string;
     personContact?: string | null;
     inviteToken?: string | null;
+    note?: string | null;
   },
 ): Promise<PublicReceipt> {
   return withLock(id, () => {
@@ -732,29 +731,6 @@ export async function rsvp(
     receipt.invitees = applyRsvp(receipt.invitees, input);
     emit(receipt, "updated");
     return toPublic(receipt);
-  });
-}
-
-export async function addInvitees(
-  id: string,
-  hostToken: string | null,
-  people: { personName: string; personContact?: string | null }[],
-): Promise<{ receipt: PublicReceipt; created: Invitee[] }> {
-  return withLock(id, () => {
-    const receipt = assertHost(id, hostToken);
-    if (receipt.status !== "planning") {
-      throw Object.assign(new Error("not_planning"), { code: "conflict" });
-    }
-    const created: Invitee[] = [];
-    const list = receipt.invitees ? [...receipt.invitees] : [];
-    for (const person of people) {
-      const row = newInvitee(person);
-      list.push(row);
-      created.push(row);
-    }
-    receipt.invitees = list;
-    emit(receipt, "updated");
-    return { receipt: toPublic(receipt, { host: true }), created };
   });
 }
 
