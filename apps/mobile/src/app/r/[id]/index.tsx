@@ -50,8 +50,14 @@ export default function ClaimScreen() {
     );
   }
 
-  if (flow.receipt.status === "planning") {
-    return <RsvpScreen />;
+  if (flow.receipt.status === "planning" || flow.receipt.status === "draft") {
+    // Draft from a planned outing (has nightAt, no items yet) still shows RSVP.
+    if (
+      flow.receipt.status === "planning" ||
+      (flow.receipt.nightAt && (flow.receipt.items?.length ?? 0) === 0)
+    ) {
+      return <RsvpScreen />;
+    }
   }
 
   if (!flow.guest) {

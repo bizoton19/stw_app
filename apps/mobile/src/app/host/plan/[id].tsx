@@ -1,20 +1,42 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Share, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 import { goHostDesk } from "@/lib/navigation";
-import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import {
+  AppShell,
+  FooterHint,
+  InterviewChrome,
+  PrimaryButton,
+  QuietButton,
+} from "@/components/chrome";
 import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
+import { clearHostedReceipt, patchHostedReceipt } from "@/lib/host-tabs";
 import { getHostToken } from "@/lib/session";
 import type { Invitee, PublicReceipt } from "@/lib/types";
 import { colors } from "@/lib/theme";
+
+function localTodayKey(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function outingDay(receipt: PublicReceipt | null): string | null {
+  if (!receipt) return null;
+  if (receipt.receiptDate && /^\d{4}-\d{2}-\d{2}$/.test(receipt.receiptDate)) {
+    return receipt.receiptDate;
+  }
+  if (receipt.nightAt) return receipt.nightAt.slice(0, 10);
+  return null;
+}
 
 export default function HostPlanBoard() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [receipt, setReceipt] = useState<PublicReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const claimUrl = id ? publicClaimUrl(id) : "";
   const hostToken = id ? getHostToken(id) : null;
@@ -25,10 +47,19 @@ export default function HostPlanBoard() {
       const data = await api<PublicReceipt>(`/api/receipts/${id}`, { hostToken });
       setReceipt(data);
       setError(null);
+      if (data.status === "draft" || data.status === "planning") {
+        await patchHostedReceipt(id, { status: data.status });
+      }
+      // Promoted to draft on event day — host uploads from capture, not settle.
+      if (data.status === "draft") {
+        // Stay on this board so they still see RSVPs + Upload CTA.
+      } else if (data.status === "open" || data.status === "finalized") {
+        router.replace({ pathname: "/r/[id]/settle", params: { id, host: "1" } });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load outing");
     }
-  }, [hostToken, id]);
+  }, [hostToken, id, router]);
 
   useEffect(() => {
     void load();
@@ -43,10 +74,8 @@ export default function HostPlanBoard() {
     };
   }, [receipt?.invitees]);
 
-  async function copyLink() {
-    await Clipboard.setStringAsync(claimUrl);
-    Alert.alert("Copied", "Invite link is on your clipboard.");
-  }
+  const day = outingDay(receipt);
+  const canUpload = Boolean(day && day <= localTodayKey());
 
   async function shareLink() {
     await Share.share({
@@ -56,8 +85,41 @@ export default function HostPlanBoard() {
   }
 
   function uploadCheck() {
-    if (!id) return;
+    if (!id || !canUpload) return;
     router.push(`/host/capture?outing=${id}`);
+  }
+
+  function confirmDelete() {
+    if (!id) return;
+    Alert.alert(
+      "Delete this outing?",
+      `${receipt?.restaurant || "This outing"} will be deleted for everyone. The invite link will stop working.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setBusy(true);
+              try {
+                if (!hostToken) throw new Error("Missing host token");
+                await api(`/api/receipts/${id}`, { method: "DELETE", hostToken });
+              } catch (err) {
+                const e = err as { message?: string; code?: string };
+                if (e.code !== "not_found") {
+                  Alert.alert("Couldn't delete", e.message || "Try again in a moment.");
+                  setBusy(false);
+                  return;
+                }
+              }
+              await clearHostedReceipt(id);
+              goHostDesk();
+            })();
+          },
+        },
+      ],
+    );
   }
 
   const whenLabel = receipt?.nightAt
@@ -74,21 +136,35 @@ export default function HostPlanBoard() {
     groups.going.length + groups.maybe.length + groups.cant.length;
 
   return (
-    <AppShell meta="Planning">
+    <AppShell meta={canUpload ? "Today" : "Planning"}>
       <InterviewChrome
-        step={2}
-        total={3}
-        kicker="Planning"
+        step={1}
+        total={1}
+        hideProgress
+        kicker={canUpload ? "Outing day" : "Planning"}
         title={receipt?.restaurant || "Your outing"}
         onBack={goHostDesk}
         onHome={goHostDesk}
         keyboard
         footer={
           <View>
-            <FooterHint>When it’s over, upload the check into this same space.</FooterHint>
-            <PrimaryButton onPress={uploadCheck}>Upload the check</PrimaryButton>
-            <QuietButton onPress={() => void shareLink()}>Share invite link</QuietButton>
-            <QuietButton onPress={() => void copyLink()}>Copy link</QuietButton>
+            {canUpload ? (
+              <>
+                <FooterHint>Tonight’s the night — upload the check into this space.</FooterHint>
+                <PrimaryButton onPress={uploadCheck}>Upload the check</PrimaryButton>
+                <QuietButton onPress={() => void shareLink()}>Share invite link</QuietButton>
+              </>
+            ) : (
+              <>
+                <FooterHint>
+                  Upload the check opens on the outing day. Share the link so people can RSVP.
+                </FooterHint>
+                <PrimaryButton onPress={() => void shareLink()}>Share invite link</PrimaryButton>
+              </>
+            )}
+            <QuietButton disabled={busy} onPress={confirmDelete}>
+              Delete outing
+            </QuietButton>
           </View>
         }
         supportTip
@@ -103,7 +179,7 @@ export default function HostPlanBoard() {
           One link for everyone. People show up here when they RSVP Going, Maybe, or Can’t.
         </Text>
         {rsvpCount === 0 ? (
-          <Text style={styles.empty}>No RSVPs yet — share the link above.</Text>
+          <Text style={styles.empty}>No RSVPs yet — share the link.</Text>
         ) : null}
 
         <Roster title="Going" people={groups.going} />

@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       venue?: ReceiptVenue | null;
       nightAt?: string;
+      receiptDate?: string | null;
       expectedPartySize?: number | null;
       hostInfo?: unknown;
       note?: string | null;
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
     const created = await createPlanReceipt({
       venue: body.venue,
       nightAt: body.nightAt,
+      receiptDate: body.receiptDate,
       expectedPartySize: body.expectedPartySize,
       hostInfo: (hostInfo as HostInfo | undefined) ?? null,
       note: body.note,

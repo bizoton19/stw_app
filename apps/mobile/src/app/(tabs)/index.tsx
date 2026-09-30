@@ -92,7 +92,9 @@ export default function HomeScreen() {
 
   function openBoard(id: string) {
     const row = hosted.find((r) => r.id === id);
-    if (row?.status === "planning") {
+    // Planned outings (and draft after event-day promotion) stay on the plan board
+    // until the check is uploaded / published.
+    if (row?.status === "planning" || (row?.status === "draft" && row.receiptDay)) {
       router.push(`/host/plan/${id}`);
       return;
     }
@@ -335,8 +337,10 @@ export default function HomeScreen() {
                         </Text>
                         <Text style={styles.heroCta}>
                           {active.status === "planning"
-                            ? "Tap to invite & RSVP · upload check when over"
-                            : "Tap for who owes what · claimed & remaining"}
+                            ? "Tap to share invite & see RSVPs"
+                            : active.status === "draft"
+                              ? "Tap to upload the check"
+                              : "Tap for who owes what · claimed & remaining"}
                         </Text>
                       </View>
                     </View>

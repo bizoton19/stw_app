@@ -72,6 +72,7 @@ export async function createDraftReceipt(): Promise<{ receiptId: string; hostTok
 export async function createPlanOuting(input: {
   venue: import("./types").ReceiptVenue;
   nightAt: string;
+  receiptDate?: string | null;
   expectedPartySize?: number | null;
   note?: string | null;
 }): Promise<{

@@ -12,6 +12,7 @@ import {
   canParseStatus,
   hostInvitees,
   normalizePlanInput,
+  promotePlanningToDraftIfDue,
   publicInvitees,
   type PlanCreateInput,
 } from "./outing";
@@ -310,7 +311,11 @@ export async function getPublicReceipt(
   await ensureSchema();
   await seedDemoIfNeeded();
   return withTransaction(async (client) => {
-    const receipt = await requireReceipt(client, id);
+    const receipt = await requireReceipt(client, id, { forUpdate: true });
+    if (promotePlanningToDraftIfDue(receipt)) {
+      await upsertReceipt(client, receipt);
+      emit(receipt, "updated");
+    }
     const host = Boolean(opts?.hostToken) && opts!.hostToken === receipt.hostToken;
     return toPublic(receipt, { host, inviteToken: opts?.inviteToken });
   });
@@ -849,7 +854,7 @@ export async function rsvp(
   await ensureSchema();
   return withTransaction(async (client) => {
     const receipt = await requireReceipt(client, id, { forUpdate: true });
-    if (receipt.status !== "planning" && receipt.status !== "open") {
+    if (receipt.status !== "planning" && receipt.status !== "draft" && receipt.status !== "open") {
       throw Object.assign(new Error("rsvp_closed"), {
         code: "conflict",
         message: "This outing is not taking RSVPs.",

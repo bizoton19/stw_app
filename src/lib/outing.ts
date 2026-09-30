@@ -15,6 +15,8 @@ function shortId(): string {
 export type PlanCreateInput = {
   venue: ReceiptVenue;
   nightAt: string;
+  /** Host's intended calendar day (YYYY-MM-DD). Prefer over UTC slice of nightAt. */
+  receiptDate?: string | null;
   expectedPartySize?: number | null;
   hostInfo?: HostInfo | null;
   note?: string | null;
@@ -43,10 +45,16 @@ export function normalizePlanInput(input: PlanCreateInput): {
     });
   }
   const nightAt = night.toISOString();
-  const receiptDate = receiptDayKey({
-    receiptDate: nightAt.slice(0, 10),
-    createdAt: nightAt,
-  });
+  const explicitDay =
+    typeof input.receiptDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.receiptDate.trim())
+      ? input.receiptDate.trim()
+      : null;
+  const receiptDate =
+    explicitDay ??
+    receiptDayKey({
+      receiptDate: nightAt.slice(0, 10),
+      createdAt: nightAt,
+    });
   const restaurant = input.venue.name.trim();
   let expectedPartySize: number | null = null;
   if (input.expectedPartySize != null) {
@@ -70,6 +78,46 @@ export function normalizePlanInput(input: PlanCreateInput): {
     expectedPartySize,
     hostInfo,
   };
+}
+
+/** Calendar day for the outing (YYYY-MM-DD). */
+export function outingDayKey(
+  receipt: Pick<Receipt, "receiptDate" | "nightAt" | "createdAt">,
+): string | null {
+  if (receipt.receiptDate && /^\d{4}-\d{2}-\d{2}$/.test(receipt.receiptDate)) {
+    return receipt.receiptDate;
+  }
+  if (receipt.nightAt) {
+    const d = new Date(receipt.nightAt);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+/** True when the outing's calendar day is today or already past (local `now`). */
+export function isOutingDayReached(
+  receipt: Pick<Receipt, "receiptDate" | "nightAt" | "createdAt">,
+  now: Date = new Date(),
+): boolean {
+  const day = outingDayKey(receipt);
+  if (!day) return false;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return day <= today;
+}
+
+/**
+ * On the outing day, planning tabs become draft so the host can upload the check.
+ * Mutates receipt in place; returns true if status changed.
+ */
+export function promotePlanningToDraftIfDue(
+  receipt: Pick<Receipt, "status" | "receiptDate" | "nightAt" | "createdAt">,
+  now: Date = new Date(),
+): boolean {
+  if (receipt.status !== "planning") return false;
+  if (!isOutingDayReached(receipt, now)) return false;
+  receipt.status = "draft";
+  return true;
 }
 
 export function newInvitee(input: {

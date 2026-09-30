@@ -70,7 +70,12 @@ export function ClaimPage({
     );
   }
 
-  if (receipt.status === "planning") {
+  if (
+    receipt.status === "planning" ||
+    (receipt.status === "draft" &&
+      receipt.nightAt &&
+      (receipt.items?.length ?? 0) === 0)
+  ) {
     return (
       <PhoneShell meta="RSVP">
         <RsvpGuest
