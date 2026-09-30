@@ -1,4 +1,4 @@
-# Plan ahead (RSVP) + Tonight (receipt) — dual host paths
+# Plan an outing (RSVP) + Tonight (receipt) — dual host paths
 
 Status: **product + UX plan — not scheduled.**  
 Related: [ui-flows.md](./ui-flows.md), [phase-2-venue.md](./phase-2-venue.md), [expected-party-size.md](./expected-party-size.md), [guest-first-reconcile.md](./guest-first-reconcile.md), [requirements.md](./requirements.md) §0.
@@ -7,25 +7,25 @@ Related: [ui-flows.md](./ui-flows.md), [phase-2-venue.md](./phase-2-venue.md), [
 
 ## One-line idea
 
-Give hosts **two ways to start the same night**:
+Give hosts **two ways to start the same outing**:
 
 1. **Tonight** (current) — already at the table with the check → snap → publish → share.  
-2. **Plan ahead** (new) — pick venue (+ night) → share one link → friends **RSVP** → after dinner host **uploads the receipt into that space** → same claim / settle flow. Latecomers still get the same link.
+2. **Plan an outing** (new) — pick venue (+ time) → invite people → they **RSVP** → after the outing host **uploads the receipt into that space** → same claim / settle flow. Latecomers still get the same link.
 
-One space. One link. Two entrances.
+One space. One night. Two entrances. Optional **per-person invites** so the host board shows **Invited → Going** when someone opens their link and taps yes.
 
 ---
 
 ## Why this belongs in Split the Wine
 
-The “I put down the card” host often **knows days ahead** they’ll pay. Today they can’t invite anyone until the receipt is parsed. Planning a dinner party should not require inventing a second product (Evite + Splitwise).
+The “I put down the card” host often **knows days ahead** they’ll pay. Today they can’t invite anyone until the receipt is parsed. Planning an outing should not require inventing a second product (Evite + Splitwise).
 
 RSVP here is **coordination for tonight’s table**, not a social network:
 
 - No accounts  
-- No friend graph  
-- No permanent events calendar  
-- Link still expires with the night  
+- No permanent friend graph or contact sync to the cloud as a product feature  
+- No long-lived events calendar  
+- Link still expires with the outing  
 - Host receipt remains truth for money  
 - RSVP ≠ auto-claim (guests still tap what they had)
 
@@ -37,104 +37,176 @@ RSVP here is **coordination for tonight’s table**, not a social network:
 flowchart TD
   Desk["Host desk"]
   Desk --> Tonight["Tonight — I have the check"]
-  Desk --> Ahead["Plan ahead — dinner party"]
+  Desk --> Ahead["Plan an outing"]
 
   Tonight --> Cap["Snap / upload receipt"]
   Cap --> Interview["Venue → items → pour → fees → pay"]
   Interview --> Open["Status: open — claim board"]
   Open --> Share["Share / QR"]
 
-  Ahead --> Venue["Pick venue + night"]
+  Ahead --> Venue["Pick venue + when"]
   Venue --> PayEarly["Optional: pay handles now"]
-  PayEarly --> Planning["Status: planning — RSVP board"]
-  Planning --> ShareEarly["Share same link"]
-  ShareEarly --> Rsvp["Guests: Going / Maybe / Can't"]
+  PayEarly --> Planning["Status: planning"]
+  Planning --> Invite["Invite: contacts / share / QR"]
+  Invite --> Invited["Roster: Invited"]
+  Invited --> RsvpYes["Guest opens link → Going"]
   Planning --> Attach["Host: Upload receipt when it's over"]
   Attach --> Interview2["Items → pour → fees → confirm pay"]
   Interview2 --> Open
-  Rsvp -.->|"same people already in space"| Open
+  RsvpYes -.->|"same people already in space"| Open
 ```
 
-| | **Tonight** | **Plan ahead** |
+| | **Tonight** | **Plan an outing** |
 |---|---|---|
 | When | Check in hand | Days / hours before |
-| First artifact | Receipt photo | Venue + night + link |
-| Guest early action | — | RSVP only |
+| First artifact | Receipt photo | Venue + when + link |
+| Guest early action | — | Invite → RSVP |
 | Link timing | After publish | Immediately after create |
-| After dinner | Already on claim board | Host attaches receipt → board unlocks claims |
-| Latecomers | Share again | Same link (RSVP or claim, by status) |
+| After the outing | Already on claim board | Host attaches receipt → board unlocks claims |
+| Latecomers | Share again | Same base link (or new invite) |
+
+---
+
+## Per-contact invites → Invited → Going (feasibility)
+
+### Desired behavior
+
+1. Host picks people (from device contacts or typed names) and sends **individually**.  
+2. App records each person on the **host roster as Invited**.  
+3. When that person opens **their** invite link and taps **Going**, roster flips **Invited → Going** (RSVP yes).  
+4. Host sees live status without texting “did you get this?”
+
+### Feasibility verdict
+
+| Approach | Feasible? | Notes |
+|---|---|---|
+| **A. In-app contact / name picker → personalized invite link** | **Yes — recommended** | Host selects Sam → we create invitee row + token → `Share.share` / Messages with `/r/:id?invite=tok` → on Going, token binds RSVP to that row |
+| **B. Generic OS share sheet and “know who they messaged”** | **No** | iOS/Android share targets do **not** return the recipient. App cannot mark Invited just because Share opened |
+| **C. Upload full address book to server** | **No — don’t** | Breaks “no social graph”; App Review + privacy story get worse |
+| **D. Host types names only, one generic link** | **Yes — lighter** | Roster starts empty until self-serve RSVP; no Invited state unless host adds names manually as Invited |
+| **E. SMS via `sms:` / `Linking` with body prefilled** | **Yes — partial** | Host still chooses contact in Messages UI; we only get Invited if we created the invitee **before** opening Messages (same as A) |
+
+**Bottom line:** Invited → Going works if the host **creates the invitee in-app first**, then shares a **tokenized link**. Relying on the system share sheet alone cannot record who was invited.
+
+### Invitee status lifecycle
+
+```text
+(none) → Invited → Going
+              ↘ Maybe
+              ↘ Can't
+              ↘ (expired / no response)
+```
+
+| Status | How it appears | Trigger |
+|---|---|---|
+| **Invited** | On host roster after host sends / saves invite | Host picks contact or adds name + shares that person’s link |
+| **Going** | RSVP yes | Guest opens invite link (token preferred) and taps Going |
+| **Maybe / Can’t** | Soft declines | Guest taps Maybe / Can’t |
+| Self-serve **Going** (no prior invite) | Shows under Going; optional “walk-in” | Guest opens bare `/r/:id` and RSVPs (no token) |
+
+When invite link opens:
+
+1. Resolve `invite` token → prefill name (and optional contact).  
+2. Primary CTA: **Going** (and Maybe / Can’t).  
+3. On Going: `response: going`, clear Invited. Host board updates (SSE/poll — same live channel as claims).  
+4. If token missing/invalid: fall back to blank RSVP form (still usable).
+
+### Privacy / philosophy guardrails
+
+- Contacts permission is **on-device picker only** (`expo-contacts` or system contact picker).  
+- Server stores for **this outing only**: display name, optional phone/email the host chose to attach, invite token, RSVP state.  
+- Not a reusable “host contacts” product DB across nights.  
+- Tokens are unguessable; listing invitees requires host token.  
+- Guest never has to install the app to RSVP (mobile web).
+
+### Host invite UX (planning board)
+
+```
+Invite people
+├─ Add from contacts     → multi-select → creates Invited rows → share one-by-one or “Send next”
+├─ Add by name           → Invited row → Copy / Share that link
+├─ Share group link      → bare /r/:id (no Invited rows; walk-in RSVPs)
+└─ QR                    → same bare link (table poster / group chat)
+```
+
+Copy: **“Invite one-by-one to track who’s in — or drop one link in the group chat.”**
+
+One-by-one send flow (keeps share sheet honest):
+
+1. Host selects 3 contacts → 3 Invited rows.  
+2. UI: “Send to Sam” → OS share with Sam’s personalized URL → mark `inviteSentAt`.  
+3. Next: Jordan…  
+4. Roster shows Invited until each taps Going.
+
+Optional later: WhatsApp / Messages deep link with body; still requires pre-created invitee.
 
 ---
 
 ## Design principles (UI / UX)
 
 1. **One composition, one job per screen** — Host desk offers two clear starts, not a dashboard of modes.  
-2. **Brand + night as hero** — Planning space shows venue name / map / date as the hero, not a form farm.  
-3. **Same link forever for that night** — `/r/:id` (or alias `/n/:id` → same). Guests bookmark once.  
-4. **Status-driven chrome** — Planning vs open vs closed change the board; guests never juggle two URLs.  
-5. **Progressive host setup** — Venue required to create; pay handles can be now or at attach time; party size optional.  
-6. **RSVP is light** — Name + Going / Maybe / Can’t. Contact optional (same as join today). No “bring a plus-one” graph in v1.  
-7. **Receipt attach is the ceremony** — Big, calm CTA: “Dinner’s over — add the check.” Then reuse capture → parse → items… with venue **already locked** (confirm or change).  
-8. **Pre-seed, don’t auto-claim** — Going guests appear as **suggested claimers** (name chips). They still claim lines. No silent assignment.  
-9. **Ephemeral** — Planning nights expire (e.g. 7 days after `nightAt`, or 48h after last activity if never attached). No archive of parties.  
+2. **Brand + outing as hero** — Planning space shows venue / map / when as the hero, not a form farm.  
+3. **Same base link for the outing** — `/r/:id`; personal invites only add `?invite=`.  
+4. **Status-driven chrome** — Planning vs open vs closed change the board.  
+5. **Progressive host setup** — Venue required; pay optional until open; invites optional (group link still works).  
+6. **RSVP is light** — Going / Maybe / Can’t. Invited is host-side until yes.  
+7. **Receipt attach is the ceremony** — “Outing’s over — add the check.” Venue already locked (confirm or change).  
+8. **Pre-seed, don’t auto-claim** — Going names become suggested claimers.  
+9. **Ephemeral** — Expire after `nightAt` (+ grace) or inactivity; no party archive.  
 10. **Fair not equal still wins** — Money path unchanged once open.
 
-Avoid: cards-as-decoration, pill cluster stats in the hero, “event management” chrome, calendar sync, ticket QR as identity.
+Avoid: cards-as-decoration, vanity stat strips, calendar sync, ticket-QR-as-identity, uploading the address book.
 
 ---
 
-## Host UX — Plan ahead
+## Host UX — Plan an outing
 
 ### Desk entry
 
 ```
 Host desk
 ├─ Start a tab          → Tonight (existing ready / capture)
-└─ Plan a dinner        → new /host/plan (or /host/ahead)
+└─ Plan an outing?      → /host/plan
 ```
 
-Copy angle: **“Hosting later? Share a link before the check.”**
+Copy angle: **“Going out later? Invite people before the check.”**
 
-### Create night (2–3 short steps)
+### Create outing (2–3 short steps)
 
-1. **Where?** — Existing venue typeahead (Mapbox / MapKit). Required Places pin (same bar as today).  
-2. **When?** — Date + optional time (local). Default: tonight.  
-3. **Optional** — Expected headcount (ties to [expected-party-size.md](./expected-party-size.md)); note (“Birthday — I’m putting the card down”).  
-4. **Pay** — Soft gate: “Add how people can pay you” now **or** “I’ll add this when I upload the check.”  
-   - If skip: space is planning-only until pay is set at attach.  
-   - Prefer collecting pay early so attach is faster after dinner.
+1. **Where?** — Existing venue typeahead (Mapbox / MapKit). Required Places pin.  
+2. **When?** — Date + optional time. Default: tonight.  
+3. **Optional** — Expected headcount; note (“Birthday — I’m putting the card down”).  
+4. **Pay** — Now or at attach time (optional early).
 
-Primary CTA: **Create link** → land on **planning share** (Copy / Share / QR — reuse share chrome).
+Primary CTA: **Create outing** → planning share / invite.
 
-### Host planning board (live while status = planning)
+### Host planning board
 
-Hero: venue name, static map or photo strip, night datetime.  
-Body: RSVP list (Going / Maybe / Can’t counts — simple, not a stat strip of vanity metrics).  
-Footer CTAs:
+Hero: venue, map/atmosphere, datetime.  
+Body: roster grouped lightly — **Going** · **Invited** · **Maybe** · **Can’t** (don’t over-card it).  
+Footer:
 
-- **Share invite**  
-- **Upload the check** (primary when dinner should be over; always available)  
+- **Invite people**  
+- **Share group link** / QR  
+- **Upload the check**  
 - Edit venue / time / note  
 
-Empty RSVP: calm empty state — “Share the link — friends tap Going.”
+Empty: “Invite friends — they’ll show as Invited until they tap Going.”
 
-### Attach receipt (bridge into tonight flow)
+### Attach receipt
 
-1. Host taps **Upload the check** → capture / library (same as tonight).  
-2. Parse into **this** night’s id (not a new receipt id).  
-3. Restaurant step: venue **pre-filled / locked** with “Looks right?” confirm; change only if wrong place.  
-4. Items → pour → fees → pay (if missing) → **Open claims**.  
-5. Status flips `planning` → `open`. Guests already in the space refresh into the claim board. Push optional: “Check is up — claim what you had.”
+Same as before: capture → parse **into this id** → confirm venue → items → pour → fees → pay → **open**. Push optional: “Check is up — claim what you had.”
 
 ---
 
-## Guest UX — same link, two boards
+## Guest UX — same outing, two boards
 
 ### URL
 
-Keep **`/r/:id`** as the public surface (claim mental model already shipping). Optional pretty path later; not required for v1.
+- Group: `https://api.splitthewine.app/r/:id`  
+- Personal: `https://api.splitthewine.app/r/:id?invite=<token>`
 
-### Status = planning
+### Status = planning (+ invite token)
 
 ```
 ┌─────────────────────────────┐
@@ -142,64 +214,39 @@ Keep **`/r/:id`** as the public surface (claim mental model already shipping). O
 │  Maison Premiere            │
 │  [ map / atmosphere ]       │
 │                             │
-│  Alex is putting the card   │
-│  down — claim after dinner. │
+│  Alex invited you.          │
+│  They’re putting the card   │
+│  down — claim after.        │
 │                             │
-│  Your name                  │
-│  [____________]             │
+│  Hi, Sam                    │  ← prefilled from invite
 │                             │
 │  [ Going ] [ Maybe ] [ Can't ]
-│                             │
-│  Going (4)                  │
-│  · Sam  · Jordan  · …       │
 └─────────────────────────────┘
 ```
 
-- No item claims yet.  
-- Edit RSVP anytime until open (or until closed).  
-- Optional contact (same privacy posture as join).  
-- Device-local remember: returning guest sees their RSVP without retyping (same pattern as `saveGuest`).
+Bare link (no token): name field empty; same buttons; becomes walk-in Going.
 
 ### Status = open
 
-Current claim board, with upgrades:
-
-- Banner: “You’re on the list — claim what you had.”  
-- Name prefilled from RSVP when possible.  
-- Going names as soft presence (“4 of ~6 on the list have claimed”) — complements expected party size.  
-- Guests who never RSVP’d can still join + claim (link is not exclusive).
-
-### Status = closed / expired
-
-Existing settle / closed copy; planning-only nights that never got a receipt show “This night never got a check” + expire.
+Claim board; name prefilled from Going; Invited-only people who never RSVP’d can still join via group link.
 
 ---
 
 ## Data model (sketch)
 
-Extend the receipt document (or thin `nights` row that becomes a receipt) — prefer **one object** so the link never changes:
-
 | Field | Notes |
 |---|---|
-| `id` | Public token in `/r/:id` |
+| `id` | Public id in `/r/:id` |
 | `hostToken` | Unchanged |
-| `status` | `planning` \| `draft` \| `open` \| `closed` (today: draft/open/closed) |
-| `venue` | Required for planning create |
-| `nightAt` | ISO datetime (local intent stored with offset) |
-| `note` | Host message |
-| `expectedPartySize` | Optional |
-| `payments` | Optional until open |
-| `rsvps[]` | `{ id, personName, personContact?, response, updatedAt }` |
-| `body` / items / fees | Empty until attach + parse |
+| `status` | `planning` \| `draft` \| `open` \| `closed` |
+| `venue` / `nightAt` / `note` / `expectedPartySize` / `payments` | As needed |
+| `invitees[]` | `{ id, personName, personContact?, inviteToken, response: invited\|going\|maybe\|cant, inviteSentAt?, updatedAt }` |
+| `body` / items / fees | Empty until attach |
 | `createdAt` / `expiresAt` | Ephemeral TTL |
 
-**Publish rules**
+`response: invited` is host-created; guest Going/Maybe/Can’t overwrites.
 
-- `planning` → shareable; claims API returns 409 / friendly “not open yet.”  
-- Attach parse writes items into same id; then host review; then `open`.  
-- Tonight path: parse creates `draft` as today; never enters `planning` unless we add “convert draft → planning” (out of scope).
-
-**Uniqueness:** `venue_day_taken` already exists for open tabs — planning nights should reserve the same venue-day key so two planning links for the same place/night don’t collide; define conflict UX (“You already have a night here — open it?”).
+**Uniqueness:** reuse venue-day reservation so two plannings for the same place/night conflict with “Open your existing outing?”
 
 ---
 
@@ -207,13 +254,11 @@ Extend the receipt document (or thin `nights` row that becomes a receipt) — pr
 
 | Endpoint | Behavior |
 |---|---|
-| `POST /api/receipts/plan` | Create `planning` night (venue + nightAt + optional note/size/pay) |
-| `GET /api/receipts/:id` | Include `status`, `rsvps`, venue; omit claim totals until open |
-| `POST /api/receipts/:id/rsvp` | Upsert RSVP by soft identity (name + device token / contact) |
-| `POST /api/receipts/:id/parse` or existing draft update | Attach image → fill items while staying host-authenticated |
-| Existing publish / claims | Claims only when `open` |
-
-Push (Phase 1 host push adjacent): notify RSVP’d devices when status → `open` (“Time to claim”).
+| `POST /api/receipts/plan` | Create `planning` outing |
+| `POST /api/receipts/:id/invitees` | Host adds invitee(s) → returns personalized URLs |
+| `POST /api/receipts/:id/rsvp` | Body includes optional `inviteToken`; sets going/maybe/cant |
+| `GET /api/receipts/:id` | Public: venue, when, status, Going names (not Invited contacts). Host auth: full roster |
+| Attach parse / publish / claims | Claims only when `open` |
 
 ---
 
@@ -221,74 +266,69 @@ Push (Phase 1 host push adjacent): notify RSVP’d devices when status → `open
 
 | Idea | Why out |
 |---|---|
-| Full event platform (plus-ones, meals, seats) | Wrong product |
-| Guest pre-orders as ledger | That’s [guest-first-reconcile.md](./guest-first-reconcile.md) — optional later **assist**, still not truth |
-| Accounts / “my parties” history | Philosophy break |
-| Separate RSVP URL and claim URL | Guests get lost; host double-shares |
-| Auto-splitting by RSVP headcount | Fair-not-equal dies |
+| Inferring recipients from OS share sheet | OS doesn’t tell us |
+| Cloud address book / social graph | Philosophy + review risk |
+| Full event platform | Wrong product |
+| Guest pre-orders as ledger | [guest-first-reconcile.md](./guest-first-reconcile.md) later assist only |
+| Separate RSVP URL product surface | Confusing; use query token on same `/r/:id` |
+| Auto-split by headcount | Fair-not-equal dies |
 
 ---
 
 ## Phased delivery
 
-### Phase A — Planning create + RSVP board (MVP)
-
-- Desk: **Plan a dinner**  
-- Create: venue + when + create link  
-- Guest: Going / Maybe / Can’t  
-- Host planning board + share chrome  
-- No receipt attach yet (host still uses Tonight for money) — *optional cut* if we want vertical slice faster  
-
-**Better MVP cut:** include attach in A so the story is complete.
-
 ### Phase A′ (recommended MVP)
 
-A + **Upload the check** → parse into same id → items/fees/pay → open → claim. Venue prefilled. RSVPs prefill names.
+- Desk: **Plan an outing?**  
+- Create: venue + when + group link  
+- Guest: Going / Maybe / Can’t on `/r/:id`  
+- Host planning board  
+- **Upload the check** → same id → open → claim  
+- Prefill Going names into claim  
 
-### Phase B — Polish
+### Phase B — Per-contact Invited → Going
+
+- Contacts / name picker  
+- `invitees` + personalized `?invite=` links  
+- One-by-one send queue  
+- Host roster: Invited vs Going  
+- Public GET hides Invited PII  
+
+### Phase C — Polish
 
 - Pay-early optional  
-- Push “check is up” to RSVPs  
-- Expected size + “4 of ~6 claimed”  
-- Expire / conflict for venue-day  
-- Web parity for planning board  
+- Push “check is up”  
+- Expected size presence  
+- Expiry / venue-day conflict  
+- Web host create parity  
 
-### Phase C — Optional later
+### Phase D — Optional
 
-- Guest-first order drafts reconcile into this night ([guest-first-reconcile.md](./guest-first-reconcile.md))  
-- Host tip note / dress code as rich note only  
+- Guest-first order drafts into this outing  
 
 ---
 
-## UI flow maps (keep in sync with ui-flows.md when building)
+## UI flow maps
 
-### Host — Plan ahead
+### Host — Plan an outing
 
 ```
-Desk → Plan a dinner
-  → Venue
-  → When (+ optional size / note)
+Desk → Plan an outing?
+  → Venue → When (+ optional size / note)
   → Pay now? (skip allowed)
-  → Share (planning)
   → Planning board
-       ├ Share again
-       └ Upload the check → Capture → Parse → Confirm venue
-            → Items → Pour → Fees → Pay (if needed) → Open → Live board
+       ├ Invite people (contacts → Invited → share per link)
+       ├ Share group link / QR
+       └ Upload the check → … → Open → Live board
 ```
 
-### Guest — One link
+### Guest
 
 ```
-Open /r/:id
-  if planning → RSVP
-  if open     → Join (name prefilled) → Claim → Settle
-  if closed   → Closed / settle summary
-```
-
-### Host — Tonight (unchanged spine)
-
-```
-Desk → Start a tab → Capture → … → Pay → Share → Live board
+Open /r/:id[?invite=]
+  if planning → RSVP (Invited→Going when token + Going)
+  if open     → Claim (name prefilled)
+  if closed   → Closed / settle
 ```
 
 ---
@@ -297,40 +337,41 @@ Desk → Start a tab → Capture → … → Pay → Share → Live board
 
 | Risk | Mitigation |
 |---|---|
-| Host creates planning night, forgets to attach | Expiry + desk nudge “Dinner was yesterday — add the check?” |
-| Philosophy creep toward events app | Strict copy: “for tonight’s table”; no recurring / public discovery |
-| RSVP names ≠ claim names | Prefill + edit; never force match |
-| Two hosts plan same venue-night | venue-day conflict dialog |
-| Guests think RSVP = paid | Copy: “You’ll claim what you ordered after the check goes up” |
-| Parse attaches to wrong night | Always attach into current planning id; never silent new id |
+| Expecting share sheet to mark Invited | Educate in UI; only in-app invite creates Invited |
+| Contacts permission scare | Picker copy: “Stays on your phone — we only save who you invite to this outing” |
+| Philosophy creep to events app | Copy: outing / table; no recurring |
+| Token forwarding | Acceptable for v1 (like claim link); rotate optional later |
+| Host forgets to attach receipt | Desk nudge after `nightAt` |
+| Invite name ≠ claim name | Prefill + edit |
 
 ---
 
 ## Success criteria
 
-- Host can create a night **without** a photo and share a working link in &lt; 60 seconds.  
-- Guest can RSVP on mobile web without installing.  
-- After attach + publish, **same URL** becomes the claim board; Going guests see themselves.  
-- Tonight path remains the default fast path at the table (no extra steps).  
-- No new account system; nights still expire.
+- Host creates an outing without a photo and can share in &lt; 60 seconds.  
+- Per-contact invite: host sees **Invited**, then **Going** when that person taps yes.  
+- Group link still works without contacts.  
+- Same URL becomes claim board after attach + publish.  
+- Tonight path stays the fast table path.  
+- No accounts; no uploaded address book; outings expire.
 
 ---
 
 ## Open choices (decide at build)
 
-1. **Pay required before first share?** Recommend **optional** — friction kills planning; force at open.  
-2. **Maybe / Can’t in v1?** Recommend **Going + Can’t** only if we need to cut; Maybe is nice socially.  
-3. **Reuse `draft` vs new `planning` status?** Prefer explicit `planning` so draft stays “photo exists, not published.”  
-4. **Web host plan flow** same week as mobile, or mobile-first? Recommend **mobile + web claim/RSVP**; host create can be mobile-first.
+1. **Pay before first share?** Optional — force at open.  
+2. **Maybe in v1?** Nice-to-have; Going + Can’t is enough if cutting.  
+3. **Contacts in MVP or Phase B?** Recommend **Phase B** — ship group link + attach first; invites next.  
+4. **`planning` vs overload `draft`?** Prefer explicit `planning`.  
 
 ---
 
 ## Suggested build order
 
-1. Status `planning` + create API + desk entry + share  
-2. Guest RSVP UI on `/r/:id`  
-3. Host planning board  
-4. Attach receipt into same id → existing interview from items (venue confirm) → open  
-5. Prefill / presence polish + expiry  
+1. `planning` + create + desk **Plan an outing?** + group share  
+2. Guest RSVP on `/r/:id`  
+3. Host planning board + attach receipt → open  
+4. **Invitees + personalized links + Invited → Going**  
+5. Presence / push / expiry  
 
 Do **not** block on guest-first reconcile or voice.
