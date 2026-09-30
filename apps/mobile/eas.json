@@ -11,13 +11,25 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.splitthewine.app",
-        "EXPO_PUBLIC_SHARE_URL": "https://api.splitthewine.app"
+        "APP_VARIANT": "dev",
+        "EXPO_PUBLIC_API_URL": "https://api-dev-production-c2d1.up.railway.app",
+        "EXPO_PUBLIC_SHARE_URL": "https://api-dev-production-c2d1.up.railway.app"
+      }
+    },
+    "dev": {
+      "distribution": "internal",
+      "autoIncrement": true,
+      "channel": "dev",
+      "env": {
+        "APP_VARIANT": "dev",
+        "EXPO_PUBLIC_API_URL": "https://api-dev-production-c2d1.up.railway.app",
+        "EXPO_PUBLIC_SHARE_URL": "https://api-dev-production-c2d1.up.railway.app"
       }
     },
     "preview": {
       "distribution": "store",
       "autoIncrement": true,
+      "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.splitthewine.app",
         "EXPO_PUBLIC_SHARE_URL": "https://api.splitthewine.app"
@@ -25,6 +37,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.splitthewine.app",
         "EXPO_PUBLIC_SHARE_URL": "https://api.splitthewine.app"

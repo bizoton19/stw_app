@@ -23,6 +23,7 @@ One Railway service serves `/api/*` and `/r/[id]` — no separate proxy. DNS + R
   - `main` → Railway service **`api`** (prod / `api.splitthewine.app`)
   - `plan-an-outing` → Railway service **`api-dev`** (dev / `apidev.splitthewine.app`)
   - Push to the branch deploys that service only. Merge to `main` when ready for prod.
+- [x] **Expo / EAS `dev` profile** → same staging API (`apps/mobile/eas.json`). Expo Go: `.env.local`. Internal build: `eas build --profile dev`. Prod TestFlight stays `--profile production`.
 
 ---
 

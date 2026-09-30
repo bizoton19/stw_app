@@ -121,6 +121,26 @@ Vision (OpenRouter) always runs on the **server**. The native app never ships th
 
 **Do not** put `OPENROUTER_API_KEY` in this app. Copy it only into the **repo-root** `.env.local`.
 
+### Staging vs production (EAS)
+
+| EAS profile | API | Install |
+|---|---|---|
+| `dev` | `api-dev` (Railway / `apidev`) | Internal install link — **Split the Wine Dev** |
+| `development` | same as `dev` | Dev client (simulator) |
+| `preview` / `production` | `api.splitthewine.app` | TestFlight / store |
+
+```bash
+# Expo Go against staging (edit .env.local, then restart Metro)
+cd apps/mobile
+# EXPO_PUBLIC_* → https://api-dev-production-c2d1.up.railway.app
+npx expo start --lan
+
+# Standalone internal build against staging
+npx eas-cli build --platform ios --profile dev
+```
+
+Prod TestFlight stays on `--profile production` → `api.splitthewine.app`.
+
 ---
 
 ## Expo web (this VM / browser preview)
