@@ -6,16 +6,28 @@ import { claimCapacity, normalizePour } from "./pour";
 import { SAMPLE_PARSE } from "./sample-tab";
 import { computeTotals, leftoverAssignments, remainingForItem, remainingMap, latestClaimerForItem } from "./totals";
 import { findVenueDayConflict, isValidatedVenue } from "./venue-day";
+import {
+  applyRsvp,
+  assertNoVenueDayConflict,
+  canParseStatus,
+  hostInvitees,
+  newInvitee,
+  normalizePlanInput,
+  publicInvitees,
+  type PlanCreateInput,
+} from "./outing";
 import type {
   Claim,
   Fee,
   HostInfo,
+  Invitee,
   Item,
   LiveEvent,
   ParseResult,
   ParseReviewChoice,
   PublicReceipt,
   Receipt,
+  ReceiptVenue,
 } from "./types";
 import { parseReceiptImage, type ParseMeta, type ReceiptImage } from "./parse-receipt";
 
@@ -74,7 +86,10 @@ function feesFromParse(parsed: ParseResult): Fee[] {
   }));
 }
 
-function toPublic(receipt: InternalReceipt): PublicReceipt {
+function toPublic(
+  receipt: InternalReceipt,
+  opts?: { host?: boolean; inviteToken?: string | null },
+): PublicReceipt {
   const claims: Claim[] = receipt.claims.map(({ ownerToken, autoLeftover, ...claim }) => {
     void ownerToken;
     void autoLeftover;
@@ -86,6 +101,11 @@ function toPublic(receipt: InternalReceipt): PublicReceipt {
     restaurant: receipt.restaurant,
     venue: receipt.venue ?? null,
     receiptDate: receipt.receiptDate ?? null,
+    nightAt: receipt.nightAt ?? null,
+    expectedPartySize: receipt.expectedPartySize ?? null,
+    invitees: opts?.host
+      ? hostInvitees(receipt.invitees)
+      : publicInvitees(receipt.invitees, opts?.inviteToken),
     items: receipt.items,
     fees: receipt.fees,
     claims,
@@ -234,6 +254,7 @@ export async function createReceipt(input?: { imageName?: string }): Promise<{
     items: [],
     fees: [],
     claims: [],
+    invitees: [],
     createdAt: now(),
     imageName: input?.imageName,
     hostToken: randomUUID(),
@@ -242,10 +263,59 @@ export async function createReceipt(input?: { imageName?: string }): Promise<{
   return { receiptId: id, hostToken: receipt.hostToken };
 }
 
-export async function getPublicReceipt(id: string): Promise<PublicReceipt> {
+export async function createPlanReceipt(input: PlanCreateInput): Promise<{
+  receiptId: string;
+  hostToken: string;
+  receipt: PublicReceipt;
+}> {
+  await ensureSchema();
+  const normalized = normalizePlanInput(input);
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<{ body: Omit<InternalReceipt, "hostToken">; id: string }>(
+      `SELECT id, body FROM ${DB_SCHEMA}.receipts`,
+    );
+    const candidates = rows.map((row) => ({ ...row.body, id: row.id })) as Receipt[];
+    assertNoVenueDayConflict(
+      candidates,
+      "",
+      normalized.venue,
+      normalized.restaurant,
+      normalized.receiptDate,
+    );
+    const id = shortId();
+    const hostToken = randomUUID();
+    const receipt: InternalReceipt = {
+      id,
+      status: "planning",
+      restaurant: normalized.restaurant,
+      venue: normalized.venue,
+      receiptDate: normalized.receiptDate,
+      nightAt: normalized.nightAt,
+      expectedPartySize: normalized.expectedPartySize,
+      invitees: [],
+      items: [],
+      fees: [],
+      claims: [],
+      hostInfo: normalized.hostInfo,
+      createdAt: now(),
+      hostToken,
+    };
+    await upsertReceipt(client, receipt);
+    return { receiptId: id, hostToken, receipt: toPublic(receipt, { host: true }) };
+  });
+}
+
+export async function getPublicReceipt(
+  id: string,
+  opts?: { hostToken?: string | null; inviteToken?: string | null },
+): Promise<PublicReceipt> {
   await ensureSchema();
   await seedDemoIfNeeded();
-  return withTransaction(async (client) => toPublic(await requireReceipt(client, id)));
+  return withTransaction(async (client) => {
+    const receipt = await requireReceipt(client, id);
+    const host = Boolean(opts?.hostToken) && opts!.hostToken === receipt.hostToken;
+    return toPublic(receipt, { host, inviteToken: opts?.inviteToken });
+  });
 }
 
 export async function parseReceipt(
@@ -258,7 +328,7 @@ export async function parseReceipt(
   // Auth + draft check under lock, then release before the slow vision call.
   await withTransaction(async (client) => {
     const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
-    if (receipt.status !== "draft") {
+    if (!canParseStatus(receipt.status)) {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
   });
@@ -295,13 +365,13 @@ export async function parseReceipt(
   const persistStarted = Date.now();
   const out = await withTransaction(async (client) => {
     const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
-    if (receipt.status !== "draft") {
+    if (!canParseStatus(receipt.status)) {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
-    // Leave venue unset — host confirms from Places suggestions on step 4.
-    receipt.restaurant = result.restaurant;
-    receipt.venue = null;
-    receipt.receiptDate = result.receiptDate ?? null;
+    const keepVenue = receipt.status === "planning" ? receipt.venue : null;
+    receipt.restaurant = keepVenue?.name?.trim() || result.restaurant;
+    receipt.venue = keepVenue;
+    receipt.receiptDate = result.receiptDate ?? receipt.receiptDate ?? null;
     receipt.items = itemsFromParse(result);
     receipt.fees = feesFromParse(result);
     receipt.imageName = image?.name ?? receipt.imageName;
@@ -765,6 +835,56 @@ export async function reopenReceipt(id: string, hostToken: string | null) {
     await upsertReceipt(client, receipt);
     emit(receipt, "reopened");
     return { receipt: toPublic(receipt), totals: computeTotals(toPublic(receipt)) };
+  });
+}
+
+export async function rsvp(
+  id: string,
+  input: {
+    response: "going" | "maybe" | "cant";
+    personName?: string;
+    personContact?: string | null;
+    inviteToken?: string | null;
+  },
+): Promise<PublicReceipt> {
+  await ensureSchema();
+  return withTransaction(async (client) => {
+    const receipt = await requireReceipt(client, id, { forUpdate: true });
+    if (receipt.status !== "planning" && receipt.status !== "open") {
+      throw Object.assign(new Error("rsvp_closed"), {
+        code: "conflict",
+        message: "This outing is not taking RSVPs.",
+      });
+    }
+    receipt.invitees = applyRsvp(receipt.invitees, input);
+    await upsertReceipt(client, receipt);
+    emit(receipt, "updated");
+    return toPublic(receipt);
+  });
+}
+
+export async function addInvitees(
+  id: string,
+  hostToken: string | null,
+  people: { personName: string; personContact?: string | null }[],
+): Promise<{ receipt: PublicReceipt; created: Invitee[] }> {
+  await ensureSchema();
+  return withTransaction(async (client) => {
+    const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
+    if (receipt.status !== "planning") {
+      throw Object.assign(new Error("not_planning"), { code: "conflict" });
+    }
+    const created: Invitee[] = [];
+    const list = receipt.invitees ? [...receipt.invitees] : [];
+    for (const person of people) {
+      const row = newInvitee(person);
+      list.push(row);
+      created.push(row);
+    }
+    receipt.invitees = list;
+    await upsertReceipt(client, receipt);
+    emit(receipt, "updated");
+    return { receipt: toPublic(receipt, { host: true }), created };
   });
 }
 

@@ -20,8 +20,39 @@ export async function createReceipt(input?: { imageName?: string }) {
   return usingDatabase() ? pg.createReceipt(input) : memory.createReceipt(input);
 }
 
-export async function getPublicReceipt(id: string) {
-  return usingDatabase() ? pg.getPublicReceipt(id) : memory.getPublicReceipt(id);
+export async function createPlanReceipt(input: Parameters<typeof memory.createPlanReceipt>[0]) {
+  return usingDatabase() ? pg.createPlanReceipt(input) : memory.createPlanReceipt(input);
+}
+
+export async function getPublicReceipt(
+  id: string,
+  opts?: { hostToken?: string | null; inviteToken?: string | null },
+) {
+  return usingDatabase()
+    ? pg.getPublicReceipt(id, opts)
+    : memory.getPublicReceipt(id, opts);
+}
+
+export async function rsvp(
+  id: string,
+  input: {
+    response: "going" | "maybe" | "cant";
+    personName?: string;
+    personContact?: string | null;
+    inviteToken?: string | null;
+  },
+) {
+  return usingDatabase() ? pg.rsvp(id, input) : memory.rsvp(id, input);
+}
+
+export async function addInvitees(
+  id: string,
+  hostToken: string | null,
+  people: { personName: string; personContact?: string | null }[],
+) {
+  return usingDatabase()
+    ? pg.addInvitees(id, hostToken, people)
+    : memory.addInvitees(id, hostToken, people);
 }
 
 export async function parseReceipt(

@@ -69,6 +69,50 @@ export async function createDraftReceipt(): Promise<{ receiptId: string; hostTok
   return api("/api/receipts", { method: "POST", body: "{}" });
 }
 
+export async function createPlanOuting(input: {
+  venue: import("./types").ReceiptVenue;
+  nightAt: string;
+  expectedPartySize?: number | null;
+  note?: string | null;
+}): Promise<{
+  receiptId: string;
+  hostToken: string;
+  receipt: PublicReceipt;
+  claimUrl: string;
+}> {
+  return api("/api/receipts/plan", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function postRsvp(
+  receiptId: string,
+  input: {
+    response: "going" | "maybe" | "cant";
+    personName?: string;
+    personContact?: string | null;
+    inviteToken?: string | null;
+  },
+): Promise<{ receipt: PublicReceipt }> {
+  return api(`/api/receipts/${receiptId}/rsvp`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function addOutingInvitees(
+  receiptId: string,
+  people: { personName: string; personContact?: string | null }[],
+  hostToken?: string | null,
+): Promise<{
+  receipt: PublicReceipt;
+  invites: { invitee: import("./types").Invitee; url: string }[];
+}> {
+  return api(`/api/receipts/${receiptId}/invitees`, {
+    method: "POST",
+    hostToken,
+    body: JSON.stringify({ people }),
+  });
+}
+
 /** Native FormData file uploads often fail on device; use FileSystem.uploadAsync instead. */
 export async function parseReceiptWithImage(
   receiptId: string,

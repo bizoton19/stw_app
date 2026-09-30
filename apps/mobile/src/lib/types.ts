@@ -1,4 +1,16 @@
-export type ReceiptStatus = "draft" | "open" | "finalized";
+export type ReceiptStatus = "planning" | "draft" | "open" | "finalized";
+
+export type InviteeResponse = "invited" | "going" | "maybe" | "cant";
+
+export type Invitee = {
+  id: string;
+  personName: string;
+  personContact?: string | null;
+  inviteToken: string;
+  response: InviteeResponse;
+  inviteSentAt?: string | null;
+  updatedAt: string;
+};
 export type PayMethod =
   | "venmo"
   | "paypal"
@@ -74,6 +86,9 @@ export type Receipt = {
   venue?: ReceiptVenue | null;
   /** Date printed on the check, if found — ISO `YYYY-MM-DD`. */
   receiptDate?: string | null;
+  nightAt?: string | null;
+  expectedPartySize?: number | null;
+  invitees?: Invitee[];
   items: Item[];
   fees: Fee[];
   claims: Claim[];

@@ -4,14 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import type { PublicReceipt } from "@/lib/types";
 import { api } from "@/lib/session";
 
-export function useReceipt(id: string) {
+export function useReceipt(id: string, opts?: { inviteToken?: string | null }) {
+  const inviteToken = opts?.inviteToken?.trim() || "";
   const [receipt, setReceipt] = useState<PublicReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState<"live" | "reconnecting" | "offline">("reconnecting");
 
   const refresh = useCallback(async () => {
     try {
-      const next = await api<PublicReceipt>(`/api/receipts/${id}`);
+      const qs = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "";
+      const next = await api<PublicReceipt>(`/api/receipts/${id}${qs}`);
       setReceipt(next);
       setError(null);
       return next;
@@ -20,7 +22,7 @@ export function useReceipt(id: string) {
       setLive("offline");
       return null;
     }
-  }, [id]);
+  }, [id, inviteToken]);
 
   useEffect(() => {
     let cancelled = false;

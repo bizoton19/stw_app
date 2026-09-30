@@ -5,12 +5,18 @@ import { deleteReceipt, getPublicReceipt, saveReceipt } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await ctx.params;
-    return Response.json(await getPublicReceipt(id));
+    const invite = new URL(req.url).searchParams.get("invite");
+    return Response.json(
+      await getPublicReceipt(id, {
+        hostToken: hostTokenOf(req),
+        inviteToken: invite,
+      }),
+    );
   } catch (err) {
     return jsonError(err);
   }

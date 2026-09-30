@@ -16,7 +16,7 @@ import { colors } from "@/lib/theme";
 export default function HostCapture() {
   const router = useRouter();
   const draft = useHostDraft();
-  const { launch } = useLocalSearchParams<{ launch?: string }>();
+  const { launch, outing } = useLocalSearchParams<{ launch?: string; outing?: string }>();
   const autoLaunch = launch === "camera" || launch === "library";
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   const consumedShareRef = useRef(false);
@@ -25,6 +25,13 @@ export default function HostCapture() {
   const hasImage = Boolean(draft.image);
   /** After Home shortcut cancels camera/library, fall back to normal pick UI. */
   const showPickChoices = !autoLaunch || hasImage || autoTried;
+
+  useEffect(() => {
+    if (!outing || typeof outing !== "string") return;
+    void draft.adoptOuting(outing).catch(() => {
+      /* host can still pick a photo; parse needs the id */
+    });
+  }, [draft, outing]);
 
   useEffect(() => {
     if (consumedShareRef.current) return;

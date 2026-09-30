@@ -11,7 +11,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, Camera, ImageIcon, Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
-import { AppShell, PrimaryButton } from "@/components/chrome";
+import { AppShell, PrimaryButton, QuietButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import { VenueMapThumb } from "@/components/venue-map-thumb";
 import {
@@ -91,6 +91,11 @@ export default function HomeScreen() {
   );
 
   function openBoard(id: string) {
+    const row = hosted.find((r) => r.id === id);
+    if (row?.status === "planning") {
+      router.push(`/host/plan/${id}`);
+      return;
+    }
     router.push({
       pathname: "/r/[id]/settle",
       params: { id, host: "1" },
@@ -293,16 +298,19 @@ export default function HomeScreen() {
                           styles.statusPill,
                           active.status === "finalized"
                             ? styles.statusPillClosed
-                            : styles.statusPillOpen,
+                            : active.status === "planning"
+                              ? styles.statusPillDraft
+                              : styles.statusPillOpen,
                         ]}
                       >
-                        {active.status !== "finalized" ? (
+                        {active.status !== "finalized" && active.status !== "planning" ? (
                           <View style={styles.liveDot} />
                         ) : null}
                         <Text
                           style={[
                             styles.statusPillText,
                             active.status === "finalized" && styles.statusPillTextClosed,
+                            active.status === "planning" && styles.statusPillTextDraft,
                           ]}
                         >
                           {hostedStatusLabel(active.status)}
@@ -326,7 +334,9 @@ export default function HomeScreen() {
                           {active.restaurant || "Open check"}
                         </Text>
                         <Text style={styles.heroCta}>
-                          Tap for who owes what · claimed & remaining
+                          {active.status === "planning"
+                            ? "Tap to invite & RSVP · upload check when over"
+                            : "Tap for who owes what · claimed & remaining"}
                         </Text>
                       </View>
                     </View>
@@ -349,16 +359,21 @@ export default function HomeScreen() {
                 <View style={styles.emptyCard}>
                   <Text style={styles.emptyTitle}>No open tab yet</Text>
                   <Text style={styles.emptyBody}>
-                    Snap the check, confirm the lines, share a claim link. Tax and tip follow what
-                    people ordered.
+                    Snap the check tonight — or plan an outing and invite people before the bill.
                   </Text>
                   <PrimaryButton onPress={() => router.push("/host")}>
                     Start a tab
                   </PrimaryButton>
+                  <QuietButton onPress={() => router.push("/host/plan")}>
+                    Plan an outing?
+                  </QuietButton>
                 </View>
               ) : (
                 <View style={styles.startTabWrap}>
                   <PrimaryButton onPress={() => router.push("/host")}>Start a tab</PrimaryButton>
+                  <QuietButton onPress={() => router.push("/host/plan")}>
+                    Plan an outing?
+                  </QuietButton>
                   <Text style={styles.startTabHint}>
                     Guided path — or use the camera / upload icons above for a quick snap.
                   </Text>

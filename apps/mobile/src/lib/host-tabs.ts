@@ -23,7 +23,10 @@ export type HostedReceiptSummary = {
   venueCategory?: string | null;
 };
 
-export function hostedStatusLabel(status?: ReceiptStatus | "draft"): "Open" | "Closed" | "Draft" {
+export function hostedStatusLabel(
+  status?: ReceiptStatus | "draft",
+): "Planning" | "Open" | "Closed" | "Draft" {
+  if (status === "planning") return "Planning";
   if (status === "draft") return "Draft";
   return status === "finalized" ? "Closed" : "Open";
 }

@@ -17,6 +17,7 @@ import type { GuestIdentity, PublicReceipt } from "@/lib/types";
 
 type ClaimFlow = {
   id: string;
+  inviteToken: string;
   receipt: PublicReceipt | null;
   error: string | null;
   live: "live" | "reconnecting" | "offline";
@@ -43,10 +44,11 @@ type ClaimFlow = {
 const Ctx = createContext<ClaimFlow | null>(null);
 
 export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
-  const params = useLocalSearchParams<{ id: string; host?: string }>();
+  const params = useLocalSearchParams<{ id: string; host?: string; invite?: string }>();
   const id = String(params.id ?? "");
   const hostQuery = params.host === "1" || params.host === "true";
-  const { receipt, error, live, refresh } = useReceipt(id);
+  const inviteToken = typeof params.invite === "string" ? params.invite : "";
+  const { receipt, error, live, refresh } = useReceipt(id, { inviteToken });
   const [guest, setGuest] = useState<GuestIdentity | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [queued, setQueued] = useState<string[]>([]);
@@ -293,6 +295,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       id,
+      inviteToken,
       receipt,
       error,
       live,
@@ -323,6 +326,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       error,
       guest,
       id,
+      inviteToken,
       isHost,
       join,
       live,

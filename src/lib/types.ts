@@ -1,4 +1,18 @@
-export type ReceiptStatus = "draft" | "open" | "finalized";
+export type ReceiptStatus = "planning" | "draft" | "open" | "finalized";
+
+/** Guest / host roster row for a planning outing (ephemeral with the tab). */
+export type InviteeResponse = "invited" | "going" | "maybe" | "cant";
+
+export type Invitee = {
+  id: string;
+  personName: string;
+  personContact?: string | null;
+  /** Unguessable token for personalized /r/:id?invite= links. */
+  inviteToken: string;
+  response: InviteeResponse;
+  inviteSentAt?: string | null;
+  updatedAt: string;
+};
 
 export type PayMethod =
   | "venmo"
@@ -81,6 +95,15 @@ export type Receipt = {
   venue?: ReceiptVenue | null;
   /** Date printed on the check, if vision found one — ISO `YYYY-MM-DD`. */
   receiptDate?: string | null;
+  /**
+   * Planned outing datetime (ISO). Used while status=planning; may mirror
+   * receiptDate’s calendar day after the check is attached.
+   */
+  nightAt?: string | null;
+  /** Optional expected claimant headcount (soft signal). */
+  expectedPartySize?: number | null;
+  /** Planning roster — Invited → Going / Maybe / Can’t. */
+  invitees?: Invitee[];
   items: Item[];
   fees: Fee[];
   claims: Claim[];

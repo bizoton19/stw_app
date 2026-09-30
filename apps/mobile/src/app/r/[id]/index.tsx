@@ -1,7 +1,7 @@
 import { Alert, FlatList, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Users } from "lucide-react-native";
-import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
@@ -13,6 +13,7 @@ import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
 import { hostNoteText } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
+import { postRsvp } from "@/lib/api";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
 import { goHostDesk } from "@/lib/navigation";
@@ -49,6 +50,10 @@ export default function ClaimScreen() {
     );
   }
 
+  if (flow.receipt.status === "planning") {
+    return <RsvpScreen />;
+  }
+
   if (!flow.guest) {
     return <JoinScreen />;
   }
@@ -56,6 +61,147 @@ export default function ClaimScreen() {
   return (
     <AppShell meta={meta}>
       <PickBoard />
+    </AppShell>
+  );
+}
+
+function RsvpScreen() {
+  const flow = useClaimFlow();
+  const receipt = flow.receipt!;
+  const inviteMatch = flow.inviteToken
+    ? receipt.invitees?.find((row) => row.response === "invited")
+    : undefined;
+  const already =
+    receipt.invitees?.find(
+      (row) =>
+        row.response !== "invited" &&
+        ((flow.inviteToken && inviteMatch && row.id === inviteMatch.id) ||
+          (flow.guest?.name &&
+            row.personName.toLowerCase() === flow.guest.name.toLowerCase())),
+    ) ?? null;
+
+  const [name, setName] = useState(
+    () => inviteMatch?.personName || flow.guest?.name || "",
+  );
+  const [contact, setContact] = useState(
+    () => inviteMatch?.personContact || flow.guest?.contact || "",
+  );
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(
+    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
+      ? already.response
+      : null,
+  );
+  const [err, setErr] = useState<string | null>(null);
+
+  const whenLabel = receipt.nightAt
+    ? new Date(receipt.nightAt).toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+
+  const goingCount =
+    receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
+
+  async function submit(response: "going" | "maybe" | "cant") {
+    if (!flow.inviteToken && !name.trim()) {
+      setErr("Add your name so the host knows who’s in.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      const { receipt: next } = await postRsvp(receipt.id, {
+        response,
+        personName: name.trim() || undefined,
+        personContact: contact.trim() || null,
+        inviteToken: flow.inviteToken || null,
+      });
+      await flow.join({ name: name.trim() || inviteMatch?.personName || "Guest", contact: contact.trim() });
+      await flow.refresh();
+      setDone(response);
+      void next;
+      void hapticNotify("success");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
+      void hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const place = receipt.restaurant?.trim() || "the outing";
+
+  return (
+    <AppShell meta="RSVP">
+      <InterviewChrome
+        step={1}
+        total={2}
+        hideProgress
+        kicker={whenLabel || "Upcoming"}
+        title={place}
+        keyboard
+        footer={
+          done ? (
+            <View>
+              <Text style={styles.rsvpThanks}>
+                {done === "going"
+                  ? "You’re going — claim opens when the host uploads the check."
+                  : done === "maybe"
+                    ? "Got it — maybe. You can change this anytime from this link."
+                    : "Noted. Thanks for letting them know."}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.rsvpActions}>
+              <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
+                Going
+              </PrimaryButton>
+              <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
+                Maybe
+              </QuietButton>
+              <QuietButton disabled={busy} onPress={() => void submit("cant")}>
+                Can’t
+              </QuietButton>
+            </View>
+          )
+        }
+      >
+        <HostMessage note={hostNoteText(receipt.hostInfo)} />
+        <Text style={styles.lead}>
+          {flow.inviteToken
+            ? "You’re invited. RSVP now — you’ll claim what you had after the check is up."
+            : "RSVP for this outing. The host will open claiming once the check is uploaded."}
+        </Text>
+        {goingCount > 0 ? (
+          <Text style={styles.rsvpMeta}>{goingCount} going so far</Text>
+        ) : null}
+        {err ? <Text style={styles.err}>{err}</Text> : null}
+        {!done ? (
+          <>
+            <Field
+              label="Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="Alex"
+              autoComplete="name"
+            />
+            <Field
+              label="Contact"
+              hint="(optional)"
+              value={contact}
+              onChangeText={setContact}
+              placeholder="phone, Venmo, or email"
+              autoComplete="tel"
+              keyboardType="default"
+            />
+          </>
+        ) : null}
+      </InterviewChrome>
     </AppShell>
   );
 }
@@ -481,4 +627,13 @@ const styles = StyleSheet.create({
   },
   unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
   unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
+  rsvpActions: { gap: 4 },
+  rsvpThanks: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.inkSoft,
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  rsvpMeta: { fontSize: 13, color: colors.muted, marginBottom: 12 },
 });

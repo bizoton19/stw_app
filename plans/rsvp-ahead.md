@@ -1,6 +1,6 @@
 # Plan an outing (RSVP) + Tonight (receipt) — dual host paths
 
-Status: **product + UX plan — not scheduled.**  
+Status: **implementing on branch `plan-an-outing`** — use Railway schema `split_the_wine_dev` (`DB_SCHEMA`).  
 Related: [ui-flows.md](./ui-flows.md), [phase-2-venue.md](./phase-2-venue.md), [expected-party-size.md](./expected-party-size.md), [guest-first-reconcile.md](./guest-first-reconcile.md), [requirements.md](./requirements.md) §0.
 
 ---

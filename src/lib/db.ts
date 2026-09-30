@@ -1,7 +1,19 @@
 import { Pool, type PoolClient } from "pg";
 
-/** Dedicated schema on a shared Railway Postgres instance — other apps use their own schemas. */
-export const DB_SCHEMA = "split_the_wine";
+/**
+ * Dedicated schema on a shared Railway Postgres instance — other apps use their own schemas.
+ * Override with DB_SCHEMA (e.g. `split_the_wine_dev` for Plan-an-outing / staging).
+ * Only allow safe identifiers (no injection via env).
+ */
+function resolveDbSchema(): string {
+  const raw = process.env.DB_SCHEMA?.trim() || "split_the_wine";
+  if (!/^[a-z][a-z0-9_]*$/i.test(raw)) {
+    throw new Error(`Invalid DB_SCHEMA: ${raw}`);
+  }
+  return raw;
+}
+
+export const DB_SCHEMA = resolveDbSchema();
 
 const globalForDb = globalThis as typeof globalThis & {
   __splitTheWinePool?: Pool;
