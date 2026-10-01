@@ -221,6 +221,7 @@ export default function SettleScreen() {
         }
         footer={footer}
         supportTip={flow.isHost}
+        keyboard={editingPay}
       >
         <Text style={styles.lead}>
           {flow.isHost
