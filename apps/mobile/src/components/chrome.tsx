@@ -58,7 +58,7 @@ export function InterviewChrome({
   onHome,
   children,
   footer,
-  keyboard = false,
+  keyboard = true,
   dense = false,
   /** Short screens: grow content area so body can use vertical space. */
   sparse = false,
@@ -83,6 +83,7 @@ export function InterviewChrome({
   onHome?: () => void;
   children: ReactNode;
   footer: ReactNode;
+  /** Keyboard avoiding — default on; pass false only if a screen must opt out. */
   keyboard?: boolean;
   dense?: boolean;
   sparse?: boolean;
@@ -211,6 +212,7 @@ export function InterviewChrome({
     </>
   );
 
+  // Default on for all interview screens; pass keyboard={false} to opt out.
   if (!keyboard) {
     return <View style={styles.chrome}>{inner}</View>;
   }
