@@ -10,6 +10,7 @@ import {
 import type { ReactNode, RefObject } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
+import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
 import { colors, type } from "@/lib/theme";
 import { HostSupportTip } from "./host-support-tip";
 import { PressScale } from "./press-scale";
@@ -90,6 +91,7 @@ export function InterviewChrome({
   hideProgress?: boolean;
   scrollRef?: RefObject<ScrollView | null>;
 }) {
+  const keyboardOpen = useKeyboardVisible();
   const progress = (step / total) * 100;
   const heading = (
     <>
@@ -118,6 +120,7 @@ export function InterviewChrome({
         styles.scrollContent,
         dense && styles.scrollContentDense,
         sparse && styles.scrollContentSparse,
+        keyboardOpen && styles.scrollContentKeyboard,
       ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
@@ -198,9 +201,12 @@ export function InterviewChrome({
         )}
       </View>
       {body}
-      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+      <SafeAreaView
+        edges={keyboardOpen ? [] : ["bottom"]}
+        style={[styles.footer, keyboardOpen && styles.footerKeyboard]}
+      >
         {footer}
-        {supportTip ? <HostSupportTip /> : null}
+        {supportTip && !keyboardOpen ? <HostSupportTip /> : null}
       </SafeAreaView>
     </>
   );
@@ -212,7 +218,10 @@ export function InterviewChrome({
   return (
     <KeyboardAvoidingView
       style={styles.chrome}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      // iOS: pad so sticky CTAs sit above the keyboard.
+      // Android: app.json uses softwareKeyboardLayoutMode "resize" — skip
+      // behavior="height" so we don't double-shrink and fight the bottom nav.
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 56 : 0}
     >
       {inner}
@@ -316,6 +325,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   scrollContentDense: { paddingTop: 10, paddingBottom: 8 },
   scrollContentSparse: { flexGrow: 1, paddingTop: 28, paddingBottom: 32 },
+  scrollContentKeyboard: { paddingBottom: 24 },
   kicker: { fontSize: type.kicker, fontWeight: "600", color: colors.inkSoft, marginBottom: 4 },
   kickerDense: { marginBottom: 2, fontSize: 12 },
   kickerSparse: { fontSize: 14, marginBottom: 8 },
@@ -345,6 +355,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 4,
+  },
+  footerKeyboard: {
+    // Keyboard already covers the home indicator — drop extra bottom chrome.
+    paddingBottom: 8,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   footerHint: {
     textAlign: "center",
