@@ -12,7 +12,7 @@ import {
 import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
 import { clearHostedReceipt, patchHostedReceipt } from "@/lib/host-tabs";
-import { getHostToken } from "@/lib/session";
+import { getHostToken, hydrateSession } from "@/lib/session";
 import type { Invitee, PublicReceipt } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
@@ -37,29 +37,41 @@ export default function HostPlanBoard() {
   const [receipt, setReceipt] = useState<PublicReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [hostToken, setHostToken] = useState<string | null>(null);
 
   const claimUrl = id ? publicClaimUrl(id) : "";
-  const hostToken = id ? getHostToken(id) : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await hydrateSession();
+      if (cancelled || !id) return;
+      setHostToken(getHostToken(id));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const load = useCallback(async () => {
     if (!id) return;
+    await hydrateSession();
+    const token = getHostToken(id);
+    setHostToken(token);
     try {
-      const data = await api<PublicReceipt>(`/api/receipts/${id}`, { hostToken });
+      const data = await api<PublicReceipt>(`/api/receipts/${id}`, { hostToken: token });
       setReceipt(data);
       setError(null);
       if (data.status === "draft" || data.status === "planning") {
         await patchHostedReceipt(id, { status: data.status });
       }
-      // Promoted to draft on event day — host uploads from capture, not settle.
-      if (data.status === "draft") {
-        // Stay on this board so they still see RSVPs + Upload CTA.
-      } else if (data.status === "open" || data.status === "finalized") {
+      if (data.status === "open" || data.status === "finalized") {
         router.replace({ pathname: "/r/[id]/settle", params: { id, host: "1" } });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load outing");
     }
-  }, [hostToken, id, router]);
+  }, [id, router]);
 
   useEffect(() => {
     void load();
@@ -103,8 +115,10 @@ export default function HostPlanBoard() {
             void (async () => {
               setBusy(true);
               try {
-                if (!hostToken) throw new Error("Missing host token");
-                await api(`/api/receipts/${id}`, { method: "DELETE", hostToken });
+                await hydrateSession();
+                const token = getHostToken(id) ?? hostToken;
+                if (!token) throw new Error("Missing host token on this phone");
+                await api(`/api/receipts/${id}`, { method: "DELETE", hostToken: token });
               } catch (err) {
                 const e = err as { message?: string; code?: string };
                 if (e.code !== "not_found") {

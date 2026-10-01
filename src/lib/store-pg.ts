@@ -869,19 +869,25 @@ export async function rsvp(
 
 export async function deleteReceipt(id: string, hostToken: string | null): Promise<void> {
   await ensureSchema();
+  // Staging schemas may not have created receipt_images yet; create it before we touch it
+  // inside a transaction (a failed SELECT aborts the whole TX in Postgres).
+  const { ensureReceiptImageTable } = await import("./receipt-image");
+  await ensureReceiptImageTable();
   const { deleteObjectKey } = await import("./object-storage");
   const storageKey = await withTransaction(async (client) => {
-    // Host may delete open or closed tabs so a venue/day slot can be reused after a bad publish.
+    // Host may delete planning / draft / open / closed tabs (frees the venue/day slot).
     assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
     let storageKey: string | null = null;
+    await client.query("SAVEPOINT stw_receipt_image");
     try {
       const { rows } = await client.query<{ storage_key: string | null }>(
         `SELECT storage_key FROM ${DB_SCHEMA}.receipt_images WHERE receipt_id = $1`,
         [id],
       );
       storageKey = rows[0]?.storage_key ?? null;
+      await client.query("RELEASE SAVEPOINT stw_receipt_image");
     } catch {
-      /* receipt_images may not exist yet on older schemas */
+      await client.query("ROLLBACK TO SAVEPOINT stw_receipt_image");
     }
     await client.query(`DELETE FROM ${DB_SCHEMA}.receipts WHERE id = $1`, [id]);
     listeners().listeners.delete(id);

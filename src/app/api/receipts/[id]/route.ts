@@ -66,7 +66,7 @@ export async function PUT(
   }
 }
 
-/** Host-only. Deletes an open or closed tab. */
+/** Host-only. Deletes planning / draft / open / closed tabs (frees the venue/day slot). */
 export async function DELETE(
   req: Request,
   ctx: { params: Promise<{ id: string }> },

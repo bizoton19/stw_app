@@ -30,6 +30,11 @@ function diskDir() {
   return path.join(process.cwd(), ".data", "receipt-images");
 }
 
+/** Ensure `receipt_images` exists for the active DB_SCHEMA (safe to call repeatedly). */
+export async function ensureReceiptImageTable() {
+  await ensureImageTable();
+}
+
 async function ensureImageTable() {
   await ensureSchema();
   await getPool().query(`
