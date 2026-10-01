@@ -1,6 +1,6 @@
 # Split the Wine — native app (Expo)
 
-A real React Native client. It talks to the same Next.js Route Handlers as the web prototype. The OpenRouter key stays on the server and is never in this bundle.
+A real React Native client. It talks to the same Next.js Route Handlers as the web prototype. The Gemini key stays on the server and is never in this bundle.
 
 Two ways to run it: **Expo Go** (scan a QR, no Xcode) and **`npx expo run:ios`** (Xcode / Simulator). Both stay Expo-Go compatible — no custom dev client.
 
@@ -10,7 +10,7 @@ From the **repo root** (not this folder):
 
 ```bash
 npm install
-cp .env.example .env.local   # optional: set OPENROUTER_API_KEY here, never in the native app
+cp .env.example .env.local   # optional: set GEMINI_API_KEY here, never in the native app
 npm run build
 npm run start
 ```
@@ -119,7 +119,7 @@ Vision (OpenRouter) always runs on the **server**. The native app never ships th
 | `EXPO_PUBLIC_API_PORT` | optional | Port used when inferring (default `43147`) |
 | `EXPO_PUBLIC_SHARE_URL` | optional | Origin used when sharing a claim link (defaults to the API URL) |
 
-**Do not** put `OPENROUTER_API_KEY` in this app. Copy it only into the **repo-root** `.env.local`.
+**Do not** put `GEMINI_API_KEY` in this app. Copy it only into the **repo-root** `.env.local`.
 
 ### Staging vs production (EAS)
 

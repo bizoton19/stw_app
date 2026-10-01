@@ -26,8 +26,8 @@ export const VISION_TIMEOUT_MS = 40_000;
 export const CLASSIFY_TIMEOUT_MS = 12_000;
 const EMPTY_PARSE: ParseResult = { restaurant: "", receiptDate: null, items: [], fees: [] };
 
-export function hasOpenRouterKey(): boolean {
-  return Boolean(process.env.OPENROUTER_API_KEY?.trim());
+export function hasGeminiKey(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY?.trim());
 }
 
 function logVisionParse(fields: Record<string, unknown>) {
@@ -80,7 +80,7 @@ export async function parseReceiptImage(
     });
     return { result: EMPTY_PARSE, parse: { source: "stub", reason: "failed" } };
   }
-  if (!hasOpenRouterKey()) {
+  if (!hasGeminiKey()) {
     logVisionParse({
       receiptId,
       source: "stub",

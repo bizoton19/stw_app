@@ -11,29 +11,33 @@ import {
 export type { ReceiptClassifyResult };
 export { interpretClassifyPayload };
 
-export const OPENROUTER_VISION_MODEL = "google/gemini-2.5-flash";
+/** Default Google AI model id (not an OpenRouter slug). */
+export const GEMINI_VISION_MODEL = "gemini-2.5-flash-lite";
 
+const GEMINI_GENERATE_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models";
+
+/** OpenAPI-style schema for Gemini `responseSchema` (no additionalProperties / union types). */
 const RECEIPT_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   properties: {
     restaurant: { type: "string" },
     receiptDate: {
-      type: ["string", "null"],
+      type: "string",
+      nullable: true,
       description: "Date printed on the receipt as YYYY-MM-DD, or null if missing/unreadable",
     },
     items: {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         properties: {
           name: { type: "string" },
           qty: { type: "integer" },
           total: { type: "number" },
           kind: {
             type: "string",
-            description: 'food | drink | unknown if unclear',
+            description: "food | drink | unknown if unclear",
             enum: ["food", "drink", "unknown"],
           },
         },
@@ -44,7 +48,6 @@ const RECEIPT_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         properties: {
           name: { type: "string" },
           amount: { type: "number" },
@@ -70,7 +73,6 @@ Return JSON only, matching the schema.
 
 const CLASSIFY_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   properties: {
     isReceipt: { type: "boolean" },
   },
@@ -90,93 +92,89 @@ type VisionImage = {
   bytes: Buffer;
 };
 
-function dataUrl(image: { type: string; bytes: Buffer }): string {
-  const mime = image.type && image.type.startsWith("image/") ? image.type : "image/jpeg";
-  return `data:${mime};base64,${image.bytes.toString("base64")}`;
+function imageMime(image: { type: string }): string {
+  return image.type && image.type.startsWith("image/") ? image.type : "image/jpeg";
 }
 
-function contentText(message: unknown): string {
-  if (!message || typeof message !== "object") return "";
-  const msg = message as { content?: unknown };
-  const content = msg.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (part && typeof part === "object" && "text" in part) {
-          return String((part as { text?: unknown }).text ?? "");
-        }
-        return "";
-      })
-      .join("");
+function candidateText(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "";
+  const candidates = (payload as { candidates?: unknown }).candidates;
+  if (!Array.isArray(candidates) || !candidates[0] || typeof candidates[0] !== "object") {
+    return "";
   }
-  return "";
+  const content = (candidates[0] as { content?: unknown }).content;
+  if (!content || typeof content !== "object") return "";
+  const parts = (content as { parts?: unknown }).parts;
+  if (!Array.isArray(parts)) return "";
+  return parts
+    .map((part) => {
+      if (part && typeof part === "object" && "text" in part) {
+        return String((part as { text?: unknown }).text ?? "");
+      }
+      return "";
+    })
+    .join("");
 }
 
 export function visionModel(): string {
-  return process.env.OPENROUTER_VISION_MODEL?.trim() || OPENROUTER_VISION_MODEL;
+  return process.env.GEMINI_VISION_MODEL?.trim() || GEMINI_VISION_MODEL;
 }
 
-async function openRouterVisionJson(opts: {
+async function geminiVisionJson(opts: {
   image: VisionImage;
   system: string;
   userText: string;
-  schemaName: string;
   schema: object;
   maxTokens: number;
   abortMs: number;
 }): Promise<string> {
-  const key = process.env.OPENROUTER_API_KEY?.trim();
+  const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) {
-    throw new Error("missing_openrouter_key");
+    throw new Error("missing_gemini_key");
   }
   const model = visionModel();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.abortMs);
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch(`${GEMINI_GENERATE_URL}/${model}:generateContent`, {
       method: "POST",
       signal: controller.signal,
       headers: {
-        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.OPENROUTER_HTTP_REFERER ?? "http://127.0.0.1:43147",
-        "X-Title": "Split the Wine",
+        "x-goog-api-key": key,
       },
       body: JSON.stringify({
-        model,
-        temperature: 0,
-        max_tokens: opts.maxTokens,
-        messages: [
-          { role: "system", content: opts.system },
+        systemInstruction: {
+          parts: [{ text: opts.system }],
+        },
+        contents: [
           {
-            role: "user",
-            content: [
-              { type: "text", text: opts.userText },
-              { type: "image_url", image_url: { url: dataUrl(opts.image) } },
+            parts: [
+              {
+                inline_data: {
+                  mime_type: imageMime(opts.image),
+                  data: opts.image.bytes.toString("base64"),
+                },
+              },
+              { text: opts.userText },
             ],
           },
         ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: opts.schemaName,
-            strict: true,
-            schema: opts.schema,
-          },
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: opts.maxTokens,
+          responseMimeType: "application/json",
+          responseSchema: opts.schema,
         },
-        provider: { require_parameters: true },
       }),
     });
     const payload = (await res.json()) as {
-      error?: { message?: string };
-      choices?: { message?: unknown }[];
+      error?: { message?: string; status?: string };
     };
     if (!res.ok) {
-      throw new Error(payload.error?.message || `openrouter_${res.status}`);
+      throw new Error(payload.error?.message || `gemini_${res.status}`);
     }
-    const text = contentText(payload.choices?.[0]?.message);
+    const text = candidateText(payload);
     if (!text.trim()) {
       throw new Error("empty_model_response");
     }
@@ -193,11 +191,10 @@ async function openRouterVisionJson(opts: {
 
 export async function classifyReceiptVision(image: VisionImage): Promise<ReceiptClassifyResult> {
   /** Slightly under the outer Promise.race so AbortSignal fires first when possible. */
-  const text = await openRouterVisionJson({
+  const text = await geminiVisionJson({
     image,
     system: CLASSIFY_PROMPT,
     userText: "Is this image a restaurant/bar receipt or tab? Answer with the JSON schema only.",
-    schemaName: "receipt_classify",
     schema: CLASSIFY_SCHEMA,
     maxTokens: 64,
     abortMs: 11_000,
@@ -207,11 +204,10 @@ export async function classifyReceiptVision(image: VisionImage): Promise<Receipt
 
 export async function parseReceiptVision(image: VisionImage): Promise<ParseResult> {
   /** Slightly under the outer Promise.race so AbortSignal fires first when possible. */
-  const text = await openRouterVisionJson({
+  const text = await geminiVisionJson({
     image,
     system: SYSTEM_PROMPT,
     userText: "Read this receipt photo. Extract restaurant name, line items, and fees.",
-    schemaName: "receipt_parse",
     schema: RECEIPT_SCHEMA,
     maxTokens: 2048,
     abortMs: 38_000,
