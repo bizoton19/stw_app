@@ -2,7 +2,7 @@
 
 A native-feeling phone app for splitting a restaurant check fairly. Photograph the tab, send a link, let people claim what they ordered. Tax and tip follow the drinks — not the headcount.
 
-Receipt scanning uses Google Gemini when `GEMINI_API_KEY` is set (server-side only). Without a key, or if the call fails, the sample bar tab is used so the rest of the flow still works.
+Receipt scanning uses a pluggable vision provider when a key is set (server-side only). Default: Google Gemini (`GEMINI_API_KEY`); optional OpenRouter (`OPENROUTER_API_KEY`). Force with `VISION_PROVIDER=gemini|openrouter`. Without a key, or if the call fails, the sample bar tab is used so the rest of the flow still works.
 
 ## Prerequisites
 
@@ -12,8 +12,9 @@ What you need to build, run, and ship this project — accounts we use, CLIs, an
 
 | Service | What it’s for | Notes |
 | --- | --- | --- |
-| **[Google AI Studio](https://aistudio.google.com/)** / Gemini API | Vision model for receipt OCR + line classification (food/drink) | Server-only `GEMINI_API_KEY`. Default model: `gemini-2.5-flash-lite`. |
-| **[Railway](https://railway.app/)** | API / Next.js hosting + **Postgres** | Deploy with Railway CLI or GitHub. Set `DATABASE_URL`, `GEMINI_API_KEY`, `ALLOWED_ORIGINS`, Mapbox token. |
+| **[Google AI Studio](https://aistudio.google.com/)** / Gemini API | Default vision provider for receipt OCR + line classification | Server-only `GEMINI_API_KEY`. Default model: `gemini-2.5-flash-lite`. |
+| **[OpenRouter](https://openrouter.ai/)** | Alternate vision provider | Server-only `OPENROUTER_API_KEY`. Set `VISION_PROVIDER=openrouter` to force. |
+| **[Railway](https://railway.app/)** | API / Next.js hosting + **Postgres** | Deploy with Railway CLI or GitHub. Set `DATABASE_URL`, `GEMINI_API_KEY` (or OpenRouter), `ALLOWED_ORIGINS`, Mapbox token. |
 | **[Cloudflare](https://www.cloudflare.com/)** (DNS) | Domain DNS for `splitthewine.app` | `api.` → Railway; `www` / apex → marketing. See [`plans/dns-todos.md`](plans/dns-todos.md). |
 | **[Netlify](https://www.netlify.com/)** | Static **marketing / landing** site | Base directory `marketing/` (`marketing/netlify.toml`). Not the claim API. |
 | **[Mapbox](https://www.mapbox.com/)** | Places autocomplete + static maps (Android / web) | `MAPBOX_ACCESS_TOKEN`. iOS venue search uses on-device **MapKit**. |
@@ -73,7 +74,7 @@ Open [http://127.0.0.1:43147](http://127.0.0.1:43147) on a phone-width viewport.
 - **Open the sample tab** — `/r/demo` (tap lines to queue, then set quantities)
 - **Host tools** — `/r/demo?host=1`
 
-Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` for live receipt scanning. The key stays on the server. Without it, the sample tab is used.
+Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` (or `OPENROUTER_API_KEY`) for live receipt scanning. The key stays on the server. Without it, the sample tab is used.
 
 Without `DATABASE_URL`, data lives in memory and resets when the server restarts. With Postgres on Railway, receipts persist.
 
