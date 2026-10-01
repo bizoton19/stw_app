@@ -86,11 +86,23 @@ export async function ensureSchema(): Promise<void> {
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         );
+
+        -- Photo metadata (bytes live in blob store when configured).
+        -- Must live in ensureSchema so new DB_SCHEMA envs (e.g. split_the_wine_dev)
+        -- are not missing it until the first upload/delete.
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.receipt_images (
+          receipt_id text PRIMARY KEY REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
+          mime text NOT NULL,
+          bytes bytea,
+          byte_size integer,
+          storage_key text,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        );
       `);
     })();
   }
   await globalForDb.__splitTheWineMigrated;
-  // Additive: safe if an older in-process migrate already completed without this table.
+  // Additive: safe if an older in-process migrate already completed without these.
   await getPool().query(`
     CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.host_push_tokens (
       receipt_id text NOT NULL REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
@@ -109,7 +121,26 @@ export async function ensureSchema(): Promise<void> {
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.receipt_images (
+      receipt_id text PRIMARY KEY REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
+      mime text NOT NULL,
+      bytes bytea,
+      byte_size integer,
+      storage_key text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
   `);
+  // Older installs: bytes was NOT NULL / missing blob columns.
+  await getPool()
+    .query(`ALTER TABLE ${DB_SCHEMA}.receipt_images ALTER COLUMN bytes DROP NOT NULL`)
+    .catch(() => undefined);
+  await getPool().query(
+    `ALTER TABLE ${DB_SCHEMA}.receipt_images ADD COLUMN IF NOT EXISTS byte_size integer`,
+  );
+  await getPool().query(
+    `ALTER TABLE ${DB_SCHEMA}.receipt_images ADD COLUMN IF NOT EXISTS storage_key text`,
+  );
 }
 
 export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
