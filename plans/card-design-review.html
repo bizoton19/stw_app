@@ -152,14 +152,24 @@
   /* claim rows */
   .rows{border-top:1px solid var(--line)}
   .row{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
-  .disc{width:21px;height:21px;border-radius:50%;border:1.5px solid var(--line);flex:none}
-  .row.on .disc{background:var(--accent);border-color:var(--accent);position:relative}
-  .row.on .disc:after{content:"";position:absolute;left:6px;top:4.5px;width:7px;height:10px;border-right:2px solid var(--accent-fg);border-bottom:2px solid var(--accent-fg);transform:rotate(40deg)}
-  .row .nm{flex:1;min-width:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
-  .row .nm i{display:block;font-style:normal;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
+  /* Centred by flex, not by hand-tuned offsets — the check must sit dead centre at every size. */
+  .disc{
+    width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);flex:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .disc svg{width:12px;height:12px;color:var(--accent-fg);opacity:0}
+  .row.on .disc{background:var(--accent);border-color:var(--accent)}
+  .row.on .disc svg{opacity:1}
+  .row .nm,.payrow .nm{flex:1;min-width:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+  .row .nm i,.payrow .nm i{display:block;font-style:normal;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
   .row .nm i svg{width:12px;height:12px;vertical-align:-2px;margin-right:4px;color:var(--accent);opacity:.75}
   .row .left{font-size:12.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
   .row.on .left{color:var(--accent)}
+
+  /* Pay rows keep OFFICIAL brand tiles in every theme — see plan §3.1. */
+  .payrow{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .paytile{width:34px;height:34px;border-radius:10px;object-fit:cover;flex:none}
+  .paycta{font-size:13px;font-weight:700;color:var(--accent)}
 
   .footnote{margin-top:12px;font-size:11.5px;color:var(--muted);text-align:center}
 
@@ -292,8 +302,9 @@
           <em>3 drinks · plus your share of tax and tip</em>
         </div>
         <div class="rows" style="border-top:0">
-          <div class="row"><div class="disc"></div><div class="nm">Venmo<i>@alex-h</i></div><div class="left">Pay</div></div>
-          <div class="row"><div class="disc"></div><div class="nm">Cash App<i>$alexh</i></div><div class="left">Pay</div></div>
+          <div class="payrow"><img class="paytile" src="../public/pay/venmo.png" alt="Venmo" /><div class="nm">Venmo<i>@alex-h</i></div><div class="paycta">Pay</div></div>
+          <div class="payrow"><img class="paytile" src="../public/pay/cashapp.png" alt="Cash App" /><div class="nm">Cash App<i>$alexh</i></div><div class="paycta">Pay</div></div>
+          <div class="payrow"><img class="paytile" src="../public/pay/paypal.png" alt="PayPal" /><div class="nm">PayPal<i>alex@example.com</i></div><div class="paycta">Pay</div></div>
         </div>
         <div class="footnote">Tapping a method opens the host’s app.</div>
       </div>
@@ -316,10 +327,10 @@
         <p class="title">What did you have?</p>
         <p class="lead">Claiming as Alex · tap everything that’s yours</p>
         <div class="rows">
-          <div class="row on"><div class="disc"></div><div class="nm">Josephine Old Fashioned<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9h18l-1.6 11.4a7.6 7.6 0 0 1-14.8 0z"/><path d="M24 27.8v10"/><path d="M17.8 38.6h12.4"/></svg>$15.00 each</i></div><div class="left">8 left</div></div>
-          <div class="row"><div class="disc"></div><div class="nm">Monkey 47 &amp; tonic<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9h18l-1.6 11.4a7.6 7.6 0 0 1-14.8 0z"/><path d="M24 27.8v10"/><path d="M17.8 38.6h12.4"/></svg>$17.00 each</i></div><div class="left">2 left</div></div>
-          <div class="row"><div class="disc"></div><div class="nm">Carafe of Sancerre<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 6h6.8v6.4l6 9.2a9 9 0 0 1 1.4 4.8v9.4a6 6 0 0 1-6 6H20.2a6 6 0 0 1-6-6v-9.4a9 9 0 0 1 1.4-4.8l6-9.2z"/></svg>shared · $52.00</i></div><div class="left">1 left</div></div>
-          <div class="row"><div class="disc"></div><div class="nm">Gem lettuce<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5h24v29.8l-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6z"/></svg>$14.00 each</i></div><div class="left">3 left</div></div>
+          <div class="row on"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Josephine Old Fashioned<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9h18l-1.6 11.4a7.6 7.6 0 0 1-14.8 0z"/><path d="M24 27.8v10"/><path d="M17.8 38.6h12.4"/></svg>$15.00 each</i></div><div class="left">8 left</div></div>
+          <div class="row"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Monkey 47 &amp; tonic<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9h18l-1.6 11.4a7.6 7.6 0 0 1-14.8 0z"/><path d="M24 27.8v10"/><path d="M17.8 38.6h12.4"/></svg>$17.00 each</i></div><div class="left">2 left</div></div>
+          <div class="row"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Carafe of Sancerre<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 6h6.8v6.4l6 9.2a9 9 0 0 1 1.4 4.8v9.4a6 6 0 0 1-6 6H20.2a6 6 0 0 1-6-6v-9.4a9 9 0 0 1 1.4-4.8l6-9.2z"/></svg>shared · $52.00</i></div><div class="left">1 left</div></div>
+          <div class="row"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Gem lettuce<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5h24v29.8l-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6z"/></svg>$14.00 each</i></div><div class="left">3 left</div></div>
         </div>
         <div style="margin-top:16px"><button class="cta">Claim 1 item</button></div>
       </div>

@@ -53,12 +53,29 @@ Four token sets. Same markup, same copy, same layout — only custom properties 
 
 | Theme | Paper | Ink | Accent | Honest assessment |
 |---|---|---|---|---|
-| **linen** *(default)* | `#F6F4F1` | `#2A241C` | `#6E2E35` merlot | Byte-for-byte today's contract. The control. |
+| **linen** *(default)* | `#F6F4F1` | `#2A241C` | `#6E2E35` merlot | Byte-for-byte today's contract. The control. **Approved — this is the one we ship.** |
 | **candlelight** | `#EFE7DC` | `#241C14` | `#7A2630` | Dimmer, warmer. The most defensible override — it is the current palette after dusk, not a new identity. |
 | **cellar** | `#171310` | `#F2EBE1` | `#C4566A` | Genuinely handsome dark mode. Caveat: merlot must lift to stay legible on near-black, and at `#C4566A` it reads closer to rosé than merlot. Expect to tune. |
 | **patio** | `#FBF9F4` | `#232B26` | `#2F5D50` bottle green | The real break — it swaps the accent. Attractive, but a green CTA is no longer recognizably Split the Wine, and it collides with `select`/`selectWash`, which already mean “claimed.” **Highest rollback risk.** |
 
 Three of the four accents already exist in `apps/mobile/src/lib/theme.ts` (`merlot`, `kindFood` amber for candlelight's wash, `select` green for patio). That is deliberate: the override reuses sanctioned hexes instead of inventing a palette, so reverting is deleting a map entry rather than hunting down stray colors.
+
+### 3.1 Payment methods keep their official tiles — in every theme
+
+**Decided during review.** Payment brand marks are a deliberate, permanent exception to the one-accent rule. Venmo blue, Cash App green, and PayPal navy must render as the official tiles in *all* themes, including `cellar`. They are trust signals: a guest about to send money needs to recognise the logo instantly, and a monochrome or merlot-tinted Venmo mark would be both unrecognisable and a brand-guideline violation.
+
+This is already built — `src/components/PayMethodIcon` serves `public/pay/*.png` at `borderRadius = size * 0.28`, falling back to `meta.brand` + `meta.mark` for methods without a press-kit tile (Zelle, MonCash, Natcash, Other). The theme work must **not** touch it.
+
+Verified on dark: the tiles stay legible, and PayPal's white tile reads as a useful bright anchor rather than a blown-out patch. Row chrome (label, handle, the `Pay` affordance) still themes normally — only the tile is exempt.
+
+### 3.2 The selected disc's check must be centred structurally
+
+**Caught during review.** The first-pass mockup positioned the check glyph with hand-tuned `left`/`top` pixel offsets, which is off-centre and breaks at any other disc size. At implementation:
+
+- Centre with `display:flex; align-items:center; justify-content:center` (web) / `alignItems/justifyContent` (native), never offsets.
+- The check is an inline SVG inheriting `currentColor`, so it flips to `--accent-fg` automatically per theme.
+- The glyph is ~12px inside a 22px disc, but the **tap target stays 44×44** per [`ui-enhance.guide.md`](./ui-enhance.guide.md) §5.1 — pad the pressable, don't grow the disc.
+- Keep the guide's §8 motion: disc scales 0.92 → 1 on select. Scale the disc, not the check, or the glyph will visibly drift.
 
 ### Where a theme is chosen
 
@@ -150,3 +167,9 @@ Open [`card-design-review.html`](./card-design-review.html) and judge:
 - [ ] Watermark at 3.8% — present enough to notice, quiet enough to ignore?
 - [ ] Tear line replacing the 1px divider — keep?
 - [ ] Theme ranking, and which (if any) ship beyond `linen`.
+
+### Verdicts so far
+
+- ✅ **`linen` approved** as the shipping theme.
+- ✅ **Payment tiles stay official brand colour** in every theme (§3.1).
+- ✅ **Selected-disc check must be centred structurally**, not by pixel offsets (§3.2).
