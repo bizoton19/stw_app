@@ -72,13 +72,18 @@ export const viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // `data-card-theme` is set by the script below, after the server has already
+    // rendered this element without it. That is deliberate — see
+    // plans/card-design-themes.md §3.3 — so the attribute mismatch on <html> is
+    // expected rather than a bug to chase.
     <html
       lang="en"
       className={`${geist.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
-        {/* Sets `data-card-theme` before first paint. The server renders no theme
-            attribute on purpose — see plans/card-design-themes.md §3.3. */}
+        {/* Blocking, in <head>, so the theme is set before first paint. React
+            never owns the value and so can never hydrate two of them. */}
         <script dangerouslySetInnerHTML={{ __html: cardThemeBootScript }} />
       </head>
       <body className="min-h-full font-sans">{children}</body>
