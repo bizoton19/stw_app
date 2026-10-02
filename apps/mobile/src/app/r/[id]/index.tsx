@@ -74,9 +74,7 @@ function JoinScreen() {
         hideProgress={flow.isHost}
         kicker={restaurant}
         title={
-          flow.isHost
-            ? "You're hosting — claim under what name?"
-            : `Here is the tab for ${restaurant}`
+          flow.isHost ? "You're hosting — claim under what name?" : "Claim what you ordered"
         }
         keyboard
         footer={
@@ -92,7 +90,7 @@ function JoinScreen() {
         <Text style={styles.lead}>
           {flow.isHost
             ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
-            : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
+            : "Just a name — no app, no account."}
         </Text>
         <ReceiptImageButton receiptId={flow.receipt!.id} hasImage={flow.receipt?.hasImage} />
         <Field label="Name" value={name} onChangeText={setName} placeholder="Alex" autoComplete="name" />
@@ -118,6 +116,10 @@ function PickBoard() {
   const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
   const closed = receipt.status === "finalized";
   const totals = useMemo(() => computeTotals(receipt), [receipt]);
+  const guestShare = flow.guest
+    ? totals.people.find((person) => person.personName === flow.guest?.name)
+    : undefined;
+  const shareSoFarCents = guestShare ? guestShare.totalCents : null;
   const totalSteps = 3;
   const pickStep = 2;
   const activeQueued = flow.queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
@@ -186,7 +188,7 @@ function PickBoard() {
         footer={
           <View>
             <PrimaryButton onPress={goSettle}>
-              {flow.isHost ? "Live board" : "Settle Payment"}
+              {flow.isHost ? "Live board" : "Pay the host"}
             </PrimaryButton>
             {flow.isHost ? (
               hostTabBar
@@ -194,6 +196,7 @@ function PickBoard() {
           </View>
         }
       >
+        <ShareSoFar cents={shareSoFarCents} />
         <HostMessage note={note} />
         <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
@@ -231,7 +234,7 @@ function PickBoard() {
       {remainingItems.length === 0
         ? flow.isHost
           ? "Live board"
-          : "Settle Payment"
+          : "Pay the host"
         : activeQueued.length === 0
           ? "Pick what you had"
           : flow.needsQty
@@ -259,7 +262,7 @@ function PickBoard() {
       total={totalSteps}
       hideProgress={flow.isHost}
       kicker={receipt.restaurant || "The check"}
-      title="What did you have?"
+      title="Claim what you ordered"
       onBack={flow.isHost ? goHostDesk : undefined}
       footer={footer}
       scroll={false}
@@ -283,6 +286,7 @@ function PickBoard() {
                 {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
               </Text>
             ) : null}
+            <ShareSoFar cents={shareSoFarCents} />
             <HostMessage note={note} />
             <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
             {totals.unclaimedItemCents > 0 ? (
@@ -327,6 +331,15 @@ function PickBoard() {
         }
       />
     </InterviewChrome>
+  );
+}
+
+function ShareSoFar({ cents }: { cents: number | null }) {
+  if (cents == null) return null;
+  return (
+    <Text style={styles.shareSoFar}>
+      Your share so far · {centsToLabel(cents)} (incl. tax & tip)
+    </Text>
   );
 }
 
@@ -435,6 +448,14 @@ const styles = StyleSheet.create({
   muted: { fontSize: 13, color: colors.muted, marginTop: 2 },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 16 },
   as: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 12 },
+  shareSoFar: {
+    marginBottom: 12,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "500",
+    color: colors.inkSoft,
+    fontVariant: ["tabular-nums"],
+  },
   remainBanner: {
     marginBottom: 12,
     fontSize: 14,

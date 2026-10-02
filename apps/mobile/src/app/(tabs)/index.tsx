@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   statusPillOpen: {
-    backgroundColor: "rgba(47, 93, 80, 0.12)",
+    backgroundColor: colors.selectWash,
   },
   statusPillClosed: {
     backgroundColor: "rgba(42, 36, 28, 0.08)",

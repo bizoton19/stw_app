@@ -209,7 +209,7 @@ export default function SettleScreen() {
         total={3}
         hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
-        title={flow.isHost ? "Live board" : "Settle Payment"}
+        title={flow.isHost ? "Live board" : "Pay the host"}
         onBack={
           flow.isHost
             ? goHostDesk
@@ -225,7 +225,7 @@ export default function SettleScreen() {
         <Text style={styles.lead}>
           {flow.isHost
             ? "Guests claim on their phones. Watch balances fill in here — tax and tip follow what people ordered."
-            : "Drinks plus a share of tax and tip. Tapping a payment method opens the host's app when possible — nothing is charged from Split the Wine."}
+            : "Drinks plus a share of tax and tip."}
         </Text>
         <ReceiptImageButton receiptId={receiptId} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
@@ -312,6 +312,9 @@ export default function SettleScreen() {
           <View style={styles.youCard}>
             <Text style={styles.youLabel}>You owe</Text>
             <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
+            <Text style={styles.neverTouch}>
+              We never hold your money — this opens your payment app pre-filled.
+            </Text>
             {payments.length > 0 ? (
               <>
                 <Text style={styles.payIntro}>
@@ -370,7 +373,7 @@ export default function SettleScreen() {
                 <Switch
                   value={showTotalDetails}
                   onValueChange={setShowTotalDetails}
-                  trackColor={{ false: colors.border, true: "rgba(47,93,80,0.45)" }}
+                  trackColor={{ false: colors.border, true: colors.selectTrack }}
                   thumbColor={showTotalDetails ? colors.select : "#f4f3f0"}
                   ios_backgroundColor={colors.border}
                   accessibilityLabel="Show total details"
@@ -637,6 +640,12 @@ const styles = StyleSheet.create({
   },
   youLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   youAmount: { marginTop: 2, fontSize: 28, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  neverTouch: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.inkSoft,
+  },
   payIntro: {
     marginTop: 8,
     fontSize: 13,

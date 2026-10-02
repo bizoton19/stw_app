@@ -8,12 +8,15 @@ export const colors = {
   chrome: "#EDE8E1",
   chromeBorder: "#D4CDC3",
   merlot: "#6E2E35",
+  /** Cream ink on merlot CTAs and any filled wine primary. */
   merlotFg: "#FBF8F5",
-  /** Selected claim lines — bottle green, contrasts merlot CTAs on warm paper. */
-  select: "#2F5D50",
-  selectWash: "rgba(47, 93, 80, 0.14)",
+  /** Selected claim lines — wine primary (replaces bottle green). */
+  select: "#7A2E4A",
+  selectWash: "rgba(122, 46, 74, 0.14)",
+  /** On-state switch track — same wine, stronger than selectWash. */
+  selectTrack: "rgba(122, 46, 74, 0.45)",
   danger: "#A33B32",
-  /** Line-kind chips — distinct from CTA merlot + select green. */
+  /** Line-kind chips — distinct from CTA merlot and wine select. */
   kindDrink: "#9C1F3D",
   kindDrinkWash: "rgba(156, 31, 61, 0.16)",
   kindFood: "#C9892A",
