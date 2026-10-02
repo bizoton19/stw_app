@@ -22,6 +22,7 @@ import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { getHostToken } from "@/lib/session";
+import { findMine, personRowKey, sameGuest } from "@/lib/guest-id";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment, PublicReceipt } from "@/lib/types";
 import { goHostDesk } from "@/lib/navigation";
@@ -67,9 +68,7 @@ export default function SettleScreen() {
     (sum, item) => sum + (receipt.remaining[item.id] ?? 0),
     0,
   );
-  const mine = flow.guest
-    ? totals.people.find((p) => p.personName === flow.guest?.name)
-    : undefined;
+  const mine = findMine(totals.people, flow.guest);
   const restaurant = receipt.restaurant || "the check";
   const place = receipt.restaurant?.trim() || "Tonight’s check";
   const hostNote = receipt.hostInfo?.note;
@@ -422,13 +421,17 @@ export default function SettleScreen() {
           >
             {totals.people.map((person) => {
               const amount = centsToLabel(person.totalCents);
-              const isYou = flow.guest?.name === person.personName;
-              const personKey = `${person.personName}\0${person.personContact ?? ""}`;
+              const isYou = sameGuest(person, flow.guest);
+              const personKey = personRowKey(person);
               const open = expandedPerson === personKey;
               return (
                 <View key={personKey} style={styles.personCard}>
                   <View style={styles.personCardHead}>
-                    <ClaimerAvatar name={person.personName} size={34} />
+                    <ClaimerAvatar
+                      name={person.personName}
+                      colorKey={person.guestId || person.personName}
+                      size={34}
+                    />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.name} numberOfLines={1}>
                         {person.personName}

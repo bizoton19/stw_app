@@ -3,8 +3,10 @@ import { describe, it } from "node:test";
 import {
   addClaim,
   addClaims,
+  attachGuestClaims,
   getPublicReceipt,
   getTotals,
+  removeClaim,
   resetStoreForTests,
 } from "./store";
 
@@ -115,5 +117,122 @@ describe("claiming", () => {
       (err: unknown) => (err as { code?: string }).code === "not_enough_remaining",
     );
     assert.equal((await getPublicReceipt("demo")).remaining[wine.id], 7);
+  });
+
+  it("separates same-name guests, keeps owner-token unclaim, and can stamp guestId later", async () => {
+    resetStoreForTests();
+    const demo = await getPublicReceipt("demo");
+    const juice = demo.items.find((item) => item.name === "Apple Juice");
+    const botanist = demo.items.find((item) => item.name === "The Botanist");
+    assert.ok(juice && botanist);
+    const alexA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const alexB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const first = await addClaim("demo", {
+      itemId: juice.id,
+      personName: "Alex",
+      guestId: alexA,
+      units: 1,
+    });
+    const second = await addClaim("demo", {
+      itemId: botanist.id,
+      personName: "Alex",
+      guestId: alexB,
+      units: 1,
+    });
+    assert.equal(first.claim.guestId, alexA);
+    assert.equal(second.claim.guestId, alexB);
+
+    const totals = await getTotals("demo");
+    assert.equal(totals.people.length, 2);
+    assert.equal(totals.people.filter((p) => p.personName === "Alex").length, 2);
+    assert.notEqual(totals.people[0]?.guestId, totals.people[1]?.guestId);
+
+    await assert.rejects(
+      () => removeClaim(second.claim.id, "not-the-token", null),
+      (err: unknown) => (err as { code?: string }).code === "forbidden",
+    );
+    await removeClaim(first.claim.id, first.ownerToken, null);
+    const afterUnclaim = await getPublicReceipt("demo");
+    assert.equal(afterUnclaim.claims.some((claim) => claim.id === first.claim.id), false);
+    assert.equal(afterUnclaim.claims.length, 1);
+
+    const legacy = await addClaim("demo", {
+      itemId: juice.id,
+      personName: "Alex",
+      units: 1,
+    });
+    assert.equal(legacy.claim.guestId, undefined);
+    const stamped = await attachGuestClaims("demo", {
+      guestId: alexA,
+      tokens: { [legacy.claim.id]: legacy.ownerToken, [second.claim.id]: "nope" },
+    });
+    assert.equal(stamped.updated, 1);
+    const pub = await getPublicReceipt("demo");
+    assert.equal(pub.claims.find((claim) => claim.id === legacy.claim.id)?.guestId, alexA);
+    assert.equal(pub.claims.find((claim) => claim.id === second.claim.id)?.guestId, alexB);
+    const split = await getTotals("demo");
+    assert.equal(split.people.length, 2);
+  });
+
+  it("names the other Alex when the same display name races a full line", async () => {
+    resetStoreForTests();
+    const demo = await getPublicReceipt("demo");
+    const juice = demo.items.find((item) => item.name === "Apple Juice");
+    assert.ok(juice);
+    const alexA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const alexB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    await addClaim("demo", {
+      itemId: juice.id,
+      personName: "Alex",
+      guestId: alexA,
+      units: juice.qty,
+    });
+    await assert.rejects(
+      () =>
+        addClaim("demo", {
+          itemId: juice.id,
+          personName: "Alex",
+          guestId: alexB,
+          units: 1,
+        }),
+      (err: unknown) => {
+        const e = err as { code?: string; claimedBy?: string };
+        assert.equal(e.code, "not_enough_remaining");
+        assert.equal(e.claimedBy, "Alex");
+        return true;
+      },
+    );
+    await assert.rejects(
+      () =>
+        addClaim("demo", {
+          itemId: juice.id,
+          personName: "Alex",
+          guestId: alexA,
+          units: 1,
+        }),
+      (err: unknown) => {
+        const e = err as { claimedBy?: string };
+        assert.equal(e.claimedBy, undefined);
+        return true;
+      },
+    );
+  });
+
+  it("rejects a guestId that is not a uuid", async () => {
+    resetStoreForTests();
+    const demo = await getPublicReceipt("demo");
+    const juice = demo.items.find((item) => item.name === "Apple Juice");
+    assert.ok(juice);
+    await assert.rejects(
+      () =>
+        addClaim("demo", {
+          itemId: juice.id,
+          personName: "Alex",
+          guestId: "Alex",
+          units: 1,
+        }),
+      (err: unknown) => (err as { code?: string }).code === "invalid",
+    );
   });
 });

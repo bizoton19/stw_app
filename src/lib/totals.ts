@@ -1,3 +1,4 @@
+import { personRowKey } from "./guest-id";
 import { sumCents, unitCentsArray } from "./money";
 import { claimCapacity, isGlassesPour } from "./pour";
 import type { Claim, Item, PersonTotal, Receipt, Totals } from "./types";
@@ -9,21 +10,27 @@ export function remainingForItem(item: Item, claims: Claim[]): number {
   return claimCapacity(item) - used;
 }
 
-/** Most recent claimer on a line (for race-loss copy). */
+/**
+ * Most recent other claimer on a line (for race-loss copy).
+ * When `excludeGuestId` is set, only that id is skipped — a same display name
+ * with a different guestId still counts. Legacy callers pass a name only.
+ */
 export function latestClaimerForItem(
   claims: Claim[],
   itemId: string,
   excludeName?: string,
+  excludeGuestId?: string,
 ): string | undefined {
+  const excludeId = excludeGuestId?.trim().toLowerCase() || undefined;
+  const exclude = excludeName?.trim().toLowerCase() || undefined;
   const rows = claims
-    .filter(
-      (c) =>
-        c.itemId === itemId &&
-        (!excludeName || c.personName.trim().toLowerCase() !== excludeName.trim().toLowerCase()),
-    )
-    .sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id),
-    );
+    .filter((c) => {
+      if (c.itemId !== itemId) return false;
+      if (excludeId) return c.guestId?.trim().toLowerCase() !== excludeId;
+      if (exclude && c.personName.trim().toLowerCase() === exclude) return false;
+      return true;
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
   return rows[0]?.personName;
 }
 
@@ -35,7 +42,13 @@ export function remainingMap(receipt: Pick<Receipt, "items" | "claims">): Record
   return map;
 }
 
-type UnitOwner = { personName: string; personContact?: string };
+type UnitOwner = {
+  key: string;
+  guestId?: string;
+  personName: string;
+  personContact?: string;
+  createdAt: string;
+};
 
 function ownersForItem(item: Item, claims: Claim[]): UnitOwner[] {
   const ordered = claims
@@ -45,8 +58,11 @@ function ownersForItem(item: Item, claims: Claim[]): UnitOwner[] {
   for (const claim of ordered) {
     for (let i = 0; i < claim.units; i++) {
       owners.push({
+        key: personRowKey(claim),
+        guestId: claim.guestId,
         personName: claim.personName,
         personContact: claim.personContact,
+        createdAt: claim.createdAt,
       });
     }
   }
@@ -61,23 +77,32 @@ function lineItemName(item: Item): string {
 export function computeTotals(receipt: Receipt): Totals {
   const itemSubtotalCents = sumCents(receipt.items.map((i) => i.totalCents));
   const feeTotalCents = sumCents(receipt.fees.map((f) => f.amountCents));
-  const peopleMap = new Map<string, PersonTotal>();
+  const peopleMap = new Map<string, PersonTotal & { seenAt: string }>();
 
-  function person(name: string, contact?: string): PersonTotal {
-    const key = name;
-    let row = peopleMap.get(key);
+  function person(owner: UnitOwner): PersonTotal & { seenAt: string } {
+    let row = peopleMap.get(owner.key);
     if (!row) {
       row = {
-        personName: name,
-        personContact: contact,
+        guestId: owner.guestId,
+        personName: owner.personName,
+        personContact: owner.personContact,
         itemCents: 0,
         feeCents: 0,
         totalCents: 0,
         lines: [],
+        seenAt: owner.createdAt,
       };
-      peopleMap.set(key, row);
-    } else if (contact && !row.personContact) {
-      row.personContact = contact;
+      peopleMap.set(owner.key, row);
+      return row;
+    }
+    const newer = owner.createdAt >= row.seenAt;
+    if (newer) {
+      row.seenAt = owner.createdAt;
+      if (owner.personName.trim()) row.personName = owner.personName;
+      if (owner.guestId) row.guestId = owner.guestId;
+    }
+    if (owner.personContact && (newer || !row.personContact)) {
+      row.personContact = owner.personContact;
     }
     return row;
   }
@@ -88,22 +113,21 @@ export function computeTotals(receipt: Receipt): Totals {
     const capacity = claimCapacity(item);
     const units = unitCentsArray(item.totalCents, capacity);
     const owners = ownersForItem(item, receipt.claims);
-    const byPerson = new Map<string, { units: number; cents: number; contact?: string }>();
+    const byPerson = new Map<string, { units: number; cents: number; owner: UnitOwner }>();
     owners.forEach((owner, idx) => {
       const cents = units[idx] ?? 0;
       claimedItemCents += cents;
-      const agg = byPerson.get(owner.personName) ?? {
-        units: 0,
-        cents: 0,
-        contact: owner.personContact,
-      };
+      const agg = byPerson.get(owner.key) ?? { units: 0, cents: 0, owner };
       agg.units += 1;
       agg.cents += cents;
-      if (owner.personContact) agg.contact = owner.personContact;
-      byPerson.set(owner.personName, agg);
+      if (owner.createdAt >= agg.owner.createdAt) agg.owner = owner;
+      else if (owner.personContact && !agg.owner.personContact) {
+        agg.owner = { ...agg.owner, personContact: owner.personContact };
+      }
+      byPerson.set(owner.key, agg);
     });
-    for (const [name, agg] of byPerson) {
-      const row = person(name, agg.contact);
+    for (const agg of byPerson.values()) {
+      const row = person(agg.owner);
       row.itemCents += agg.cents;
       row.lines.push({
         itemId: item.id,
@@ -114,9 +138,16 @@ export function computeTotals(receipt: Receipt): Totals {
     }
   }
 
-  const people = [...peopleMap.values()].sort((a, b) =>
-    a.personName.localeCompare(b.personName),
-  );
+  const people = [...peopleMap.values()]
+    .map(({ seenAt, ...row }) => {
+      void seenAt;
+      return row;
+    })
+    .sort(
+      (a, b) =>
+        a.personName.localeCompare(b.personName) ||
+        (a.guestId ?? "").localeCompare(b.guestId ?? ""),
+    );
 
   const feeWeights = [
     ...people.map((row) => row.itemCents),

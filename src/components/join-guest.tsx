@@ -39,8 +39,7 @@ export function JoinGuest({
         <ContinueButton
           disabled={!name.trim()}
           onClick={() => {
-            const guest = { name: name.trim(), contact: contact.trim() };
-            saveGuest(receiptId, guest);
+            const guest = saveGuest(receiptId, { name: name.trim(), contact: contact.trim() });
             onJoined(guest);
           }}
         >

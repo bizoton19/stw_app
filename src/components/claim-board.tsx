@@ -15,6 +15,8 @@ import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice, isGlassesPour } from "@/lib/pour";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
 import { hostNoteText } from "@/lib/host-pay";
+import { findMine, sameGuest } from "@/lib/guest-id";
+import { useBindGuestClaims } from "@/hooks/use-bind-guest-claims";
 import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
 import type { PublicReceipt } from "@/lib/types";
@@ -40,9 +42,8 @@ export function ClaimBoard({
   const remainingItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
   const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
   const totals = useMemo(() => computeTotals(receipt), [receipt]);
-  const mine = guest
-    ? totals.people.find((p) => p.personName === guest.name)
-    : undefined;
+  const mine = findMine(totals.people, guest);
+  useBindGuestClaims(receipt.id, receipt.claims, onChange);
   const closed = receipt.status === "finalized";
   const totalSteps = 3;
   const pickStep = 2;
@@ -122,6 +123,7 @@ export function ClaimBoard({
         body: JSON.stringify({
           personName: guest.name,
           personContact: guest.contact || undefined,
+          guestId: guest.guestId,
           claims: queuedItems.map((item) => ({
             itemId: item.id,
             units: Math.min(
@@ -599,15 +601,21 @@ function History({
                     const mineToDrop =
                       !closed &&
                       (Boolean(getClaimToken(receipt.id, claim.id)) || Boolean(isHost));
+                    const you = sameGuest(claim, getGuest(receipt.id));
                     return (
                       <li
                         key={claim.id}
                         className="flex items-center justify-between gap-2 text-[13px] text-muted-foreground"
                       >
                         <span className="flex min-w-0 items-center gap-2.5">
-                          <ClaimerAvatar name={claim.personName} size={26} />
+                          <ClaimerAvatar
+                            name={claim.personName}
+                            colorKey={claim.guestId || claim.personName}
+                            size={26}
+                          />
                           <span className="truncate">
-                            {claim.personName} · {claim.units}
+                            {claim.personName}
+                            {you ? " (you)" : ""} · {claim.units}
                             {claim.personContact ? ` · ${claim.personContact}` : ""}
                           </span>
                         </span>
