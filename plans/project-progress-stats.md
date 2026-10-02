@@ -85,6 +85,8 @@ git log --reverse -1 --format='%aI %s'
 - The day palette is unchanged on purpose: every theme token holds the exact value it shipped with, so dusk is one-line reversible and "too ugly" never costs a migration.
 - Same display name no longer merges on the claim board or settle: each join keeps a stable guest id, and “you owe” follows that id.
 - Launch waitlist is production-safe: validated emails, in-process rate limits, and `launch_notify` documented in the ERD. Coming-soon prefers the Railway list; Netlify Forms stays an unsynced fallback when the API cannot be reached.
+- Coming-soon waitlist host is chosen at Netlify build time (`STW_API_BASE` → `api-config.js`), so staging and local can override the production API.
+- CORS + waitlist smoke checklist for `www` → Railway `POST /api/waitlist`.
 
 ### Day 13 — Sat 2026-10-03 · **candidate release**
 - Labeled **`candidate-release-2026-10-03`** on `plan-an-outing` (friend-test / store-prep freeze point before Places hybrid work).

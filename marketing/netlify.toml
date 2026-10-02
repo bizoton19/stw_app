@@ -1,5 +1,16 @@
 # Static marketing site on Netlify
 # Site settings: Base directory = marketing
+#
+# Build writes api-config.js from STW_API_BASE (see README.md in this folder).
+# A build command set in the Netlify UI overrides this file — leave it empty,
+# or set it to: node inject-api-base.mjs
+
+[build]
+  command = "node inject-api-base.mjs"
+  publish = "."
+
+[build.environment]
+  STW_API_BASE = "https://api.splitthewine.app"
 
 [[redirects]]
   from = "/faq"
@@ -40,3 +51,9 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Each deploy should pick up a new STW_API_BASE immediately.
+[[headers]]
+  for = "/api-config.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
