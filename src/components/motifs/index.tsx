@@ -186,6 +186,8 @@ const MOTIFS = {
 
 export type MotifName = keyof typeof MOTIFS;
 
+export const MOTIF_NAMES = Object.keys(MOTIFS) as MotifName[];
+
 export function Motif({
   name,
   size = 16,

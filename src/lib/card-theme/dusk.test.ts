@@ -102,6 +102,28 @@ test("globals.css declares the same token values as themes.ts", () => {
   }
 });
 
+test("native card-theme tokens have not drifted from web", () => {
+  // apps/mobile keeps its own copy because Metro's project root is apps/mobile.
+  // This is the guard that keeps the copy honest.
+  const src = readFileSync(
+    new URL("../../../apps/mobile/src/lib/card-theme/themes.ts", import.meta.url),
+    "utf8",
+  );
+  for (const id of CARD_THEME_IDS) {
+    const block = src.match(new RegExp(`${id}: \\{([\\s\\S]*?)\\n  \\}`))?.[1];
+    assert.ok(block, `native themes.ts has no ${id} map`);
+    for (const [token, value] of Object.entries(cardThemes[id])) {
+      const declared = block.match(new RegExp(`\\b${token}: "([^"]*)"`));
+      assert.ok(declared, `native themes.ts ${id} is missing ${token}`);
+      assert.equal(
+        declared[1],
+        value,
+        `native themes.ts ${id}.${token} drifted from web`,
+      );
+    }
+  }
+});
+
 test("the boot script sets the theme before paint, with the tested boundaries", () => {
   // No React, no hydration mismatch — the script owns the attribute outright.
   assert.match(cardThemeBootScript, /dataset\.cardTheme/);
