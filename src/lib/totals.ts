@@ -143,6 +143,37 @@ export function computeTotals(receipt: Receipt): Totals {
   };
 }
 
+/**
+ * Guest's proportional share (items + tax & tip).
+ * `extra` is the in-progress claim queue — not yet saved — so the board can
+ * show a quiet running total while someone is still tapping lines.
+ */
+export function shareSoFarCents(
+  receipt: Receipt,
+  personName: string,
+  extra: { itemId: string; units: number }[] = [],
+): number {
+  const name = personName.trim();
+  if (!name) return 0;
+  const extras: Claim[] = extra
+    .filter((row) => row.units > 0)
+    .map((row, i) => ({
+      id: `preview_${i}`,
+      itemId: row.itemId,
+      personName: name,
+      units: row.units,
+      createdAt: `9999-01-01T00:00:${String(i).padStart(2, "0")}.000Z`,
+    }));
+  const hasShare =
+    extras.length > 0 || receipt.claims.some((claim) => claim.personName === name);
+  if (!hasShare) return 0;
+  const totals = computeTotals({
+    ...receipt,
+    claims: [...receipt.claims, ...extras],
+  });
+  return totals.people.find((person) => person.personName === name)?.totalCents ?? 0;
+}
+
 export function leftoverAssignments(receipt: Receipt): { itemId: string; units: number }[] {
   const remaining = remainingMap(receipt);
   return receipt.items

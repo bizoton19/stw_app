@@ -215,7 +215,7 @@ export function SettleView({
           <div className="-ml-2 flex h-11 items-center">
             <button
               type="button"
-              aria-label="Back to settle payment"
+              aria-label="Back to pay the host"
               onClick={() => {
                 setPayLater(false);
                 setSaveHint(null);
@@ -311,11 +311,11 @@ export function SettleView({
           {receipt.restaurant || "The check"}
         </p>
         <h1 className="text-[1.65rem] font-semibold tracking-tight">
-          {isHost ? "Live board" : "Settle Payment"}
+          {isHost ? "Live board" : "Pay the host"}
         </h1>
         <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-          Drinks plus a share of tax and tip. Tapping a payment method opens the host&apos;s app
-          when possible — nothing is charged from Split the Wine.
+          Drinks plus a share of tax and tip.
+          {isHost ? "" : " Nothing is charged from Split the Wine."}
         </p>
         {message ? <p className="mt-3 text-[14px] text-destructive">{message}</p> : null}
 
@@ -341,7 +341,7 @@ export function SettleView({
                   role="switch"
                   checked={showTotalDetails}
                   onChange={(e) => setShowTotalDetails(e.target.checked)}
-                  className="size-4 accent-[#2F5D50]"
+                  className="size-4 accent-primary"
                 />
               </label>
             </li>
@@ -403,6 +403,9 @@ export function SettleView({
                   You can pay your share of {centsToLabel(mine.totalCents)} to the host
                   {hostName !== "the host" ? `, ${hostName},` : ""} via the following payment
                   method{payments.length === 1 ? "" : "s"}:
+                </p>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                  We never hold your money — this opens your payment app pre-filled.
                 </p>
                 <ul className="mt-3 space-y-2">
                   {payments.map((payment) => {
