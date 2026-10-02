@@ -50,7 +50,7 @@ function VenueGlyph({ category, name }: { category?: string | null; name?: strin
   if (!kind) return null;
   const tint =
     kind === "bar"
-      ? { bg: "bg-[rgba(110,46,53,0.12)] text-[#6E2E35]", label: "Bar" }
+      ? { bg: "bg-[rgba(110,46,53,0.12)] text-[var(--stw-merlot)]", label: "Bar" }
       : kind === "grocery"
         ? { bg: "bg-[rgba(61,90,128,0.14)] text-[#3D5A80]", label: "Grocery" }
         : { bg: "bg-[rgba(92,122,94,0.14)] text-[#4F6B50]", label: "Restaurant" };
@@ -280,7 +280,7 @@ export function VenueTypeahead({
           <img
             src={`/api/places/static-map?lat=${venue!.lat}&lng=${venue!.lng}&w=600&h=220`}
             alt={`Map of ${venue!.name}`}
-            className="h-[280px] w-full rounded-[14px] border border-border object-cover bg-[#EDE8E1]"
+            className="h-[280px] w-full rounded-[14px] border border-border object-cover bg-[var(--stw-chrome)]"
           />
         ) : null}
       </div>

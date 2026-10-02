@@ -341,6 +341,7 @@ export function ClaimBoard({
         total={totalSteps}
         hideProgress
         kicker={receipt.restaurant || "The check"}
+        motif="label-band"
         title="How many of each?"
         stepKey="qty"
         direction={direction}
@@ -413,6 +414,7 @@ export function ClaimBoard({
       total={totalSteps}
       hideProgress
       kicker={receipt.restaurant || "The check"}
+      motif="label-band"
       title="What did you have?"
       stepKey="pick"
       direction={direction}
@@ -455,7 +457,7 @@ export function ClaimBoard({
                   onClick={() => toggle(item.id)}
                   className={`pressable mb-2 flex w-full items-center gap-3 rounded-[14px] border-[1.5px] px-3.5 py-3.5 text-left ${
                     selected
-                      ? "border-[#2F5D50] bg-[rgba(47,93,80,0.14)]"
+                      ? "border-[var(--stw-select)] bg-[var(--stw-select-wash)]"
                       : "border-transparent bg-transparent"
                   }`}
                 >
@@ -463,7 +465,7 @@ export function ClaimBoard({
                   <span className="min-w-0 flex-1">
                     <span
                       className={`block text-[16px] font-semibold tracking-tight ${
-                        selected ? "font-bold text-[#2F5D50]" : "text-foreground"
+                        selected ? "font-bold text-[var(--stw-select)]" : "text-foreground"
                       }`}
                     >
                       {item.name}
@@ -482,7 +484,7 @@ export function ClaimBoard({
                     initial={{ opacity: 0.45, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`shrink-0 text-right text-[13px] font-semibold tabular-nums ${
-                      selected ? "text-[#2F5D50]" : "text-ink-soft"
+                      selected ? "text-[var(--stw-select)]" : "text-ink-soft"
                     }`}
                   >
                     <span className="block">

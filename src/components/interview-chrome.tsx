@@ -3,6 +3,7 @@
 import { ChevronLeft } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { HostSupportTip } from "@/components/host-support-tip";
+import { Motif, type MotifName } from "@/components/motifs";
 import { cn } from "@/lib/utils";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -12,6 +13,7 @@ export function InterviewChrome({
   total,
   title,
   kicker,
+  motif,
   onBack,
   direction = 1,
   stepKey,
@@ -24,6 +26,8 @@ export function InterviewChrome({
   total: number;
   title: string;
   kicker?: string;
+  /** Atmosphere beside the kicker. Carries no meaning the kicker doesn't. */
+  motif?: MotifName;
   onBack?: () => void;
   direction?: 1 | -1;
   stepKey: string;
@@ -91,7 +95,12 @@ export function InterviewChrome({
           >
             <div className="px-5 pt-3">
               {kicker ? (
-                <p className="mb-1 text-[13px] font-medium text-ink-soft">{kicker}</p>
+                <p className="mb-1 flex items-center gap-1.5 text-[13px] font-medium text-ink-soft">
+                  {motif ? (
+                    <Motif name={motif} size={15} className="text-primary opacity-80" />
+                  ) : null}
+                  {kicker}
+                </p>
               ) : null}
               <h1 className="text-[1.7rem] leading-[1.15] font-semibold tracking-tight">
                 {title}
@@ -102,7 +111,7 @@ export function InterviewChrome({
         </AnimatePresence>
       </div>
 
-      <div className="shrink-0 border-t border-[#D4CDC3] bg-[#EDE8E1] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
+      <div className="shrink-0 border-t border-[var(--stw-chrome-border)] bg-[var(--stw-chrome)] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
         {footer}
         {supportTip ? <HostSupportTip /> : null}
       </div>

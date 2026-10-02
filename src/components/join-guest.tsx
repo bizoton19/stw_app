@@ -33,6 +33,7 @@ export function JoinGuest({
       total={3}
       hideProgress
       kicker={place}
+      motif="label-band"
       title={isHost ? "You're hosting — claim under what name?" : `Here is the tab for ${place}`}
       stepKey="join"
       footer={

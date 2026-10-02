@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cardThemeBootScript } from "@/lib/card-theme/boot-script";
 import "./globals.css";
 
 const geist = Geist({
@@ -75,6 +76,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geist.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Sets `data-card-theme` before first paint. The server renders no theme
+            attribute on purpose — see plans/card-design-themes.md §3.3. */}
+        <script dangerouslySetInnerHTML={{ __html: cardThemeBootScript }} />
+      </head>
       <body className="min-h-full font-sans">{children}</body>
     </html>
   );

@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Banknote, ChevronLeft, Copy, Share2 } from "lucide-react";
+import { ChevronLeft, Copy, Share2 } from "lucide-react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
 import { HostSupportTip } from "@/components/host-support-tip";
 import { LineKindIcon } from "@/components/line-kind-icon";
+import { CardWash, Motif } from "@/components/motifs";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { WineMark } from "@/components/wine-mark";
 import { hostPayments, validateHostPayments } from "@/lib/host-pay";
@@ -283,7 +284,7 @@ export function SettleView({
           </div>
         </div>
 
-        <div className="shrink-0 space-y-1 border-t border-[#D4CDC3] bg-[#EDE8E1] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
+        <div className="shrink-0 space-y-1 border-t border-[var(--stw-chrome-border)] bg-[var(--stw-chrome)] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
           <Link
             href={`/r/${receipt.id}`}
             className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium"
@@ -341,7 +342,7 @@ export function SettleView({
                   role="switch"
                   checked={showTotalDetails}
                   onChange={(e) => setShowTotalDetails(e.target.checked)}
-                  className="size-4 accent-[#2F5D50]"
+                  className="size-4 accent-[var(--stw-select)]"
                 />
               </label>
             </li>
@@ -372,7 +373,7 @@ export function SettleView({
 
         <div className="mt-5 space-y-1 border-y border-border py-3 text-[14px]">
           <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
-            <Banknote className="size-3.5" strokeWidth={2} aria-hidden />
+            <Motif name="check-stub" size={14} className="text-primary opacity-80" />
             The tab
           </p>
           <div className="flex justify-between">
@@ -392,8 +393,15 @@ export function SettleView({
         </div>
 
         {mine && mine.totalCents > 0 ? (
-          <div className="mt-5 rounded-[14px] border border-border bg-[#FBFAF8] p-3.5">
-            <p className="text-[13px] font-semibold text-ink-soft">You owe</p>
+          <div className="relative mt-5 overflow-hidden rounded-[14px] border border-border bg-[var(--stw-sheet)] p-3.5">
+            <CardWash />
+            {/* The wash is absolutely positioned, so content has to be positioned
+                too or it paints underneath. */}
+            <div className="relative">
+            <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-soft">
+              <Motif name="pour" size={14} className="text-primary opacity-80" />
+              You owe
+            </p>
             <p className="mt-0.5 text-[1.75rem] font-bold tabular-nums">
               {centsToLabel(mine.totalCents)}
             </p>
@@ -455,11 +463,13 @@ export function SettleView({
                 The host hasn&apos;t added a payment method yet.
               </p>
             )}
+            </div>
           </div>
         ) : null}
 
-        <p className="mt-6 mb-3 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
-          <Banknote className="size-3.5" strokeWidth={2} aria-hidden />
+        <div className="stw-perf mt-6" aria-hidden />
+        <p className="mb-3 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+          <Motif name="coupe-pair" size={15} className="text-primary opacity-80" />
           Everyone&apos;s share
         </p>
         <ul className="space-y-6">
@@ -589,7 +599,7 @@ export function SettleView({
         ) : null}
       </div>
 
-      <div className="shrink-0 space-y-1 border-t border-[#D4CDC3] bg-[#EDE8E1] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
+      <div className="shrink-0 space-y-1 border-t border-[var(--stw-chrome-border)] bg-[var(--stw-chrome)] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
         {canPayLater ? (
           <QuietButton onClick={() => setPayLater(true)}>I&apos;ll pay later</QuietButton>
         ) : null}

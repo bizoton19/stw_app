@@ -106,6 +106,7 @@ export function RsvpGuest({
       total={2}
       hideProgress
       kicker={whenLabel || "Upcoming"}
+      motif="coupe-pair"
       title={place}
       stepKey="rsvp"
       footer={

@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
+import type { MotifName } from "@/components/motifs";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,16 +64,26 @@ const ORDER: Step[] = [
 const COUNTED: Step[] = ORDER.filter((s) => s !== "parsing");
 const TOTAL_STEPS = COUNTED.length;
 
-const COPY: Record<Step, { kicker: string; title: string }> = {
+/** `motif` is atmosphere only — see plans/card-design-themes.md §2. `grapes` is
+    deliberately unused: it is the easiest motif to overuse. */
+const COPY: Record<Step, { kicker: string; title: string; motif?: MotifName }> = {
   ready: { kicker: "", title: "Ready to split this check?" },
-  capture: { kicker: "The receipt", title: "How should we add the tab?" },
-  parsing: { kicker: "Reading", title: "Looking over every pour…" },
-  restaurant: { kicker: "The place", title: "What's the name on the check?" },
-  items: { kicker: "The drinks", title: "Does this look right?" },
-  pour: { kicker: "Bottles", title: "How should people claim these?" },
-  fees: { kicker: "Tax & tip", title: "These follow what people ordered." },
+  capture: { kicker: "The receipt", title: "How should we add the tab?", motif: "check-stub" },
+  parsing: { kicker: "Reading", title: "Looking over every pour…", motif: "check-stub" },
+  restaurant: {
+    kicker: "The place",
+    title: "What's the name on the check?",
+    motif: "label-band",
+  },
+  items: { kicker: "The drinks", title: "Does this look right?", motif: "stem" },
+  pour: { kicker: "Bottles", title: "How should people claim these?", motif: "carafe" },
+  fees: { kicker: "Tax & tip", title: "These follow what people ordered.", motif: "check-stub" },
   pay: { kicker: "Getting paid", title: "How should people pay you?" },
-  share: { kicker: "Share", title: "Send this. They claim what they drank." },
+  share: {
+    kicker: "Share",
+    title: "Send this. They claim what they drank.",
+    motif: "coupe-pair",
+  },
 };
 
 const PAY_OPTIONS: { method: PayMethod; label: string; hint: string }[] = [
@@ -419,7 +430,7 @@ export function HostInterview() {
           ].map((label, i) => (
             <li
               key={label}
-              className="flex items-center gap-3.5 rounded-[14px] border border-border bg-[#FFFcf8] px-4 py-3.5"
+              className="flex items-center gap-3.5 rounded-[14px] border border-border bg-[var(--stw-sheet)] px-4 py-3.5"
             >
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[rgba(110,46,53,0.1)] text-[14px] font-extrabold text-primary">
                 {i + 1}
@@ -481,7 +492,7 @@ export function HostInterview() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={previewUrl} alt="Receipt preview" className="max-h-48 w-full object-cover" />
-            <span className="absolute inset-x-0 bottom-0 bg-[rgba(42,36,28,0.55)] py-2 text-center text-[12px] font-semibold text-[#F6F4F1]">
+            <span className="absolute inset-x-0 bottom-0 bg-[rgba(42,36,28,0.55)] py-2 text-center text-[12px] font-semibold text-[var(--stw-paper)]">
               Tap to replace
             </span>
           </button>
@@ -539,7 +550,7 @@ export function HostInterview() {
     body = (
       <>
         {itemsHint ? (
-          <p className="mb-3 rounded-xl bg-[#E6E0D8] px-3 py-2.5 text-[13px] font-medium leading-snug text-foreground">
+          <p className="mb-3 rounded-xl bg-[var(--stw-border)] px-3 py-2.5 text-[13px] font-medium leading-snug text-foreground">
             {itemsHint}
           </p>
         ) : (
@@ -605,7 +616,7 @@ export function HostInterview() {
                 type="button"
                 className={`pressable flex h-8 w-7 shrink-0 items-center justify-center ${
                   parseReview === "remove_items"
-                    ? "rounded-md bg-[rgba(110,46,53,0.08)] text-[#6E2E35]"
+                    ? "rounded-md bg-[rgba(110,46,53,0.08)] text-[var(--stw-merlot)]"
                     : ""
                 }`}
                 aria-label={`Remove ${item.name || "line"}`}
@@ -648,7 +659,7 @@ export function HostInterview() {
             <button
               type="button"
               disabled={reviewBusy || !itemsOk}
-              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1] disabled:opacity-40"
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[var(--stw-paper)] disabled:opacity-40"
               onClick={() => void applyItemsReview("looks_good", { continue: true })}
             >
               Looks good
@@ -657,7 +668,7 @@ export function HostInterview() {
             <button
               type="button"
               disabled={reviewBusy}
-              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1] disabled:opacity-40"
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[var(--stw-paper)] disabled:opacity-40"
               onClick={() => void applyItemsReview("remove_items")}
             >
               Yes but I need to remove some items
@@ -669,7 +680,7 @@ export function HostInterview() {
             <button
               type="button"
               disabled={reviewBusy}
-              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[#F6F4F1] disabled:opacity-40"
+              className="block w-full px-3.5 py-3.5 text-left text-[14px] font-semibold text-foreground hover:bg-[var(--stw-paper)] disabled:opacity-40"
               onClick={() => void applyItemsReview("needs_edits")}
             >
               No I need to make edits
@@ -682,7 +693,7 @@ export function HostInterview() {
             disabled={reviewBusy}
             className={`pressable inline-flex h-12 flex-1 items-center justify-center gap-1 rounded-full border px-4 text-[15px] font-bold ${
               parseReview === "looks_good" || parseReview === "remove_items"
-                ? "border-[#6E2E35] bg-[rgba(110,46,53,0.06)]"
+                ? "border-[var(--stw-merlot)] bg-[rgba(110,46,53,0.06)]"
                 : "border-border bg-background"
             }`}
             aria-expanded={itemsYesOpen}
@@ -701,7 +712,7 @@ export function HostInterview() {
             disabled={reviewBusy}
             className={`pressable inline-flex h-12 flex-1 items-center justify-center gap-1 rounded-full border px-4 text-[15px] font-bold ${
               parseReview === "needs_edits"
-                ? "border-[#6E2E35] bg-[rgba(110,46,53,0.06)]"
+                ? "border-[var(--stw-merlot)] bg-[rgba(110,46,53,0.06)]"
                 : "border-border bg-background"
             }`}
             aria-expanded={itemsNoOpen}
@@ -720,7 +731,7 @@ export function HostInterview() {
           <button
             type="button"
             disabled={reviewBusy || !itemsOk}
-            className="pressable mt-2 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#6E2E35] text-[15px] font-bold text-white disabled:opacity-40"
+            className="pressable mt-2 inline-flex h-12 w-full items-center justify-center rounded-full bg-[var(--stw-merlot)] text-[15px] font-bold text-white disabled:opacity-40"
             onClick={() => goAfterItems()}
           >
             Continue
@@ -752,7 +763,7 @@ export function HostInterview() {
                 className={`rounded-2xl border px-3.5 py-3.5 ${
                   unresolved
                     ? "border-[rgba(47,93,80,0.35)] bg-[rgba(47,93,80,0.04)]"
-                    : "border-border bg-[#FFFcf8]"
+                    : "border-border bg-[var(--stw-sheet)]"
                 }`}
               >
                 <div className="min-w-0">
@@ -810,7 +821,7 @@ export function HostInterview() {
                     type="button"
                     className={`pressable inline-flex h-10 flex-1 items-center justify-center rounded-full border px-3 text-[13px] font-bold ${
                       mode === "as_printed"
-                        ? "border-[#6E2E35] bg-[rgba(110,46,53,0.08)] text-[#6E2E35]"
+                        ? "border-[var(--stw-merlot)] bg-[rgba(110,46,53,0.08)] text-[var(--stw-merlot)]"
                         : "border-border bg-background text-foreground"
                     }`}
                     onClick={() =>
@@ -823,7 +834,7 @@ export function HostInterview() {
                     type="button"
                     className={`pressable inline-flex h-10 flex-1 items-center justify-center rounded-full border px-3 text-[13px] font-bold ${
                       mode === "glasses"
-                        ? "border-[#2F5D50] bg-[rgba(47,93,80,0.12)] text-[#2F5D50]"
+                        ? "border-[var(--stw-select)] bg-[var(--stw-select-wash)] text-[var(--stw-select)]"
                         : "border-border bg-background text-foreground"
                     }`}
                     onClick={() =>
@@ -1013,14 +1024,14 @@ export function HostInterview() {
                   onClick={() => toggleMethod(option.method)}
                   className={`pressable flex min-w-[96px] flex-1 flex-col items-center gap-2 rounded-[14px] border-[1.5px] px-2.5 py-3.5 ${
                     on
-                      ? "border-[#2F5D50] bg-[rgba(47,93,80,0.14)]"
+                      ? "border-[var(--stw-select)] bg-[var(--stw-select-wash)]"
                       : "border-border bg-transparent"
                   }`}
                 >
                   <PayMethodIcon method={option.method} size={48} />
                   <span
                     className={`text-[13px] font-semibold ${
-                      on ? "font-bold text-[#2F5D50]" : "text-ink-soft"
+                      on ? "font-bold text-[var(--stw-select)]" : "text-ink-soft"
                     }`}
                   >
                     {option.label}
@@ -1037,7 +1048,7 @@ export function HostInterview() {
                 return (
                   <div
                     key={payment.method}
-                    className="rounded-xl border border-border bg-[#FFFcf8] p-3"
+                    className="rounded-xl border border-border bg-[var(--stw-sheet)] p-3"
                   >
                     <div className="mb-2.5 flex items-center gap-2.5">
                       <PayMethodIcon method={payment.method} size={40} />
@@ -1186,6 +1197,7 @@ export function HostInterview() {
           ? "Quick check"
           : COPY[step].kicker
       }
+      motif={COPY[step].motif}
       title={
         step === "pour" && candidates.some((row) => row.needsResolve)
           ? "Could this be a shared bottle?"

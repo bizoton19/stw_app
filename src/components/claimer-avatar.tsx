@@ -11,7 +11,7 @@ export function ClaimerAvatar({
   const fontSize = Math.max(10, Math.round(size * 0.38));
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center font-semibold tracking-wide text-[#FBF8F5]"
+      className="inline-flex shrink-0 items-center justify-center font-semibold tracking-wide text-[var(--stw-merlot-fg)]"
       style={{
         width: size,
         height: size,
