@@ -15,7 +15,7 @@ What you need to build, run, and ship this project — accounts we use, CLIs, an
 | **[OpenRouter](https://openrouter.ai/)** | Vision model for receipt OCR + line classification (food/drink) | Server-only `OPENROUTER_API_KEY`. Default model: `google/gemini-2.5-flash`. |
 | **[Railway](https://railway.app/)** | API / Next.js hosting + **Postgres** | Deploy with Railway CLI or GitHub. Set `DATABASE_URL`, `OPENROUTER_*`, `ALLOWED_ORIGINS`, Mapbox token. |
 | **[Cloudflare](https://www.cloudflare.com/)** (DNS) | Domain DNS for `splitthewine.app` | `api.` → Railway; `www` / apex → marketing. See [`plans/dns-todos.md`](plans/dns-todos.md). |
-| **[Netlify](https://www.netlify.com/)** | Static **marketing / landing** site | Base directory `marketing/` (`marketing/netlify.toml`). Not the claim API. |
+| **[Netlify](https://www.netlify.com/)** | Static **marketing / landing** site | Base directory `marketing/`. Build injects `STW_API_BASE` into `api-config.js`. See [`marketing/README.md`](marketing/README.md). Not the claim API. |
 | **[Mapbox](https://www.mapbox.com/)** | Places autocomplete + static maps (Android / web) | `MAPBOX_ACCESS_TOKEN`. iOS venue search uses on-device **MapKit**. |
 | **[Expo](https://expo.dev/)** / EAS | Native builds, updates, store submit | `eas-cli` in `apps/mobile`. Project under Expo account. |
 | **[Apple Developer Program](https://developer.apple.com/programs/)** | iOS signing, TestFlight, App Store | Bundle id `com.splitthewine.app`. Paid membership required to ship. |
@@ -54,6 +54,7 @@ Static HTML/CSS in `marketing/` on Netlify
 - Local API: `http://0.0.0.0:43147` (`npm run dev` / `npm run start`)
 - Production API + claim board: Railway (`api.splitthewine.app` or `*.up.railway.app`)
 - Landing: `www.splitthewine.app` (Netlify)
+- Marketing waitlist API: `STW_API_BASE` at Netlify build time (default `https://api.splitthewine.app`). See [`marketing/README.md`](marketing/README.md).
 - Mobile: `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_SHARE_URL` → that API origin
 
 Copy root `.env.example` → `.env.local` and `apps/mobile/.env.example` → `apps/mobile/.env.local` as needed.

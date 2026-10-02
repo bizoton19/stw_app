@@ -34,3 +34,11 @@ Until the apps are live in the stores, **do not** send marketing visitors to App
 - [ ] App Store / Play screenshots + description
 - [ ] Privacy / support URLs still point at `www.splitthewine.app`
 - [ ] Marketing hero CTA copy: “Coming soon” → “Download”
+
+---
+
+## Waitlist API host and CORS smoke
+
+The coming-soon page does not hardcode an API origin. Netlify’s build writes `marketing/api-config.js` from `STW_API_BASE` (production default `https://api.splitthewine.app`). Signups still go to Railway `POST /api/waitlist` → Postgres `launch_notify`. Netlify Forms stays a no-JS / unreachable-API fallback. There is no sync from Netlify into the database.
+
+How to set the host for production, staging, or local, and the OPTIONS/POST smoke checklist: [`marketing/README.md`](../marketing/README.md).

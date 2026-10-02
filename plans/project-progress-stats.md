@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-09-27 ~20:15 −04:00 |
-| **Elapsed** | **~7 days** |
-| **Commits on `main`** | **~190** (refresh with `git rev-list --count HEAD`) |
+| **This snapshot** | 2026-10-02 ~07:06 −04:00 |
+| **Elapsed** | **~12 days** |
+| **Commits** | **217** on this branch (`main` is 216; refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -77,6 +77,10 @@ git log --reverse -1 --format='%aI %s'
 - Progress stats doc + Cursor rule to keep milestones current
 - Host desk: camera + upload shortcuts (skip beginner guide); edit pay handles after publish
 - Web brand mark matches official tilted merlot bottle icon
+
+### Day 8 — Fri 2026-10-02
+- Coming-soon waitlist host is chosen at Netlify build time (`STW_API_BASE` → `api-config.js`), so staging and local can override the production API
+- CORS + waitlist smoke checklist for `www` → Railway `POST /api/waitlist`
 
 ## How to extend this file
 

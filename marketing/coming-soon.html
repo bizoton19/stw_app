@@ -155,6 +155,8 @@
         &copy; 2026 Split the Wine
     </footer>
 
+    <!-- API origin: /api-config.js, written at build from STW_API_BASE. -->
+    <script src="/api-config.js"></script>
     <script>
         const i18n = {
             en: {
@@ -279,7 +281,20 @@
             showThanks();
         }
 
-        const API_BASE = "https://api.splitthewine.app";
+        function readApiBase() {
+            const raw = window.STW_API_BASE;
+            if (typeof raw !== "string" || !raw.trim()) return "";
+            try {
+                const url = new URL(raw);
+                if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+                if (url.username || url.password) return "";
+                return url.origin;
+            } catch (e) {
+                return "";
+            }
+        }
+
+        const API_BASE = readApiBase();
 
         async function onNotifySubmit(e) {
             e.preventDefault();
@@ -311,7 +326,8 @@
             }
         }
 
-        formEl.addEventListener("submit", onNotifySubmit);
+        // No injected host: keep the native Netlify post. Do not guess a production URL.
+        if (API_BASE) formEl.addEventListener("submit", onNotifySubmit);
     </script>
 </body>
 </html>
