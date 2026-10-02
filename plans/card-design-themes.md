@@ -1,6 +1,6 @@
-# Card design, SVG motifs, and themes — first pass
+# Card design, SVG motifs, and themes
 
-**Status:** first pass, awaiting review. Nothing is wired into the app.
+**Status:** shipped on web and native (phases 1–4). `linen` by day, `candlelight` after 19:00 local, no picker. Phase 5 (Three.js) is still untouched and still optional.
 **Review sheet:** [`card-design-review.html`](./card-design-review.html) — open it and use the theme switcher.
 **Motif sources:** [`motifs/*.svg`](./motifs/)
 **Relationship to [`ui-enhance.guide.md`](./ui-enhance.guide.md):** this plan **deliberately overrides** §3 (“at most three merlot roles”, “do not invent a second brand color”) and §10 (“no second accent”, “dark mode is never a different palette”) — approved on the condition that every override is reversible. §6 of this doc is that escape hatch.
@@ -185,13 +185,27 @@ The load-bearing decision is keeping `linen` byte-identical to the shipped palet
 | Phase | Work | Reviewable output |
 |---|---|---|
 | **0** | Motif kit + review sheet + this plan | ✅ Done. Scope now settled: linen + auto-dusk candlelight. |
-| **1** | `themes.ts` + `<Motif>` on web; wire Share and Settle in `linen` only | Same look as today, new plumbing underneath |
-| **2** | `dusk.ts` + the pre-paint inline script; candlelight goes live | Day/dusk screenshots, zero hydration warnings |
-| **3** | Native motif parity (`react-native-svg`) + `AppState` dusk re-check | Web/native side-by-side, day and dusk |
-| **4** | Claim rows get motif markers + tear lines (still 2D) | Density check on a real phone |
-| **5 — optional** | Marketing hero scene; settle pour if it still seems worth it | Perf numbers before/after |
+| **1** | `themes.ts` + `<Motif>` on web; wire Share and Settle in `linen` only | ✅ Done. `--stw-*` custom properties; linen holds the shipped values, so day is unchanged. |
+| **2** | `dusk.ts` + the pre-paint inline script; candlelight goes live | ✅ Done. Verified by computed style, not by eye: candlelight resolves `#efe7dc` paper / `#7a2630` CTA, linen stays byte-identical at `#ede8e1` chrome. |
+| **3** | Native motif parity (`react-native-svg`) + `AppState` dusk re-check | ✅ Done, with a caveat — see §7.1. |
+| **4** | Claim rows get motif markers + tear lines (still 2D) | ✅ Done. `LineKindIcon` is now `stem` / `check-stub`; the tear line is `.stw-perf`. |
+| **5 — optional** | Marketing hero scene; settle pour if it still seems worth it | Not started. Still optional. |
 
 Phase 5 of the old plan (persist `themeId`) is **gone** — automatic dusk needs no storage, no schema change, and no change to the claim link.
+
+### 7.1 Native dusk is opt-in, and §4 understated the work
+
+The plan assumed `theme.ts` becoming `cardThemes.linen` would be enough for native to follow the clock. It is not, and the reason is worth recording.
+
+Native has ~250 palette references, and nearly all of them sit inside module-scope `StyleSheet.create({...})` objects that JavaScript evaluates **once at import**. A value read at import time cannot follow a clock no matter what it points at. So on native:
+
+- `colors` stays the day palette and every existing call site keeps working, unchanged — which is what kept this step safe to ship.
+- Dusk is available per component through `useCardTheme()` (`AppState` → `active` re-check, no polling), and is used where tokens are already read at render time — currently `LineKindIcon`.
+- **Native screens therefore still paint `linen` at dusk.** Making native fully follow the clock is a mechanical but wide refactor (module-scope styles → render-time tokens) and is its own task, not a loose end of this one.
+
+Web has no such problem: custom properties are resolved by the browser at paint, so one attribute on `<html>` re-themes everything.
+
+The duplicated token map (`apps/mobile/src/lib/card-theme/themes.ts` exists because Metro's project root is `apps/mobile`) is guarded by a test that reads the native file and compares it to web token by token. It was mutation-checked: changing one native hex fails the suite.
 
 ---
 
@@ -206,10 +220,13 @@ Phase 5 of the old plan (persist `themeId`) is **gone** — automatic dusk needs
 5. Payment tiles stay official brand colour in every theme (§3.1).
 6. The selected-disc check is centred structurally, never by pixel offsets (§3.2).
 
+7. **`grapes` ships in the kit but is used nowhere.** It stayed drawable and themeable so the decision is reversible, but §2's warning held up: nothing needed it. `cork` earned exactly one placement (the native planning screen, "the night started"), which answers the old open question #2 — it is not the next `grapes`, but it is close to the line.
+8. **`perforation.svg` and `paper-grain.svg` ship as CSS, not components** (`.stw-perf`, `.stw-grain`). Both are backgrounds; the tear line in particular must never be an SVG, because stretching it deforms the notches into arrowheads.
+
 **Still open**
 
 1. Settle pour: build it in Phase 5 as proof, or leave Three.js entirely to the marketing site?
-2. Does `cork` earn a place on the host desk, or is it the next `grapes` — a motif that exists because it was easy to draw?
+2. Should native follow the clock too (§7.1), or is day-only native acceptable given nobody can compare two phones side by side?
 
 ---
 

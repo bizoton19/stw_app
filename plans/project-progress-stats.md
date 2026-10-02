@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-09-27 ~20:15 −04:00 |
-| **Elapsed** | **~7 days** |
-| **Commits on `main`** | **~190** (refresh with `git rev-list --count HEAD`) |
+| **This snapshot** | 2026-10-02 ~04:40 −04:00 |
+| **Elapsed** | **~11.6 days** |
+| **Commits on `main`** | **242** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -77,6 +77,12 @@ git log --reverse -1 --format='%aI %s'
 - Progress stats doc + Cursor rule to keep milestones current
 - Host desk: camera + upload shortcuts (skip beginner guide); edit pay handles after publish
 - Web brand mark matches official tilted merlot bottle icon
+
+### Day 12 — Fri 2026-10-02
+- **The app now knows what time it is.** Cards paint `linen` by day and a dimmer, warmer `candlelight` after 19:00 local — automatically, with no picker and no setting to explain. A blocking script in `<head>` sets the theme before first paint, so there is no flash and no hydration mismatch.
+- **Hand-drawn motif kit replaces generic icons** on both web and native: a stem marks a drink line, a torn check stub marks food and "the tab", a carafe marks a shared bottle, a label band marks the venue. All stroke-only and colour-inheriting, so one drawing serves every theme.
+- **Settle got card treatment** — a masked split watermark behind "You owe", and a tear line instead of a plain divider.
+- The day palette is unchanged on purpose: every theme token holds the exact value it shipped with, so dusk is one-line reversible and "too ugly" never costs a migration.
 
 ## How to extend this file
 
