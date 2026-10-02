@@ -11,12 +11,22 @@ import { ContinueButton, InterviewChrome, QuietButton } from "@/components/inter
 import { HostMessage } from "@/components/host-message";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { ReceiptImageButton } from "@/components/receipt-image-sheet";
+import { Input } from "@/components/ui/input";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice, isGlassesPour } from "@/lib/pour";
 import { needsQtyStep, pruneQueue } from "@/lib/claim-queue";
 import { hostNoteText } from "@/lib/host-pay";
-import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
-import { computeTotals } from "@/lib/totals";
+import {
+  api,
+  clearClaimToken,
+  getClaimToken,
+  getGuest,
+  getHostToken,
+  saveClaimToken,
+  saveGuest,
+  type GuestIdentity,
+} from "@/lib/session";
+import { computeTotals, personForGuest } from "@/lib/totals";
 import type { PublicReceipt } from "@/lib/types";
 
 export function ClaimBoard({
@@ -29,7 +39,13 @@ export function ClaimBoard({
   onChange: () => Promise<unknown> | unknown;
 }) {
   const router = useRouter();
-  const guest = getGuest(receipt.id);
+  const [guestState, setGuestState] = useState<{ id: string; guest: GuestIdentity | null }>(
+    () => ({ id: receipt.id, guest: getGuest(receipt.id) }),
+  );
+  if (guestState.id !== receipt.id) {
+    setGuestState({ id: receipt.id, guest: getGuest(receipt.id) });
+  }
+  const guest = guestState.guest;
   const [queued, setQueued] = useState<string[]>([]);
   const [units, setUnits] = useState<Record<string, number>>({});
   const [phase, setPhase] = useState<"pick" | "qty">("pick");
@@ -40,9 +56,7 @@ export function ClaimBoard({
   const remainingItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
   const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
   const totals = useMemo(() => computeTotals(receipt), [receipt]);
-  const mine = guest
-    ? totals.people.find((p) => p.personName === guest.name)
-    : undefined;
+  const mine = personForGuest(totals.people, guest);
   const closed = receipt.status === "finalized";
   const totalSteps = 3;
   const pickStep = 2;
@@ -120,6 +134,7 @@ export function ClaimBoard({
       }>(`/api/receipts/${receipt.id}/claims`, {
         method: "POST",
         body: JSON.stringify({
+          guestId: guest.guestId,
           personName: guest.name,
           personContact: guest.contact || undefined,
           claims: queuedItems.map((item) => ({
@@ -253,6 +268,8 @@ export function ClaimBoard({
           mine={mine?.totalCents}
           guest={guest}
           isHost={isHost}
+          onGuest={(next) => setGuestState({ id: receipt.id, guest: next })}
+          onChange={onChange}
         />
         <HostMessage note={note} />
         {message ? <p className="mb-3 text-[14px] text-destructive">{message}</p> : null}
@@ -420,11 +437,14 @@ export function ClaimBoard({
       footer={pickFooter}
     >
       {guest ? (
-        <p className="mb-3 text-[15px] leading-[22px] text-muted-foreground">
-          Claiming as {guest.name}
-          {isHost ? " (host)" : ""}
-          {guest.contact ? ` · ${guest.contact}` : ""}
-        </p>
+        <GuestBar
+          receiptId={receipt.id}
+          guest={guest}
+          isHost={isHost}
+          shareCents={mine?.totalCents}
+          onGuest={(next) => setGuestState({ id: receipt.id, guest: next })}
+          onChange={onChange}
+        />
       ) : null}
       <HostMessage note={note} />
       {receipt.hasImage ? (
@@ -515,14 +535,19 @@ export function ClaimBoard({
 function BoardHeader({
   receipt,
   title,
+  mine,
   guest,
   isHost,
+  onGuest,
+  onChange,
 }: {
   receipt: PublicReceipt;
   title: string;
   mine?: number;
-  guest: { name: string; contact: string } | null;
+  guest: GuestIdentity | null;
   isHost?: boolean;
+  onGuest: (guest: GuestIdentity) => void;
+  onChange: () => Promise<unknown> | unknown;
 }) {
   return (
     <div className="pt-3">
@@ -535,14 +560,144 @@ function BoardHeader({
         </h1>
       </div>
       {guest ? (
-        <p className="mb-3 text-[15px] leading-[22px] text-muted-foreground">
-          Claiming as {guest.name}
-          {isHost ? " (host)" : ""}
-          {guest.contact ? ` · ${guest.contact}` : ""}
-        </p>
+        <GuestBar
+          receiptId={receipt.id}
+          guest={guest}
+          isHost={isHost}
+          shareCents={mine}
+          onGuest={onGuest}
+          onChange={onChange}
+        />
       ) : null}
       {receipt.hasImage ? (
         <ReceiptImageButton receiptId={receipt.id} hasImage />
+      ) : null}
+    </div>
+  );
+}
+
+function GuestBar({
+  receiptId,
+  guest,
+  isHost,
+  shareCents,
+  onGuest,
+  onChange,
+}: {
+  receiptId: string;
+  guest: GuestIdentity;
+  isHost?: boolean;
+  shareCents?: number;
+  onGuest: (guest: GuestIdentity) => void;
+  onChange: () => Promise<unknown> | unknown;
+}) {
+  const [draft, setDraft] = useState<{ name: string; contact: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const editing = draft !== null;
+  const name = draft?.name ?? guest.name;
+  const contact = draft?.contact ?? guest.contact;
+
+  async function save() {
+    const trimmed = name.trim();
+    if (!trimmed || busy) return;
+    setBusy(true);
+    setError(null);
+    const next = saveGuest(receiptId, {
+      guestId: guest.guestId,
+      name: trimmed,
+      contact,
+    });
+    let synced = false;
+    try {
+      await api(`/api/receipts/${receiptId}/guest`, {
+        method: "POST",
+        body: JSON.stringify({
+          guestId: next.guestId,
+          personName: next.name,
+          personContact: next.contact || undefined,
+        }),
+      });
+      synced = true;
+      onGuest(next);
+      await onChange();
+      setDraft(null);
+    } catch {
+      if (!synced) saveGuest(receiptId, guest);
+      setError("Couldn't update your name on the table. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="mb-3">
+        <label htmlFor="guest-edit-name" className="mb-2 block text-[13px] font-medium">
+          Name
+        </label>
+        <Input
+          id="guest-edit-name"
+          value={name}
+          onChange={(e) => setDraft({ name: e.target.value, contact })}
+          className="h-12 rounded-xl border-border bg-transparent text-base"
+          autoComplete="name"
+        />
+        <label htmlFor="guest-edit-contact" className="mt-3 mb-2 block text-[13px] font-medium">
+          Contact <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
+        <Input
+          id="guest-edit-contact"
+          value={contact}
+          onChange={(e) => setDraft({ name, contact: e.target.value })}
+          className="h-12 rounded-xl border-border bg-transparent text-base"
+          placeholder="phone, Venmo, or email"
+          autoComplete="tel"
+        />
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            className="pressable h-10 rounded-full bg-primary px-4 text-[14px] font-semibold text-primary-foreground disabled:opacity-50"
+            disabled={busy || !name.trim()}
+            onClick={() => void save()}
+          >
+            Save name
+          </button>
+          <button
+            type="button"
+            className="pressable h-10 px-3 text-[14px] font-medium text-muted-foreground"
+            disabled={busy}
+            onClick={() => {
+              setDraft(null);
+              setError(null);
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3">
+      <p className="text-[15px] leading-[22px] text-muted-foreground">
+        Claiming as {guest.name}
+        {isHost ? " (host)" : ""}
+        {guest.contact ? ` · ${guest.contact}` : ""}{" "}
+        <button
+          type="button"
+          className="pressable font-medium text-foreground underline-offset-2 hover:underline"
+          onClick={() => setDraft({ name: guest.name, contact: guest.contact })}
+        >
+          Edit
+        </button>
+      </p>
+      {shareCents && shareCents > 0 ? (
+        <p className="mt-1 text-[14px] font-semibold tabular-nums text-foreground">
+          Your share so far · {centsToLabel(shareCents)}
+        </p>
       ) : null}
     </div>
   );
@@ -605,7 +760,7 @@ function History({
                         className="flex items-center justify-between gap-2 text-[13px] text-muted-foreground"
                       >
                         <span className="flex min-w-0 items-center gap-2.5">
-                          <ClaimerAvatar name={claim.personName} size={26} />
+                          <ClaimerAvatar name={claim.personName} guestId={claim.guestId} size={26} />
                           <span className="truncate">
                             {claim.personName} · {claim.units}
                             {claim.personContact ? ` · ${claim.personContact}` : ""}

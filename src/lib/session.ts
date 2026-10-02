@@ -1,5 +1,11 @@
+import {
+  guestStorageKey,
+  mergeGuestIdentity,
+  newGuestId,
+  parseStoredGuest,
+} from "./guest-id";
+
 const HOST_PREFIX = "stw-host:";
-const GUEST_PREFIX = "stw-guest:";
 const TOKEN_PREFIX = "stw-tokens:";
 
 export function saveHostToken(receiptId: string, token: string) {
@@ -14,20 +20,50 @@ export function ensureDemoHost(isHostQuery: boolean) {
   if (isHostQuery) saveHostToken("demo", "demo-host");
 }
 
-export type GuestIdentity = { name: string; contact: string };
+/** Device identity for one receipt. `name` is cosmetic — see docs/guest-id-contract.md. */
+export type GuestIdentity = { guestId: string; name: string; contact: string };
 
-export function saveGuest(receiptId: string, guest: GuestIdentity) {
-  sessionStorage.setItem(`${GUEST_PREFIX}${receiptId}`, JSON.stringify(guest));
-}
-
-export function getGuest(receiptId: string): GuestIdentity | null {
-  const raw = sessionStorage.getItem(`${GUEST_PREFIX}${receiptId}`);
-  if (!raw) return null;
+function browserStorage(kind: "local" | "session"): Storage | null {
+  if (typeof window === "undefined") return null;
   try {
-    return JSON.parse(raw) as GuestIdentity;
+    return kind === "local" ? window.localStorage : window.sessionStorage;
   } catch {
     return null;
   }
+}
+
+/**
+ * Guest for this receipt. Minted once per device and kept in
+ * localStorage `stw-guest:{receiptId}`. A legacy sessionStorage value is
+ * migrated on read.
+ */
+export function getGuest(receiptId: string): GuestIdentity | null {
+  const key = guestStorageKey(receiptId);
+  const local = browserStorage("local");
+  const session = browserStorage("session");
+  const parsedLocal = parseStoredGuest(local?.getItem(key));
+  const parsed = parsedLocal ?? parseStoredGuest(session?.getItem(key));
+  if (!parsed) return null;
+  if (parsed.guestId && parsedLocal) {
+    return { guestId: parsed.guestId, name: parsed.name, contact: parsed.contact };
+  }
+  const guest: GuestIdentity = {
+    guestId: parsed.guestId ?? newGuestId(),
+    name: parsed.name,
+    contact: parsed.contact,
+  };
+  local?.setItem(key, JSON.stringify(guest));
+  return guest;
+}
+
+/** Saves the cosmetic name. Reuses the stored guestId unless `guest.guestId` is set. */
+export function saveGuest(
+  receiptId: string,
+  guest: { guestId?: string; name: string; contact?: string },
+): GuestIdentity {
+  const next = mergeGuestIdentity(getGuest(receiptId), guest);
+  browserStorage("local")?.setItem(guestStorageKey(receiptId), JSON.stringify(next));
+  return next;
 }
 
 export function saveClaimToken(receiptId: string, claimId: string, token: string) {

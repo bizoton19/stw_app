@@ -12,6 +12,7 @@ export async function POST(
     const { id } = await ctx.params;
     const body = (await req.json()) as {
       itemId?: string;
+      guestId?: string;
       personName?: string;
       personContact?: string;
       units?: number;
@@ -19,9 +20,11 @@ export async function POST(
     };
     const personName = String(body.personName ?? "");
     const personContact = body.personContact;
+    const guestId = body.guestId;
 
     if (Array.isArray(body.claims)) {
       const result = await addClaims(id, {
+        guestId,
         personName,
         personContact,
         claims: body.claims.map((row) => ({
@@ -51,6 +54,7 @@ export async function POST(
 
     const result = await addClaim(id, {
       itemId: String(body.itemId ?? ""),
+      guestId,
       personName,
       personContact,
       units: Number(body.units),

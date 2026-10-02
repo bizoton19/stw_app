@@ -52,6 +52,12 @@ export type Fee = {
 export type Claim = {
   id: string;
   itemId: string;
+  /**
+   * Stable person key (UUID). Absent on legacy claims, which still group by `personName`.
+   * Not an auth secret — claim delete uses `ownerToken`.
+   */
+  guestId?: string;
+  /** Cosmetic display name. Not unique. */
   personName: string;
   personContact?: string;
   units: number;
@@ -119,6 +125,9 @@ export type Receipt = {
 };
 
 export type PersonTotal = {
+  /** Set when this row is keyed by guestId. Absent for legacy name-grouped rows. */
+  guestId?: string;
+  /** Cosmetic display name (latest label for this guestId). */
   personName: string;
   personContact?: string;
   itemCents: number;

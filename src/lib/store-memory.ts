@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { dollarsToCents } from "./money";
 import { claimCapacity, normalizePour } from "./pour";
 import { SAMPLE_PARSE } from "./sample-tab";
+import { claimPersonFields, normalizeGuestId, relabelGuestClaims } from "./guest-id";
 import { computeTotals, leftoverAssignments, remainingForItem, remainingMap, latestClaimerForItem } from "./totals";
 import { findVenueDayConflict, isValidatedVenue } from "./venue-day";
 import {
@@ -429,17 +430,20 @@ export async function saveReceipt(
 
 export async function addClaim(
   id: string,
-  input: { itemId: string; personName: string; personContact?: string; units: number },
+  input: {
+    itemId: string;
+    guestId?: string;
+    personName: string;
+    personContact?: string;
+    units: number;
+  },
 ) {
   return withLock(id, () => {
     const receipt = requireReceipt(id);
     if (receipt.status !== "open") {
       throw Object.assign(new Error("not_open"), { code: "conflict" });
     }
-    const name = input.personName.trim();
-    if (!name) {
-      throw Object.assign(new Error("name_required"), { code: "invalid" });
-    }
+    const person = claimPersonFields(input);
     if (!Number.isInteger(input.units) || input.units < 1) {
       throw Object.assign(new Error("invalid_units"), { code: "invalid" });
     }
@@ -449,7 +453,10 @@ export async function addClaim(
     }
     const remaining = remainingForItem(item, receipt.claims);
     if (input.units > remaining) {
-      const claimedBy = latestClaimerForItem(receipt.claims, item.id, name);
+      const claimedBy = latestClaimerForItem(receipt.claims, item.id, {
+        guestId: person.guestId,
+        personName: person.personName,
+      });
       throw Object.assign(new Error("not_enough_remaining"), {
         code: "not_enough_remaining",
         remaining,
@@ -465,11 +472,15 @@ export async function addClaim(
             : `Only ${remaining} left on ${item.name}`,
       });
     }
+    if (person.guestId) {
+      relabelGuestClaims(receipt.claims, person.guestId, person.personName, person.personContact);
+    }
     const claim: InternalClaim = {
       id: `cl_${shortId()}`,
       itemId: item.id,
-      personName: name,
-      personContact: input.personContact?.trim() || undefined,
+      ...(person.guestId ? { guestId: person.guestId } : {}),
+      personName: person.personName,
+      personContact: person.personContact,
       units: input.units,
       createdAt: now(),
       ownerToken: randomUUID(),
@@ -481,6 +492,7 @@ export async function addClaim(
       claim: {
         id: claim.id,
         itemId: claim.itemId,
+        ...(claim.guestId ? { guestId: claim.guestId } : {}),
         personName: claim.personName,
         personContact: claim.personContact,
         units: claim.units,
@@ -495,6 +507,7 @@ export async function addClaim(
 export async function addClaims(
   id: string,
   input: {
+    guestId?: string;
     personName: string;
     personContact?: string;
     claims: { itemId: string; units: number }[];
@@ -505,10 +518,7 @@ export async function addClaims(
     if (receipt.status !== "open") {
       throw Object.assign(new Error("not_open"), { code: "conflict" });
     }
-    const name = input.personName.trim();
-    if (!name) {
-      throw Object.assign(new Error("name_required"), { code: "invalid" });
-    }
+    const person = claimPersonFields(input);
     if (!Array.isArray(input.claims) || input.claims.length === 0) {
       throw Object.assign(new Error("claims_required"), { code: "invalid" });
     }
@@ -528,7 +538,10 @@ export async function addClaims(
       }
       const remaining = remainingForItem(item, receipt.claims);
       if (units > remaining) {
-        const claimedBy = latestClaimerForItem(receipt.claims, itemId, name);
+        const claimedBy = latestClaimerForItem(receipt.claims, itemId, {
+          guestId: person.guestId,
+          personName: person.personName,
+        });
         throw Object.assign(new Error("not_enough_remaining"), {
           code: "not_enough_remaining",
           remaining,
@@ -546,13 +559,17 @@ export async function addClaims(
       }
     }
 
+    if (person.guestId) {
+      relabelGuestClaims(receipt.claims, person.guestId, person.personName, person.personContact);
+    }
     const created: InternalClaim[] = [];
     for (const [itemId, units] of requested) {
       const claim: InternalClaim = {
         id: `cl_${shortId()}`,
         itemId,
-        personName: name,
-        personContact: input.personContact?.trim() || undefined,
+        ...(person.guestId ? { guestId: person.guestId } : {}),
+        personName: person.personName,
+        personContact: person.personContact,
         units,
         createdAt: now(),
         ownerToken: randomUUID(),
@@ -572,6 +589,31 @@ export async function addClaims(
       tokens: Object.fromEntries(created.map((claim) => [claim.id, claim.ownerToken])),
       remaining: publicReceipt.remaining,
     };
+  });
+}
+
+export async function updateGuestDisplay(
+  id: string,
+  input: { guestId?: string; personName?: string; personContact?: string | null },
+) {
+  const personName = String(input.personName ?? "").trim();
+  if (!personName) {
+    throw Object.assign(new Error("name_required"), { code: "invalid" });
+  }
+  const guestId = normalizeGuestId(input.guestId);
+  if (!guestId) {
+    throw Object.assign(new Error("guest_id_required"), {
+      code: "invalid",
+      message: "guestId is required",
+    });
+  }
+  const personContact =
+    typeof input.personContact === "string" ? input.personContact.trim() || undefined : undefined;
+  return withLock(id, () => {
+    const receipt = requireReceipt(id);
+    relabelGuestClaims(receipt.claims, guestId, personName, personContact);
+    emit(receipt, "updated");
+    return toPublic(receipt);
   });
 }
 

@@ -2,12 +2,15 @@ import { CLAIMER_COLORS, colorForName, initialsFor } from "@/lib/claimer-color";
 
 export function ClaimerAvatar({
   name,
+  guestId,
   size = 28,
 }: {
   name: string;
+  /** When set, color is keyed by guestId so duplicate display names stay distinct. */
+  guestId?: string;
   size?: number;
 }) {
-  const bg = colorForName(name);
+  const bg = colorForName(guestId?.trim() || name);
   const fontSize = Math.max(10, Math.round(size * 0.38));
   return (
     <span

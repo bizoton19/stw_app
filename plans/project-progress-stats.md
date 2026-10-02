@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-09-27 ~20:15 −04:00 |
-| **Elapsed** | **~7 days** |
-| **Commits on `main`** | **~190** (refresh with `git rev-list --count HEAD`) |
+| **This snapshot** | 2026-10-02 ~10:00 −04:00 |
+| **Elapsed** | **~12 days** |
+| **Commits on this branch** | **222** (`git rev-list --count HEAD` after the guestId commit) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -77,6 +77,10 @@ git log --reverse -1 --format='%aI %s'
 - Progress stats doc + Cursor rule to keep milestones current
 - Host desk: camera + upload shortcuts (skip beginner guide); edit pay handles after publish
 - Web brand mark matches official tilted merlot bottle icon
+
+### Day 8 — Fri 2026-10-02
+- Duplicate display names stay separate people on the claim board and settle
+- Mine, share so far, and you-owe follow the device’s `guestId`, while the name stays a cosmetic label
 
 ## How to extend this file
 

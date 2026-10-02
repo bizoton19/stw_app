@@ -134,7 +134,8 @@ erDiagram
   CLAIM {
     text id
     text itemId
-    text personName
+    text guestId "UUID — person key; omitted on legacy claims"
+    text personName "cosmetic display name — not unique"
     text personContact "optional"
     int units
     text createdAt
@@ -155,7 +156,7 @@ erDiagram
 **Claim capacity (logical, not a column):**  
 `claim units` remaining = `qty` when `pour` absent/`as_printed`, else `qty × glassesPerPrintedUnit`. Stored claims still use integer `units` against that capacity.
 
-**Public API strip:** responses omit `ownerToken` / `autoLeftover` and add computed `remaining: Record<itemId, number>`.
+**Public API strip:** responses omit `ownerToken` / `autoLeftover` and add computed `remaining: Record<itemId, number>`. `guestId` is public (aggregation key, not a secret). Totals group by `guestId` when present, otherwise by exact `personName`. Contract: [guest-id-contract.md](../docs/guest-id-contract.md).
 
 ---
 
@@ -188,7 +189,8 @@ erDiagram
 
   GUEST_KV {
     text receiptId
-    text name
+    text guestId "UUID minted once per device per receipt"
+    text name "cosmetic — may collide"
     text contact "optional"
   }
 
@@ -207,6 +209,8 @@ erDiagram
 ```
 
 Clearing a tab from the host desk removes local list/token entries; server delete is separate (closed tabs only).
+
+**Web guest identity** uses the same `stw-guest:{receiptId}` JSON (`guestId`, `name`, `contact`) in **localStorage** (one guest per receipt per browser profile). A legacy `sessionStorage` copy is migrated on read. Host tokens and claim owner tokens stay in `sessionStorage`. Expo mirrors the guest JSON in AsyncStorage under that key. See [guest-id-contract.md](../docs/guest-id-contract.md).
 
 ---
 

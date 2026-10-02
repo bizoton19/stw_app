@@ -13,18 +13,36 @@ export function remainingForItem(item: Item, claims: Claim[]): number {
 export function latestClaimerForItem(
   claims: Claim[],
   itemId: string,
-  excludeName?: string,
+  exclude?: string | { guestId?: string; personName?: string },
 ): string | undefined {
+  const excludeGuestId = typeof exclude === "object" ? exclude?.guestId : undefined;
+  const excludeName = typeof exclude === "string" ? exclude : exclude?.personName;
   const rows = claims
-    .filter(
-      (c) =>
-        c.itemId === itemId &&
-        (!excludeName || c.personName.trim().toLowerCase() !== excludeName.trim().toLowerCase()),
-    )
+    .filter((c) => {
+      if (c.itemId !== itemId) return false;
+      if (excludeGuestId) return c.guestId !== excludeGuestId;
+      if (
+        excludeName &&
+        c.personName.trim().toLowerCase() === excludeName.trim().toLowerCase()
+      ) {
+        return false;
+      }
+      return true;
+    })
     .sort(
       (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id),
     );
   return rows[0]?.personName;
+}
+
+/** This device's row. A guestId never matches a different person who shares the display name. */
+export function personForGuest<T extends { guestId?: string; personName: string }>(
+  people: T[],
+  guest: { guestId?: string; name: string } | null | undefined,
+): T | undefined {
+  if (!guest) return undefined;
+  if (guest.guestId) return people.find((p) => p.guestId === guest.guestId);
+  return people.find((p) => !p.guestId && p.personName === guest.name);
 }
 
 export function remainingMap(receipt: Pick<Receipt, "items" | "claims">): Record<string, number> {
@@ -35,7 +53,17 @@ export function remainingMap(receipt: Pick<Receipt, "items" | "claims">): Record
   return map;
 }
 
-type UnitOwner = { personName: string; personContact?: string };
+type UnitOwner = {
+  guestId?: string;
+  personName: string;
+  personContact?: string;
+  createdAt: string;
+};
+
+function personKey(owner: { guestId?: string; personName: string }): string {
+  if (owner.guestId) return `id:${owner.guestId}`;
+  return `name:${owner.personName}`;
+}
 
 function ownersForItem(item: Item, claims: Claim[]): UnitOwner[] {
   const ordered = claims
@@ -45,8 +73,10 @@ function ownersForItem(item: Item, claims: Claim[]): UnitOwner[] {
   for (const claim of ordered) {
     for (let i = 0; i < claim.units; i++) {
       owners.push({
+        guestId: claim.guestId,
         personName: claim.personName,
         personContact: claim.personContact,
+        createdAt: claim.createdAt,
       });
     }
   }
@@ -61,23 +91,32 @@ function lineItemName(item: Item): string {
 export function computeTotals(receipt: Receipt): Totals {
   const itemSubtotalCents = sumCents(receipt.items.map((i) => i.totalCents));
   const feeTotalCents = sumCents(receipt.fees.map((f) => f.amountCents));
-  const peopleMap = new Map<string, PersonTotal>();
+  type PersonAcc = PersonTotal & { latestAt: string };
+  const peopleMap = new Map<string, PersonAcc>();
 
-  function person(name: string, contact?: string): PersonTotal {
-    const key = name;
+  function touch(owner: UnitOwner): PersonAcc {
+    const key = personKey(owner);
     let row = peopleMap.get(key);
     if (!row) {
       row = {
-        personName: name,
-        personContact: contact,
+        guestId: owner.guestId,
+        personName: owner.personName,
+        personContact: owner.personContact,
         itemCents: 0,
         feeCents: 0,
         totalCents: 0,
         lines: [],
+        latestAt: owner.createdAt,
       };
       peopleMap.set(key, row);
-    } else if (contact && !row.personContact) {
-      row.personContact = contact;
+      return row;
+    }
+    if (owner.createdAt >= row.latestAt) {
+      row.personName = owner.personName;
+      row.latestAt = owner.createdAt;
+      if (owner.personContact) row.personContact = owner.personContact;
+    } else if (owner.personContact && !row.personContact) {
+      row.personContact = owner.personContact;
     }
     return row;
   }
@@ -88,22 +127,47 @@ export function computeTotals(receipt: Receipt): Totals {
     const capacity = claimCapacity(item);
     const units = unitCentsArray(item.totalCents, capacity);
     const owners = ownersForItem(item, receipt.claims);
-    const byPerson = new Map<string, { units: number; cents: number; contact?: string }>();
+    const byPerson = new Map<
+      string,
+      {
+        guestId?: string;
+        personName: string;
+        contact?: string;
+        units: number;
+        cents: number;
+        createdAt: string;
+      }
+    >();
     owners.forEach((owner, idx) => {
       const cents = units[idx] ?? 0;
       claimedItemCents += cents;
-      const agg = byPerson.get(owner.personName) ?? {
+      const key = personKey(owner);
+      const agg = byPerson.get(key) ?? {
+        guestId: owner.guestId,
+        personName: owner.personName,
+        contact: owner.personContact,
         units: 0,
         cents: 0,
-        contact: owner.personContact,
+        createdAt: owner.createdAt,
       };
       agg.units += 1;
       agg.cents += cents;
-      if (owner.personContact) agg.contact = owner.personContact;
-      byPerson.set(owner.personName, agg);
+      if (owner.createdAt >= agg.createdAt) {
+        agg.personName = owner.personName;
+        agg.createdAt = owner.createdAt;
+        if (owner.personContact) agg.contact = owner.personContact;
+      } else if (owner.personContact && !agg.contact) {
+        agg.contact = owner.personContact;
+      }
+      byPerson.set(key, agg);
     });
-    for (const [name, agg] of byPerson) {
-      const row = person(name, agg.contact);
+    for (const agg of byPerson.values()) {
+      const row = touch({
+        guestId: agg.guestId,
+        personName: agg.personName,
+        personContact: agg.contact,
+        createdAt: agg.createdAt,
+      });
       row.itemCents += agg.cents;
       row.lines.push({
         itemId: item.id,
@@ -114,9 +178,16 @@ export function computeTotals(receipt: Receipt): Totals {
     }
   }
 
-  const people = [...peopleMap.values()].sort((a, b) =>
-    a.personName.localeCompare(b.personName),
-  );
+  const people = [...peopleMap.values()]
+    .map(({ latestAt: _latestAt, ...row }) => {
+      void _latestAt;
+      return row;
+    })
+    .sort(
+      (a, b) =>
+        a.personName.localeCompare(b.personName) ||
+        (a.guestId ?? "").localeCompare(b.guestId ?? ""),
+    );
 
   const feeWeights = [
     ...people.map((row) => row.itemCents),
