@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-03 ~10:50 −04:00 · place and tab photos share one full-page paper sheet |
+| **This snapshot** | 2026-10-03 ~11:20 −04:00 · consolidating bot branches into `plan-an-outing` |
 | **Elapsed** | **~12.9 days** |
-| **Commits on this branch** | **270** (refresh with `git rev-list --count HEAD`) |
+| **Commits on this branch** | refresh with `git rev-list --count HEAD` |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -84,6 +84,7 @@ git log --reverse -1 --format='%aI %s'
 - **Settle got card treatment** — a masked split watermark behind "You owe", and a tear line instead of a plain divider.
 - The day palette is unchanged on purpose: every theme token holds the exact value it shipped with, so dusk is one-line reversible and "too ugly" never costs a migration.
 - Same display name no longer merges on the claim board or settle: each join keeps a stable guest id, and “you owe” follows that id.
+- Launch waitlist is production-safe: validated emails, in-process rate limits, and `launch_notify` documented in the ERD. Coming-soon prefers the Railway list; Netlify Forms stays an unsynced fallback when the API cannot be reached.
 
 ### Day 13 — Sat 2026-10-03 · **candidate release**
 - Labeled **`candidate-release-2026-10-03`** on `plan-an-outing` (friend-test / store-prep freeze point before Places hybrid work).
