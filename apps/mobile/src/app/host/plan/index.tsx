@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { OutingWhenPicker } from "@/components/outing-when-picker";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { createPlanOuting } from "@/lib/api";
 import { rememberHostedReceipt } from "@/lib/host-tabs";
@@ -12,23 +13,18 @@ import { venueLocationKey } from "@/lib/venue-day";
 import type { ReceiptVenue } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
-function defaultNightAt(): string {
+function defaultNight(): Date {
   const d = new Date();
   d.setHours(19, 30, 0, 0);
   if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1);
-  return d.toISOString();
+  return d;
 }
 
 export default function HostPlanOuting() {
   const router = useRouter();
   const [restaurant, setRestaurant] = useState("");
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
-  const [nightLocal, setNightLocal] = useState(() => {
-    const iso = defaultNightAt();
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  });
+  const [night, setNight] = useState(defaultNight);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,13 +36,10 @@ export default function HostPlanOuting() {
     Number.isFinite(venue.lat) &&
     Number.isFinite(venue.lng);
 
-  const nightAt = useMemo(() => {
-    const d = new Date(nightLocal);
-    return Number.isNaN(d.getTime()) ? null : d.toISOString();
-  }, [nightLocal]);
+  const nightAt = night.toISOString();
 
   async function create() {
-    if (!placeLocked || !venue || !nightAt) return;
+    if (!placeLocked || !venue) return;
     setBusy(true);
     setError(null);
     try {
@@ -96,7 +89,7 @@ export default function HostPlanOuting() {
             <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>
             <PrimaryButton
               busy={busy}
-              disabled={!placeLocked || !nightAt}
+              disabled={!placeLocked}
               onPress={() => void create()}
             >
               Create outing link
@@ -108,23 +101,13 @@ export default function HostPlanOuting() {
         {error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
         ) : null}
+        <OutingWhenPicker value={night} onChange={setNight} />
         <VenueTypeahead
           value={restaurant}
           venue={venue}
-          receiptDate={nightAt?.slice(0, 10) ?? null}
           onChangeName={setRestaurant}
           onChangeVenue={setVenue}
         />
-        <Text style={styles.label}>When</Text>
-        <TextInput
-          value={nightLocal}
-          onChangeText={setNightLocal}
-          placeholder="YYYY-MM-DDTHH:mm"
-          placeholderTextColor={colors.muted}
-          autoCapitalize="none"
-          style={styles.input}
-        />
-        <Text style={styles.hint}>Local date & time (edit if needed).</Text>
         <Text style={styles.label}>Note for the group (optional)</Text>
         <TextInput
           value={note}
@@ -147,7 +130,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.inkSoft,
   },
-  hint: { fontSize: 12, color: colors.muted, marginBottom: 4 },
   input: {
     height: 48,
     borderRadius: 12,

@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-02 ~10:12 −04:00 |
+| **This snapshot** | 2026-10-02 ~11:09 −04:00 |
 | **Elapsed** | **~12 days** |
-| **Commits on `main`** | **222** (refresh with `git rev-list --count HEAD`) |
+| **Commits on `main`** | **223** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -80,6 +80,7 @@ git log --reverse -1 --format='%aI %s'
 
 ### Day 8 — Fri 2026-10-02
 - Same display name no longer merges on the claim board or settle: each join keeps a stable guest id, and “you owe” follows that id
+- Plan an outing shows a date and time picker again on “Where are you going?”
 
 ## How to extend this file
 
