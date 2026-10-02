@@ -236,7 +236,7 @@ function PickBoard() {
           ? "Live board"
           : "Pay the host"
         : activeQueued.length === 0
-          ? "Pick what you had"
+          ? "Pick what you ordered"
           : flow.needsQty
             ? activeQueued.length === 1
               ? "Claim 1 item"
