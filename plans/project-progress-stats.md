@@ -89,6 +89,7 @@ git log --reverse -1 --format='%aI %s'
 - CORS + waitlist smoke checklist for `www` → Railway `POST /api/waitlist`.
 
 ### Day 13 — Sat 2026-10-03 · **candidate release**
+- Plan-an-outing uses a dedicated date/time picker; place search stays above When, and Create unpins until a place is locked.
 - Labeled **`candidate-release-2026-10-03`** on `plan-an-outing` (friend-test / store-prep freeze point before Places hybrid work).
 - Receipt read is snappier: skip host classify by default, sharp-downscale before Gemini, **15s** extract timeout, default model **gemini-3.5-flash-lite**.
 - Home paints hosted tabs from local storage first; close/reopen apply the POST receipt and GET no longer takes a Postgres row lock.

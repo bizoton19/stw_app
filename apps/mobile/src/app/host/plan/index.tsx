@@ -1,18 +1,11 @@
 import { useMemo, useState } from "react";
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { HostSupportTip } from "@/components/host-support-tip";
+import { OutingWhenPicker } from "@/components/outing-when-picker";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { createPlanOuting } from "@/lib/api";
 import { rememberHostedReceipt } from "@/lib/host-tabs";
@@ -40,10 +33,10 @@ function localDayKey(d: Date): string {
 
 export default function HostPlanOuting() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [restaurant, setRestaurant] = useState("");
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
   const [night, setNight] = useState(defaultNight);
-  const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,35 +50,6 @@ export default function HostPlanOuting() {
 
   const nightAt = useMemo(() => night.toISOString(), [night]);
   const receiptDate = useMemo(() => localDayKey(night), [night]);
-
-  const whenLabel = useMemo(
-    () =>
-      night.toLocaleString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-    [night],
-  );
-
-  function onPickerChange(event: DateTimePickerEvent, selected?: Date) {
-    if (Platform.OS === "android") {
-      setPickerMode(null);
-      if (event.type !== "set" || !selected) return;
-    }
-    if (!selected) return;
-    setNight((prev) => {
-      const next = new Date(prev);
-      if (pickerMode === "date") {
-        next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
-      } else {
-        next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
-      }
-      return next;
-    });
-  }
 
   async function create() {
     if (!placeLocked || !venue) return;
@@ -136,15 +100,6 @@ export default function HostPlanOuting() {
         onBack={() => router.back()}
         onHome={goHostDesk}
         keyboard
-        footer={
-          <View>
-            <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>
-            <PrimaryButton busy={busy} disabled={!placeLocked} onPress={() => void create()}>
-              Create outing link
-            </PrimaryButton>
-          </View>
-        }
-        supportTip
       >
         {error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
@@ -156,56 +111,27 @@ export default function HostPlanOuting() {
           onChangeName={setRestaurant}
           onChangeVenue={setVenue}
         />
-        <Text style={styles.label}>When</Text>
-        <View style={styles.whenRow}>
-          <Pressable
-            onPress={() => setPickerMode("date")}
-            style={[styles.whenChip, { flex: 1.2 }]}
-          >
-            <Text style={styles.whenChipText}>
-              {night.toLocaleDateString(undefined, {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-              })}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setPickerMode("time")}
-            style={[styles.whenChip, { flex: 1 }]}
-          >
-            <Text style={styles.whenChipText}>
-              {night.toLocaleTimeString(undefined, {
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </Text>
-          </Pressable>
-        </View>
-        <Text style={styles.hint}>{whenLabel}</Text>
-        {pickerMode ? (
-          <DateTimePicker
-            value={night}
-            mode={pickerMode}
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={onPickerChange}
-            minimumDate={pickerMode === "date" ? new Date() : undefined}
-          />
+        {placeLocked ? (
+          <>
+            <OutingWhenPicker value={night} onChange={setNight} />
+            <Text style={styles.label}>Note for the group (optional)</Text>
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              placeholder="I’m putting the card down"
+              placeholderTextColor={colors.muted}
+              style={[styles.input, styles.note]}
+              multiline
+            />
+            <View style={[styles.create, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+              <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>
+              <PrimaryButton busy={busy} onPress={() => void create()}>
+                Create outing link
+              </PrimaryButton>
+              <HostSupportTip />
+            </View>
+          </>
         ) : null}
-        {Platform.OS === "ios" && pickerMode ? (
-          <Pressable onPress={() => setPickerMode(null)} style={styles.donePicker}>
-            <Text style={styles.donePickerText}>Done</Text>
-          </Pressable>
-        ) : null}
-        <Text style={styles.label}>Note for the group (optional)</Text>
-        <TextInput
-          value={note}
-          onChangeText={setNote}
-          placeholder="I’m putting the card down"
-          placeholderTextColor={colors.muted}
-          style={[styles.input, styles.note]}
-          multiline
-        />
       </InterviewChrome>
     </AppShell>
   );
@@ -219,20 +145,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.inkSoft,
   },
-  hint: { fontSize: 12, color: colors.muted, marginBottom: 4, marginTop: 6 },
-  whenRow: { flexDirection: "row", gap: 8 },
-  whenChip: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    backgroundColor: colors.paper,
-  },
-  whenChipText: { fontSize: 16, color: colors.ink, fontWeight: "600" },
-  donePicker: { alignSelf: "flex-end", paddingVertical: 8, paddingHorizontal: 4 },
-  donePickerText: { fontSize: 15, fontWeight: "700", color: colors.merlot },
   input: {
     height: 48,
     borderRadius: 12,
@@ -244,4 +156,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   note: { height: 80, paddingTop: 12, textAlignVertical: "top" },
+  create: { marginTop: 22, gap: 8 },
 });
