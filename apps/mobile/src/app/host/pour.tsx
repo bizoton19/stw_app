@@ -190,8 +190,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   cardResolve: {
-    borderColor: "rgba(47,93,80,0.35)",
-    backgroundColor: "rgba(47,93,80,0.04)",
+    borderColor: "rgba(122, 46, 74, 0.35)",
+    backgroundColor: "rgba(122, 46, 74, 0.04)",
   },
   name: { fontSize: 15, fontWeight: "700", color: colors.ink, letterSpacing: -0.2 },
   meta: { marginTop: 3, fontSize: 12, color: colors.muted, fontVariant: ["tabular-nums"] },
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   modeGlassesOn: {
     borderColor: colors.select,
-    backgroundColor: "rgba(47,93,80,0.12)",
+    backgroundColor: colors.selectWash,
   },
   modeText: { fontSize: 13, fontWeight: "700", color: colors.ink, textAlign: "center" },
   modeBottleText: { color: colors.merlot },

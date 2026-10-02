@@ -210,7 +210,7 @@ export default function SettleScreen() {
         hideProgress={flow.isHost}
         kicker={flow.isHost ? receipt.restaurant || "The check" : "Your share"}
         motif={flow.isHost ? "label-band" : "check-stub"}
-        title={flow.isHost ? "Live board" : "What you owe"}
+        title={flow.isHost ? "Live board" : "Pay the host"}
         onBack={
           flow.isHost
             ? goHostDesk
@@ -224,12 +224,11 @@ export default function SettleScreen() {
         supportTip={flow.isHost}
         keyboard={editingPay}
       >
-        {flow.isHost ? (
-          <Text style={styles.lead}>
-            Guests claim on their phones. Watch balances fill in here — tax and tip follow what
-            people ordered.
-          </Text>
-        ) : null}
+        <Text style={styles.lead}>
+          {flow.isHost
+            ? "Guests claim on their phones. Watch balances fill in here — tax and tip follow what people ordered."
+            : "Drinks plus a share of tax and tip."}
+        </Text>
         <ReceiptImageButton receiptId={receiptId} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
 
@@ -321,6 +320,9 @@ export default function SettleScreen() {
             <Text style={styles.youMeta}>
               {mine.lines.length} {mine.lines.length === 1 ? "item" : "items"}
               {" · "}plus your share of tax and tip
+            </Text>
+            <Text style={styles.neverTouch}>
+              We never hold your money — this opens your payment app pre-filled.
             </Text>
             {payments.length > 0 ? (
               <>
@@ -664,6 +666,12 @@ const styles = StyleSheet.create({
   },
   youAmount: { marginTop: 2, fontSize: 32, fontWeight: "800", fontVariant: ["tabular-nums"] },
   youMeta: { fontSize: 13, color: colors.inkSoft },
+  neverTouch: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.inkSoft,
+  },
   payFoot: {
     marginTop: 8,
     fontSize: 11.5,
