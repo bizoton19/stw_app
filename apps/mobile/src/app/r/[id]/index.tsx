@@ -153,6 +153,7 @@ function RsvpScreen() {
         total={2}
         hideProgress
         kicker={whenLabel || "Upcoming"}
+        motif="coupe-pair"
         title={place}
         keyboard
         footer={
@@ -221,6 +222,7 @@ function JoinScreen() {
         total={3}
         hideProgress={flow.isHost}
         kicker={restaurant}
+        motif="label-band"
         title={
           flow.isHost
             ? "You're hosting — claim under what name?"
@@ -328,6 +330,7 @@ function PickBoard() {
         total={totalSteps}
         hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
+        motif="label-band"
         title="Claiming is closed"
         onBack={flow.isHost ? goHostDesk : undefined}
         supportTip={flow.isHost}
@@ -407,6 +410,7 @@ function PickBoard() {
       total={totalSteps}
       hideProgress={flow.isHost}
       kicker={receipt.restaurant || "The check"}
+      motif="label-band"
       title="What did you have?"
       onBack={flow.isHost ? goHostDesk : undefined}
       footer={footer}

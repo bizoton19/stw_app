@@ -275,6 +275,7 @@ export default function HostItems() {
         step={4}
         total={8}
         kicker={t("items.kicker")}
+        motif="stem"
         title={t("items.title")}
         onBack={() => router.back()}
         onHome={goHostDesk}

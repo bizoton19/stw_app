@@ -42,6 +42,7 @@ export default function HostShare() {
         step={8}
         total={8}
         kicker="Share"
+        motif="coupe-pair"
         title="Send this. They claim what they consumed."
         sparse
         onBack={goHostDesk}

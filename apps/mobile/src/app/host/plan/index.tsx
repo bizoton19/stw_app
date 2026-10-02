@@ -131,6 +131,7 @@ export default function HostPlanOuting() {
         total={2}
         hideProgress
         kicker="Plan an outing"
+        motif="coupe-pair"
         title="Where are you going?"
         onBack={() => router.back()}
         onHome={goHostDesk}

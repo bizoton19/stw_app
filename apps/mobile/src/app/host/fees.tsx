@@ -23,6 +23,7 @@ export default function HostFees() {
         step={6}
         total={8}
         kicker={t("fees.kicker")}
+        motif="check-stub"
         title={t("fees.title")}
         onBack={() => router.back()}
         onHome={goHostDesk}

@@ -44,6 +44,7 @@ export default function HostParsing() {
         total={8}
         hideProgress
         kicker="Reading"
+        motif="check-stub"
         title="Looking over every pour…"
         onBack={() => router.back()}
         onHome={goHostDesk}

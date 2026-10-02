@@ -209,6 +209,7 @@ export default function SettleScreen() {
         total={3}
         hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
+        motif="label-band"
         title={flow.isHost ? "Live board" : "Settle Payment"}
         onBack={
           flow.isHost

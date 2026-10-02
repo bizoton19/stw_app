@@ -23,6 +23,7 @@ export default function HostRestaurant() {
         step={3}
         total={8}
         kicker="The place"
+        motif="label-band"
         title="Confirm the place on the check"
         onBack={() => router.back()}
         onHome={goHostDesk}

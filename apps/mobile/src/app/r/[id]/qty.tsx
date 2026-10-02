@@ -70,6 +70,7 @@ export default function QtyScreen() {
         total={totalSteps}
         hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
+        motif="label-band"
         title="How many of each?"
         onBack={() => router.back()}
         footer={

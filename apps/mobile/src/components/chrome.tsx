@@ -11,6 +11,7 @@ import type { ReactNode, RefObject } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
 import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
+import { Motif, type MotifName } from "@/components/motifs";
 import { colors, type } from "@/lib/theme";
 import { HostSupportTip } from "./host-support-tip";
 import { PressScale } from "./press-scale";
@@ -53,6 +54,7 @@ export function InterviewChrome({
   step,
   total,
   kicker,
+  motif,
   title,
   onBack,
   onHome,
@@ -77,6 +79,8 @@ export function InterviewChrome({
   step: number;
   total: number;
   kicker?: string;
+  /** Atmosphere beside the kicker. Carries no meaning the kicker doesn't. */
+  motif?: MotifName;
   title: string;
   onBack?: () => void;
   /** Jump to host desk without stacking Back through every step. */
@@ -94,13 +98,28 @@ export function InterviewChrome({
 }) {
   const keyboardOpen = useKeyboardVisible();
   const progress = (step / total) * 100;
+  const kickerStyle = [
+    styles.kicker,
+    dense && styles.kickerDense,
+    sparse && styles.kickerSparse,
+  ];
   const heading = (
     <>
-      {kicker ? (
-        <Text
-          allowFontScaling
-          style={[styles.kicker, dense && styles.kickerDense, sparse && styles.kickerSparse]}
+      {kicker && motif ? (
+        <View
+          style={[
+            styles.kickerRow,
+            dense && styles.kickerRowDense,
+            sparse && styles.kickerRowSparse,
+          ]}
         >
+          <Motif name={motif} size={15} color={colors.merlot} opacity={0.8} />
+          <Text allowFontScaling style={[kickerStyle, styles.kickerInRow]}>
+            {kicker}
+          </Text>
+        </View>
+      ) : kicker ? (
+        <Text allowFontScaling style={kickerStyle}>
           {kicker}
         </Text>
       ) : null}
@@ -331,6 +350,11 @@ const styles = StyleSheet.create({
   kicker: { fontSize: type.kicker, fontWeight: "600", color: colors.inkSoft, marginBottom: 4 },
   kickerDense: { marginBottom: 2, fontSize: 12 },
   kickerSparse: { fontSize: 14, marginBottom: 8 },
+  /** Spacing moves to the row so the motif and kicker share one baseline. */
+  kickerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  kickerRowDense: { marginBottom: 2 },
+  kickerRowSparse: { marginBottom: 8 },
+  kickerInRow: { marginBottom: 0 },
   title: {
     fontSize: type.title,
     fontWeight: "700",

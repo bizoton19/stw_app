@@ -76,6 +76,7 @@ export default function HostPour() {
         step={5}
         total={8}
         kicker={anyResolve ? "Quick check" : "Bottles"}
+        motif="carafe"
         title={anyResolve ? "Could this be a shared bottle?" : "How should people claim these?"}
         onBack={() => router.back()}
         onHome={goHostDesk}

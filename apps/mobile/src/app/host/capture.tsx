@@ -148,6 +148,7 @@ export default function HostCapture() {
         step={2}
         total={8}
         kicker="The receipt"
+        motif="check-stub"
         title={
           autoLaunch && !hasImage && !autoTried
             ? "Add the tab…"

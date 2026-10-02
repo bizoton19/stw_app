@@ -156,6 +156,7 @@ export default function HostPlanBoard() {
         total={1}
         hideProgress
         kicker={canUpload ? "Outing day" : "Planning"}
+        motif="cork"
         title={receipt?.restaurant || "Your outing"}
         onBack={goHostDesk}
         onHome={goHostDesk}
