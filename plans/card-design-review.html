@@ -23,11 +23,8 @@
     --muted:#8C8072; --line:rgba(242,235,225,.13); --accent:#C4566A; --accent-fg:#1A1411;
     --wash:rgba(196,86,106,.10); --grain:.06;
   }
-  [data-theme="patio"] {
-    --paper:#FBF9F4; --sheet:#FFFFFF; --ink:#232B26; --ink-soft:#5F6B63;
-    --muted:#7D887F; --line:#E2E6DF; --accent:#2F5D50; --accent-fg:#F7FBF8;
-    --wash:rgba(47,93,80,.07); --grain:.02;
-  }
+  /* `patio` was cut — bottle-green CTA stopped reading as Split the Wine and collided with
+     the `select` green that already means "claimed". Palette parked in card-design-themes.md §3.4. */
 
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
@@ -183,16 +180,15 @@
 <div class="wrap">
 
   <h1>Card design + theme review — first pass</h1>
-  <p class="lead">Bespoke SVG motifs, four themes, and the three card surfaces that carry them. Nothing here is wired into the app yet.</p>
+  <p class="lead">Bespoke SVG motifs across the three card surfaces that carry them. Nothing is wired into the app yet.</p>
   <p class="sub">Motif sources live in <code>plans/motifs/*.svg</code>. Plan: <code>plans/card-design-themes.md</code>.</p>
 
   <div class="warn">
-    <strong>Override + rollback.</strong> <code>linen</code> is the exact current contract from
-    <code>plans/ui-enhance.guide.md</code> §3 and is the default. <code>candlelight</code>,
-    <code>cellar</code>, and <code>patio</code> intentionally break the “one accent, no new palette” law you
-    approved overriding. Three of them reuse hexes that already exist in
-    <code>apps/mobile/src/lib/theme.ts</code> (merlot, <code>kindFood</code> amber, <code>select</code> green), so
-    rollback is deleting a theme entry — not unpicking a redesign.
+    <strong>Scope — decided.</strong> Ship <code>linen</code> (day) and <code>candlelight</code>, where candlelight is an
+    <strong>automatic dusk variant</strong>, not a manual pick — no theme picker in the UI.
+    <code>cellar</code> is kept here only as a deferred dark-mode reference.
+    <code>patio</code> was <strong>cut</strong> and its palette parked for a different project.
+    Payment-method tiles stay official brand colour in every theme.
   </div>
 
   <h2>1 · Motif sheet</h2>
@@ -241,12 +237,11 @@
   </div>
 
   <h2>2 · Themes on real cards</h2>
-  <p class="sub">Same markup, same copy, four token sets. Switch and judge.</p>
+  <p class="sub">Same markup, same copy, different token sets. In the product the switch is the clock, not a button — these controls exist only for review.</p>
   <div class="switch" id="switch">
-    <button data-t="linen" aria-pressed="true">Linen · current contract</button>
-    <button data-t="candlelight" aria-pressed="false">Candlelight</button>
-    <button data-t="cellar" aria-pressed="false">Cellar (dark)</button>
-    <button data-t="patio" aria-pressed="false">Patio</button>
+    <button data-t="linen" aria-pressed="true">Linen · day</button>
+    <button data-t="candlelight" aria-pressed="false">Candlelight · auto dusk</button>
+    <button data-t="cellar" aria-pressed="false">Cellar · deferred</button>
   </div>
 
   <div class="boards" id="boards">
@@ -351,8 +346,8 @@
   <h2>4 · Rollback</h2>
   <table class="plan">
     <tr><th>Step</th><th>Action</th></tr>
-    <tr><td>Hate one theme</td><td>Delete its entry from the theme map. No component touched.</td></tr>
-    <tr><td>Hate all alternates</td><td>Set default to <code>linen</code> and drop the picker — visually identical to today.</td></tr>
+    <tr><td>Dusk looks wrong</td><td>Make <code>duskTheme()</code> always return <code>linen</code> — one function, one line.</td></tr>
+    <tr><td>Hate candlelight entirely</td><td>Delete its entry from the theme map. Resolve falls back to <code>linen</code>, which is pixel-identical to today.</td></tr>
     <tr><td>Hate the motifs</td><td>Motif components render <code>null</code> behind one flag; layout is unaffected because nothing reserves motif space.</td></tr>
     <tr><td>Hate the 3D</td><td>Scene is lazy-loaded behind its SVG fallback; removing the import leaves the fallback.</td></tr>
   </table>

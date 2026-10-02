@@ -51,14 +51,57 @@ All files are stroke-only, `viewBox="0 0 48 48"` (except the two noted), and pai
 
 Four token sets. Same markup, same copy, same layout — only custom properties change.
 
-| Theme | Paper | Ink | Accent | Honest assessment |
-|---|---|---|---|---|
-| **linen** *(default)* | `#F6F4F1` | `#2A241C` | `#6E2E35` merlot | Byte-for-byte today's contract. The control. **Approved — this is the one we ship.** |
-| **candlelight** | `#EFE7DC` | `#241C14` | `#7A2630` | Dimmer, warmer. The most defensible override — it is the current palette after dusk, not a new identity. |
-| **cellar** | `#171310` | `#F2EBE1` | `#C4566A` | Genuinely handsome dark mode. Caveat: merlot must lift to stay legible on near-black, and at `#C4566A` it reads closer to rosé than merlot. Expect to tune. |
-| **patio** | `#FBF9F4` | `#232B26` | `#2F5D50` bottle green | The real break — it swaps the accent. Attractive, but a green CTA is no longer recognizably Split the Wine, and it collides with `select`/`selectWash`, which already mean “claimed.” **Highest rollback risk.** |
+**Decided:** ship **two** themes — `linen` by day, `candlelight` automatically after dusk. **No theme picker in the UI.**
 
-Three of the four accents already exist in `apps/mobile/src/lib/theme.ts` (`merlot`, `kindFood` amber for candlelight's wash, `select` green for patio). That is deliberate: the override reuses sanctioned hexes instead of inventing a palette, so reverting is deleting a map entry rather than hunting down stray colors.
+| Theme | Paper | Ink | Accent | Status |
+|---|---|---|---|---|
+| **linen** *(default)* | `#F6F4F1` | `#2A241C` | `#6E2E35` merlot | ✅ **Ships.** Byte-for-byte today's contract. |
+| **candlelight** | `#EFE7DC` | `#241C14` | `#7A2630` | ✅ **Ships, automatic.** Dimmer and warmer — the same identity after dusk, not a new one. Applied by clock, never chosen. |
+| **cellar** | `#171310` | `#F2EBE1` | `#C4566A` | ⏸ **Deferred.** Handsome, but the accent needs tuning (`#C4566A` reads closer to rosé than merlot) and true dark mode is its own project. Kept in the review sheet as reference only. |
+| **patio** | `#FBF9F4` | `#232B26` | `#2F5D50` | ❌ **Cut.** Parked for a different project — see §3.4. |
+
+Both shipping accents already exist in `apps/mobile/src/lib/theme.ts` (`merlot`, plus `kindFood` amber for candlelight's wash). Nothing new is invented, so reverting is deleting a map entry rather than hunting stray colors.
+
+### 3.3 Candlelight is applied by the clock
+
+The rule is deliberately boring and dependency-free:
+
+```ts
+/** linen by day, candlelight after dusk. Local to whoever is looking at the card. */
+export function duskTheme(now = new Date()): ThemeId {
+  const hour = now.getHours();
+  return hour >= 18 || hour < 6 ? "candlelight" : "linen";
+}
+```
+
+**Why local device time, not the outing's `nightAt`:** everyone at one table is in the same timezone at the same moment, so the table stays visually consistent — which is what matters for screenshots and for the "we're all looking at the same check" feeling. A guest claiming from home the next morning correctly sees the day theme.
+
+**Hydration is the real trap.** [`ui-enhance.guide.md`](./ui-enhance.guide.md) §1 already calls out shell flicker and SSR/client mismatch as things that "break the spell," and a time-dependent theme is exactly how that bug gets reintroduced. React must never render two different themes:
+
+- The server renders **no** theme attribute.
+- A tiny blocking inline script in `<head>` sets `document.documentElement.dataset.cardTheme` **before first paint** — the same pattern dark-mode toggles use. No flash, no mismatch, because React never owns the value.
+- Components read tokens via CSS custom properties only. No component branches on the theme id in JS.
+
+**Native** has no SSR, so it computes at mount and re-checks when the app returns to the foreground (`AppState` → `active`). No timer polling; nobody's dinner crosses 18:00 and needs a live repaint mid-tap.
+
+**Edge cases to honour:**
+- A hard override for QA and screenshots: `?cardTheme=candlelight` on web, a dev-menu toggle on native. Never surfaced to real users.
+- If the device clock is nonsense, `linen` wins — the fallback is always the approved default.
+- The 18:00/06:00 boundary is naive on purpose. We already store venue coordinates (Mapbox/MapKit), so a real sunset calculation is a possible upgrade later; it is not worth a dependency now.
+
+### 3.4 Parked: the `patio` palette
+
+Cut from this project, preserved here so it is not lost:
+
+```
+paper   #FBF9F4    sheet   #FFFFFF
+ink     #232B26    inkSoft #5F6B63
+muted   #7D887F    line    #E2E6DF
+accent  #2F5D50    accentFg #F7FBF8
+wash    rgba(47,93,80,.07)
+```
+
+Why it failed *here*: a bottle-green CTA stops reading as Split the Wine, and the green collides with `select`/`selectWash`, which already mean "claimed" on the claim board. Neither objection applies in a project that isn't about wine or claiming, so the palette is worth keeping.
 
 ### 3.1 Payment methods keep their official tiles — in every theme
 
@@ -79,9 +122,7 @@ Verified on dark: the tiles stay legible, and PayPal's white tile reads as a use
 
 ### Where a theme is chosen
 
-- Host picks at publish time (or from the share screen).
-- Stored on the receipt/outing so guests inherit it — the claim link carries the host's choice.
-- Guests never pick; a per-guest theme would make screenshots inconsistent at one table.
+Nowhere. That is the point. There is **no host picker and no guest picker** — the clock decides (§3.3), so there is no new setting, no new column on the receipt, and nothing to explain in the FAQ.
 
 ---
 
@@ -89,15 +130,18 @@ Verified on dark: the tiles stay legible, and PayPal's white tile reads as a use
 
 ```
 src/lib/card-theme/
-  themes.ts        token maps, keyed by theme id; `linen` is the default export
-  resolve.ts       pick a theme from receipt.themeId, fall back to linen
+  themes.ts        token maps keyed by theme id; `linen` is the default
+  dusk.ts          duskTheme(now) — the only place the clock is read
+  dusk.test.ts     boundary tests (17:59 / 18:00 / 05:59 / 06:00)
 src/components/motifs/
   index.tsx        <Motif name="stem" />, tree-shakeable
 apps/mobile/src/components/motifs/
   index.tsx        same names, react-native-svg primitives
 ```
 
-Web consumes tokens as CSS custom properties on a wrapper (`data-card-theme="candlelight"`), so no component reads a hex directly. Native consumes the same map as a plain object through the existing `colors` import site, which means `theme.ts` becomes `themes.linen` and every current call site keeps working.
+Web consumes tokens as CSS custom properties on `<html data-card-theme>`, so no component reads a hex directly. Native consumes the same map as a plain object through the existing `colors` import site, which means `theme.ts` becomes `themes.linen` and every current call site keeps working.
+
+`duskTheme()` is a pure function of a `Date`, so the boundaries are unit-testable without mocking a clock — which matters, because a time-dependent UI is otherwise only verifiable by waiting until evening.
 
 Motif components accept only `name`, `size`, and `className`/`style`. They never set color — `currentColor` inherits it. One file, every theme.
 
@@ -125,13 +169,14 @@ Every step below is independent — you can reverse one without touching the oth
 
 | If you hate… | Do this | Blast radius |
 |---|---|---|
-| One theme | Delete its entry from `themes.ts` | None. Resolve falls back to `linen`. |
-| All alternates | Set the default to `linen`, drop the picker | Pixel-identical to today. |
+| The dusk switch | `duskTheme()` returns `"linen"` unconditionally | One line. Candlelight simply never appears. |
+| Candlelight itself | Delete its entry from `themes.ts` | None. Resolve falls back to `linen`, pixel-identical to today. |
+| The dusk boundary | Change two numbers in `duskTheme()` | None. Covered by `dusk.test.ts`. |
 | The motifs | `<Motif>` returns `null` behind one flag | None. No layout reserves motif space, so nothing reflows. |
 | The watermark / grain | Remove the `.wash` element or set opacity to 0 | None. Purely decorative, absolutely positioned. |
 | The 3D | Delete the lazy import | Falls back to the static `pour.svg` it was already layered over. |
 
-The load-bearing decision is keeping `linen` byte-identical to the shipped palette. As long as that holds, “too ugly” is always one-line reversible.
+The load-bearing decision is keeping `linen` byte-identical to the shipped palette. As long as that holds, “too ugly” is always one-line reversible — and because there is no picker, there is also no user-facing setting to migrate or deprecate if candlelight gets cut.
 
 ---
 
@@ -139,22 +184,33 @@ The load-bearing decision is keeping `linen` byte-identical to the shipped palet
 
 | Phase | Work | Reviewable output |
 |---|---|---|
-| **0 — now** | Motif kit + review sheet + this plan | ✅ Built. Awaiting your verdict. |
-| **1** | `themes.ts` + `<Motif>` on web; wire Share and Settle in `linen` only | Same look as today, new plumbing |
-| **2** | Turn on `candlelight` + `cellar`, add the host picker | Screenshots in all themes |
-| **3** | Native motif parity (`react-native-svg`) + token refactor of `theme.ts` | Web/native side-by-side |
+| **0** | Motif kit + review sheet + this plan | ✅ Done. Scope now settled: linen + auto-dusk candlelight. |
+| **1** | `themes.ts` + `<Motif>` on web; wire Share and Settle in `linen` only | Same look as today, new plumbing underneath |
+| **2** | `dusk.ts` + the pre-paint inline script; candlelight goes live | Day/dusk screenshots, zero hydration warnings |
+| **3** | Native motif parity (`react-native-svg`) + `AppState` dusk re-check | Web/native side-by-side, day and dusk |
 | **4** | Claim rows get motif markers + tear lines (still 2D) | Density check on a real phone |
-| **5** | Persist `themeId` on receipt/outing so the claim link carries it | Guest sees host's theme |
-| **6 — optional** | Marketing hero scene; settle pour if it still seems worth it | Perf numbers before/after |
+| **5 — optional** | Marketing hero scene; settle pour if it still seems worth it | Perf numbers before/after |
+
+Phase 5 of the old plan (persist `themeId`) is **gone** — automatic dusk needs no storage, no schema change, and no change to the claim link.
 
 ---
 
-## 8. Open questions
+## 8. Settled and still open
 
-1. **Patio** is the one I would cut — a green CTA reads as a different product and it fights the existing `select` green. Keep it as a swatch, or drop it now?
-2. **Cellar** needs its accent tuned; `#C4566A` is more rosé than merlot. Want me to iterate on that hex, or is dark mode out of scope until later?
-3. Is `candlelight` worth shipping as a *manual* theme at all, or should it be an **automatic** dusk variant (time-of-day), which is arguably the better product?
-4. Settle pour: build it in Phase 2 as proof, or leave Three.js entirely to the marketing site?
+**Settled**
+
+1. `linen` ships as the day theme.
+2. `candlelight` ships as an **automatic dusk variant** — no picker anywhere.
+3. `patio` is cut; palette parked in §3.4 for another project.
+4. `cellar` is deferred, kept as reference only.
+5. Payment tiles stay official brand colour in every theme (§3.1).
+6. The selected-disc check is centred structurally, never by pixel offsets (§3.2).
+
+**Still open**
+
+1. Is the 18:00 / 06:00 boundary right, or should dusk start later (19:00) so a 18:30 dinner still opens in day light?
+2. Settle pour: build it in Phase 5 as proof, or leave Three.js entirely to the marketing site?
+3. Does `cork` earn a place on the host desk, or is it the next `grapes` — a motif that exists because it was easy to draw?
 
 ---
 
