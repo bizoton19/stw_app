@@ -85,7 +85,8 @@ export function InterviewChrome({
   /** Jump to host desk without stacking Back through every step. */
   onHome?: () => void;
   children: ReactNode;
-  footer: ReactNode;
+  /** Omit to leave the step unscrolled by a pinned bar (plan-outing place/date). */
+  footer?: ReactNode;
   /** Keyboard avoiding — default on; pass false only if a screen must opt out. */
   keyboard?: boolean;
   dense?: boolean;
@@ -220,13 +221,15 @@ export function InterviewChrome({
         )}
       </View>
       {body}
-      <SafeAreaView
-        edges={keyboardOpen ? [] : ["bottom"]}
-        style={[styles.footer, keyboardOpen && styles.footerKeyboard]}
-      >
-        {footer}
-        {supportTip && !keyboardOpen ? <HostSupportTip /> : null}
-      </SafeAreaView>
+      {footer != null || supportTip ? (
+        <SafeAreaView
+          edges={keyboardOpen ? [] : ["bottom"]}
+          style={[styles.footer, keyboardOpen && styles.footerKeyboard]}
+        >
+          {footer}
+          {supportTip && !keyboardOpen ? <HostSupportTip /> : null}
+        </SafeAreaView>
+      ) : null}
     </>
   );
 
