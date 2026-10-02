@@ -18,7 +18,7 @@ import { hostNoteText } from "@/lib/host-pay";
 import { findMine, sameGuest } from "@/lib/guest-id";
 import { useBindGuestClaims } from "@/hooks/use-bind-guest-claims";
 import { api, clearClaimToken, getClaimToken, getGuest, getHostToken, saveClaimToken } from "@/lib/session";
-import { computeTotals } from "@/lib/totals";
+import { computeTotals, shareSoFarCents } from "@/lib/totals";
 import type { PublicReceipt } from "@/lib/types";
 
 export function ClaimBoard({
@@ -73,6 +73,18 @@ export function ClaimBoard({
   }, [phase, activeQueued.length]);
 
   const queuedItems = remainingItems.filter((item) => activeQueued.includes(item.id));
+  const shareCents = guest?.name
+    ? shareSoFarCents(
+        receipt,
+        guest.name,
+        queued
+          .filter((id) => (receipt.remaining[id] ?? 0) > 0)
+          .map((id) => ({
+            itemId: id,
+            units: Math.min(Math.max(1, units[id] ?? 1), receipt.remaining[id] ?? 0),
+          })),
+      )
+    : 0;
   const totalUnits = queuedItems.reduce((sum, item) => {
     const max = receipt.remaining[item.id] ?? 0;
     const value = units[item.id] ?? 1;
@@ -252,7 +264,7 @@ export function ClaimBoard({
         <BoardHeader
           receipt={receipt}
           title="Claiming is closed"
-          mine={mine?.totalCents}
+          shareCents={shareCents}
           guest={guest}
           isHost={isHost}
         />
@@ -271,7 +283,7 @@ export function ClaimBoard({
             href={`/r/${receipt.id}/settle`}
             className="pressable inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
           >
-            Settle Payment
+            {isHost ? "Live board" : "Pay the host"}
           </Link>
           {isHost ? (
             <QuietButton disabled={busy || !getHostToken(receipt.id)} onClick={() => void reopen()}>
@@ -290,7 +302,7 @@ export function ClaimBoard({
           href={`/r/${receipt.id}/settle`}
           className="pressable inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[15px] font-semibold text-primary-foreground"
         >
-          Settle Payment
+          {isHost ? "Live board" : "Pay the host"}
         </Link>
         {isHost ? (
           <QuietButton
@@ -308,7 +320,7 @@ export function ClaimBoard({
         onClick={goQty}
       >
         {activeQueued.length === 0
-          ? "Pick what you had"
+          ? "Pick what you ordered"
           : needsQty
             ? activeQueued.length === 1
               ? "Claim 1 item"
@@ -322,7 +334,7 @@ export function ClaimBoard({
           href={`/r/${receipt.id}/settle`}
           className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium text-foreground"
         >
-          Settle Payment
+          Pay the host
         </Link>
       ) : null}
       {isHost ? (
@@ -363,6 +375,7 @@ export function ClaimBoard({
             : "Whole glasses only. We will not split a pour."}
         </p>
         {message ? <p className="mb-3 text-sm text-destructive">{message}</p> : null}
+        <ShareSoFar cents={shareCents} />
         <ul className="divide-y divide-border border-y border-border">
           {queuedItems.map((item) => {
             const max = receipt.remaining[item.id] ?? 0;
@@ -422,7 +435,7 @@ export function ClaimBoard({
       hideProgress
       kicker={receipt.restaurant || "The check"}
       motif="label-band"
-      title="What did you have?"
+      title="Claim what you ordered"
       stepKey="pick"
       direction={direction}
       onBack={isHost ? () => router.push("/") : undefined}
@@ -439,6 +452,7 @@ export function ClaimBoard({
       {receipt.hasImage ? (
         <ReceiptImageButton receiptId={receipt.id} hasImage />
       ) : null}
+      <ShareSoFar cents={shareCents} />
       {totals.unclaimedItemCents > 0 ? (
         <p className="mb-3 text-[14px] font-bold tabular-nums text-foreground">
           Still on the table · {centsToLabel(totals.unclaimedItemCents)}
@@ -521,15 +535,25 @@ export function ClaimBoard({
   );
 }
 
+function ShareSoFar({ cents }: { cents: number }) {
+  if (cents <= 0) return null;
+  return (
+    <p className="mb-3 text-[13px] leading-snug text-ink-soft tabular-nums">
+      Your share so far · {centsToLabel(cents)} (incl. tax & tip)
+    </p>
+  );
+}
+
 function BoardHeader({
   receipt,
   title,
+  shareCents = 0,
   guest,
   isHost,
 }: {
   receipt: PublicReceipt;
   title: string;
-  mine?: number;
+  shareCents?: number;
   guest: { name: string; contact: string } | null;
   isHost?: boolean;
 }) {
@@ -550,6 +574,7 @@ function BoardHeader({
           {guest.contact ? ` · ${guest.contact}` : ""}
         </p>
       ) : null}
+      <ShareSoFar cents={shareCents} />
       {receipt.hasImage ? (
         <ReceiptImageButton receiptId={receipt.id} hasImage />
       ) : null}

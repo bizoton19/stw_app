@@ -217,7 +217,7 @@ export function SettleView({
           <div className="-ml-2 flex h-11 items-center">
             <button
               type="button"
-              aria-label="Back to settle payment"
+              aria-label="Back to pay the host"
               onClick={() => {
                 setPayLater(false);
                 setSaveHint(null);
@@ -318,8 +318,12 @@ export function SettleView({
           {isHost ? receipt.restaurant || "The check" : "Your share"}
         </p>
         <h1 className="text-[1.65rem] font-semibold tracking-tight">
-          {isHost ? "Live board" : "What you owe"}
+          {isHost ? "Live board" : "Pay the host"}
         </h1>
+        <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
+          Drinks plus a share of tax and tip.
+          {isHost ? "" : " Nothing is charged from Split the Wine."}
+        </p>
         {message ? <p className="mt-3 text-[14px] text-destructive">{message}</p> : null}
 
         {leftover ? (
@@ -421,6 +425,14 @@ export function SettleView({
             </p>
             {payments.length > 0 ? (
               <>
+                <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+                  You can pay your share of {centsToLabel(mine.totalCents)} to the host
+                  {hostName !== "the host" ? `, ${hostName},` : ""} via the following payment
+                  method{payments.length === 1 ? "" : "s"}:
+                </p>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                  We never hold your money — this opens your payment app pre-filled.
+                </p>
                 <ul className="mt-3 space-y-2">
                   {payments.map((payment) => {
                     const openable = payMethodIsOpenable(payment.method);

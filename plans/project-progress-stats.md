@@ -96,6 +96,7 @@ git log --reverse -1 --format='%aI %s'
 - Nearby photos on a phone use the same API address as the rest of the app, so a `0.0.0.0` photo link from the dev server still loads. Each list card is one full photo. Opening a place scrolls up to three nearby photos, labels the Google rating, and shows a Mapbox map of the pin.
 - On “Where are you going?” and the web restaurant step, nearby places swipe sideways as photo cards (the first nearby photo, plus name, address, and category) until you type two letters. A tap opens that one place, scrolls up to three nearby photos, and loads its rating and website from Place Details; Plan here saves them with the first nearby photo, and back returns to the place step. Typing still uses Mapbox or MapKit and the place-id bridge. If nearby or that details call cannot load, the row stays empty or the place still saves without a rating, and search still works.
 - On the phone, the place screen leads the address, Google rating, category, website, and maps lines with small line icons. Tapping a gallery photo opens that same image in the full-page tab-photo sheet, centered, with the close control on screen. Swipe down or tap the scrim to close. The tab photo uses that same sheet.
+- Guest claim-link copy matches the ad message (“Claim what you ordered” / pay-the-host settle).
 
 ## How to extend this file
 
