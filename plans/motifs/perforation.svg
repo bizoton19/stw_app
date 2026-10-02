@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+  <title>Perforation  tear line between card sections. Replaces generic 1px dividers.</title>
+  <path d="M0 5a5 5 0 0 0 5-5v10a5 5 0 0 0-5-5z" fill="currentColor" stroke="none" opacity=".28" />
+  <path d="M240 5a5 5 0 0 1-5-5v10a5 5 0 0 1 5-5z" fill="currentColor" stroke="none" opacity=".28" />
+  <path d="M10 5h220" stroke-dasharray="1.6 5.4" opacity=".75" />
+</svg>
