@@ -70,7 +70,7 @@ The rule is deliberately boring and dependency-free:
 /** linen by day, candlelight after dusk. Local to whoever is looking at the card. */
 export function duskTheme(now = new Date()): ThemeId {
   const hour = now.getHours();
-  return hour >= 18 || hour < 6 ? "candlelight" : "linen";
+  return hour >= 19 || hour < 6 ? "candlelight" : "linen";
 }
 ```
 
@@ -82,12 +82,12 @@ export function duskTheme(now = new Date()): ThemeId {
 - A tiny blocking inline script in `<head>` sets `document.documentElement.dataset.cardTheme` **before first paint** — the same pattern dark-mode toggles use. No flash, no mismatch, because React never owns the value.
 - Components read tokens via CSS custom properties only. No component branches on the theme id in JS.
 
-**Native** has no SSR, so it computes at mount and re-checks when the app returns to the foreground (`AppState` → `active`). No timer polling; nobody's dinner crosses 18:00 and needs a live repaint mid-tap.
+**Native** has no SSR, so it computes at mount and re-checks when the app returns to the foreground (`AppState` → `active`). No timer polling; nobody's dinner crosses 19:00 and needs a live repaint mid-tap.
 
 **Edge cases to honour:**
 - A hard override for QA and screenshots: `?cardTheme=candlelight` on web, a dev-menu toggle on native. Never surfaced to real users.
 - If the device clock is nonsense, `linen` wins — the fallback is always the approved default.
-- The 18:00/06:00 boundary is naive on purpose. We already store venue coordinates (Mapbox/MapKit), so a real sunset calculation is a possible upgrade later; it is not worth a dependency now.
+- **19:00 / 06:00 is the chosen boundary.** 18:00 was rejected because a 18:30 dinner would open already dimmed; 19:00 means the switch lands once the night actually feels like one. The window is naive on purpose. We already store venue coordinates (Mapbox/MapKit), so a real sunset calculation is a possible upgrade later; it is not worth a dependency now.
 
 ### 3.4 Parked: the `patio` palette
 
@@ -132,7 +132,7 @@ Nowhere. That is the point. There is **no host picker and no guest picker** — 
 src/lib/card-theme/
   themes.ts        token maps keyed by theme id; `linen` is the default
   dusk.ts          duskTheme(now) — the only place the clock is read
-  dusk.test.ts     boundary tests (17:59 / 18:00 / 05:59 / 06:00)
+  dusk.test.ts     boundary tests (18:59 / 19:00 / 05:59 / 06:00)
 src/components/motifs/
   index.tsx        <Motif name="stem" />, tree-shakeable
 apps/mobile/src/components/motifs/
@@ -200,7 +200,7 @@ Phase 5 of the old plan (persist `themeId`) is **gone** — automatic dusk needs
 **Settled**
 
 1. `linen` ships as the day theme.
-2. `candlelight` ships as an **automatic dusk variant** — no picker anywhere.
+2. `candlelight` ships as an **automatic dusk variant** — no picker anywhere. Dusk window: **19:00–06:00** local.
 3. `patio` is cut; palette parked in §3.4 for another project.
 4. `cellar` is deferred, kept as reference only.
 5. Payment tiles stay official brand colour in every theme (§3.1).
@@ -208,9 +208,8 @@ Phase 5 of the old plan (persist `themeId`) is **gone** — automatic dusk needs
 
 **Still open**
 
-1. Is the 18:00 / 06:00 boundary right, or should dusk start later (19:00) so a 18:30 dinner still opens in day light?
-2. Settle pour: build it in Phase 5 as proof, or leave Three.js entirely to the marketing site?
-3. Does `cork` earn a place on the host desk, or is it the next `grapes` — a motif that exists because it was easy to draw?
+1. Settle pour: build it in Phase 5 as proof, or leave Three.js entirely to the marketing site?
+2. Does `cork` earn a place on the host desk, or is it the next `grapes` — a motif that exists because it was easy to draw?
 
 ---
 
