@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { HostSupportTip } from "@/components/host-support-tip";
 import { OutingWhenPicker } from "@/components/outing-when-picker";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { createPlanOuting } from "@/lib/api";
@@ -22,6 +24,7 @@ function defaultNight(): Date {
 
 export default function HostPlanOuting() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [restaurant, setRestaurant] = useState("");
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
   const [night, setNight] = useState(defaultNight);
@@ -84,39 +87,37 @@ export default function HostPlanOuting() {
         onBack={() => router.back()}
         onHome={goHostDesk}
         keyboard
-        footer={
-          <View>
-            <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>
-            <PrimaryButton
-              busy={busy}
-              disabled={!placeLocked}
-              onPress={() => void create()}
-            >
-              Create outing link
-            </PrimaryButton>
-          </View>
-        }
-        supportTip
       >
         {error ? (
           <Text style={{ color: colors.danger, fontSize: 14, marginBottom: 12 }}>{error}</Text>
         ) : null}
-        <OutingWhenPicker value={night} onChange={setNight} />
         <VenueTypeahead
           value={restaurant}
           venue={venue}
           onChangeName={setRestaurant}
           onChangeVenue={setVenue}
         />
-        <Text style={styles.label}>Note for the group (optional)</Text>
-        <TextInput
-          value={note}
-          onChangeText={setNote}
-          placeholder="I’m putting the card down"
-          placeholderTextColor={colors.muted}
-          style={[styles.input, styles.note]}
-          multiline
-        />
+        {placeLocked ? (
+          <>
+            <OutingWhenPicker value={night} onChange={setNight} />
+            <Text style={styles.label}>Note for the group (optional)</Text>
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              placeholder="I’m putting the card down"
+              placeholderTextColor={colors.muted}
+              style={[styles.input, styles.note]}
+              multiline
+            />
+            <View style={[styles.create, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+              <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>
+              <PrimaryButton busy={busy} onPress={() => void create()}>
+                Create outing link
+              </PrimaryButton>
+              <HostSupportTip />
+            </View>
+          </>
+        ) : null}
       </InterviewChrome>
     </AppShell>
   );
@@ -141,4 +142,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   note: { height: 80, paddingTop: 12, textAlignVertical: "top" },
+  create: { marginTop: 22, gap: 8 },
 });
