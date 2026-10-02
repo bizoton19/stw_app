@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-09-27 ~20:15 −04:00 |
-| **Elapsed** | **~7 days** |
-| **Commits on `main`** | **~190** (refresh with `git rev-list --count HEAD`) |
+| **This snapshot** | 2026-10-02 ~10:40 −04:00 |
+| **Elapsed** | **~12 days** |
+| **Commits on `HEAD`** | **217** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -77,6 +77,9 @@ git log --reverse -1 --format='%aI %s'
 - Progress stats doc + Cursor rule to keep milestones current
 - Host desk: camera + upload shortcuts (skip beginner guide); edit pay handles after publish
 - Web brand mark matches official tilted merlot bottle icon
+
+### Day 8 — Fri 2026-10-02
+- Receipt OCR can call Google Gemini directly (`gemini-flash-lite-latest`), with OpenRouter kept as a fallback when no Gemini key is set
 
 ## How to extend this file
 

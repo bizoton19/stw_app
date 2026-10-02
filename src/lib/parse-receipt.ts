@@ -26,8 +26,11 @@ export const VISION_TIMEOUT_MS = 40_000;
 export const CLASSIFY_TIMEOUT_MS = 12_000;
 const EMPTY_PARSE: ParseResult = { restaurant: "", receiptDate: null, items: [], fees: [] };
 
-export function hasOpenRouterKey(): boolean {
-  return Boolean(process.env.OPENROUTER_API_KEY?.trim());
+export function hasVisionKey(): boolean {
+  const forced = process.env.VISION_PROVIDER?.trim().toLowerCase();
+  if (forced === "gemini") return Boolean(process.env.GEMINI_API_KEY?.trim());
+  if (forced === "openrouter") return Boolean(process.env.OPENROUTER_API_KEY?.trim());
+  return Boolean(process.env.GEMINI_API_KEY?.trim() || process.env.OPENROUTER_API_KEY?.trim());
 }
 
 function logVisionParse(fields: Record<string, unknown>) {
@@ -80,7 +83,7 @@ export async function parseReceiptImage(
     });
     return { result: EMPTY_PARSE, parse: { source: "stub", reason: "failed" } };
   }
-  if (!hasOpenRouterKey()) {
+  if (!hasVisionKey()) {
     logVisionParse({
       receiptId,
       source: "stub",
@@ -91,8 +94,10 @@ export async function parseReceiptImage(
     return { result: EMPTY_PARSE, parse: { source: "stub", reason: "no_key" } };
   }
 
-  const { classifyReceiptVision, parseReceiptVision, visionModel } = await import("./vision");
+  const { classifyReceiptVision, parseReceiptVision, visionModel, visionProviderId } =
+    await import("./vision");
   const model = visionModel();
+  const provider = visionProviderId();
 
   const classifyStarted = Date.now();
   try {
@@ -107,6 +112,7 @@ export async function parseReceiptImage(
     ]);
     logVisionClassify({
       receiptId,
+      provider,
       model,
       isReceipt: classify.isReceipt,
       ms: Date.now() - classifyStarted,
@@ -120,6 +126,7 @@ export async function parseReceiptImage(
     const message = err instanceof Error ? err.message : String(err);
     logVisionClassify({
       receiptId,
+      provider,
       model,
       reason: "classify_failed",
       ms: Date.now() - classifyStarted,
@@ -140,6 +147,7 @@ export async function parseReceiptImage(
     if (result.items.length === 0) {
       logVisionParse({
         receiptId,
+        provider,
         model,
         source: "vision",
         reason: "empty",
@@ -152,6 +160,7 @@ export async function parseReceiptImage(
     }
     logVisionParse({
       receiptId,
+      provider,
       model,
       source: "vision",
       reason: "ok",
@@ -172,6 +181,7 @@ export async function parseReceiptImage(
     const reason: ParseReason = timedOut ? "timeout" : "failed";
     logVisionParse({
       receiptId,
+      provider,
       model,
       source: "stub",
       reason,
