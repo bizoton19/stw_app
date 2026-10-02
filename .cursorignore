@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnp
+.pnp.*
+.yarn/*
+
+# Build / framework output
+.next/
+out/
+build/
+dist/
+coverage/
+.turbo/
+.vercel/
+.cache/
+**/.expo/
+**/ios/build/
+**/android/build/
+**/android/app/build/
+*.tsbuildinfo
+
+# Logs & debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+logs/
+**/logs/
+
+# Local / env / secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+.DS_Store
+
+# Large local / generated assets
+marketing/screenshots/
+agent-tools/
+.data/
