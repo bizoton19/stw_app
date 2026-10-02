@@ -17,6 +17,9 @@ The API is a **capability-URL** system: knowing a receipt id is enough to join a
 | **Med** | Shared claim link leaks PII | Public receipt JSON includes guest **names/contacts** and host **payment handles**. Fine among friends; bad if a link leaks. |
 | **Med** | Hardcoded `demo` / `demo-host` | Stranger can edit/finalize the seeded demo receipt. |
 | **Med** | Large upload buffering | Image is fully buffered before the 8 MB check → memory spike. |
+| **Med** | RSVP name-only updates | Anyone with the group invite link can overwrite another guest’s RSVP by reusing `personName` (case-insensitive). |
+| **Med** | Plan conflict leaks `existingId` | Unauthenticated `POST /api/receipts/plan` 409 returns another user’s receipt id (capability URL). |
+| **Med** | Unbounded RSVP roster | Unique names append forever; no roster/field caps or rate limits on `POST .../rsvp`. |
 | **Low** | OpenRouter key in client | **Not** an issue today — key is server-only (`src/lib/vision.ts` + `server-only`). |
 | **Low** | Cleartext mobile ATS | OK for LAN; friend builds must use **HTTPS** Railway URL. |
 
@@ -26,10 +29,49 @@ The API is a **capability-URL** system: knowing a receipt id is enough to join a
 - Burn OpenRouter on parse (until we require host auth)  
 - Open `/r/demo` and host it with `demo-host` (until demo is gated)  
 - Claim on any **open** receipt whose id they know  
+- Probe venue/day via `POST /plan` and learn conflicting receipt ids  
+- Hijack or spam RSVPs on any receipt id they know (name-only match; unbounded roster)  
 - **Cannot** steal the OpenRouter key from the app bundle  
 - **Cannot** unclaim someone else’s claims without that claim’s owner token  
 
 **Friend-test judgment:** Acceptable **if** the URL stays private, OpenRouter has a spend cap, we run **one** Railway instance, and we land the quick hardening below. Not acceptable for an open App Store audience.
+
+---
+
+## Plan / RSVP security TODOs
+
+From `/review-security` on the plan-an-outing branch (2026-10-02). Host-gated mutations and public invitee contact stripping looked fine; these three are the new medium risks.
+
+### 1. RSVP integrity — stop name-only hijacking
+
+- [ ] Do not treat case-insensitive `personName` match as authorization to update an existing invitee
+- [ ] Prefer: issue a per-device / first-submit RSVP secret (cookie or local storage + server field) and require it for updates
+- [ ] Or: create-only on name match; updates require returned `inviteeId` + secret (or signed invite token in the URL)
+- [ ] Keep optional legacy `inviteToken` path if personalized invites return; do not rely on display name alone
+
+**Where:** `src/lib/outing.ts` (`applyRsvp`), `src/app/api/receipts/[id]/rsvp/route.ts`
+
+### 2. Plan conflict — stop leaking receipt ids
+
+- [ ] On venue/day 409 from unauthenticated `POST /api/receipts/plan`, return a generic conflict message only — **no `existingId`**
+- [ ] Optionally scope venue-day conflicts per host/device instead of globally across all receipts
+- [ ] Optionally require auth or tighter rate limits on `POST /plan` (pairs with Phase 1 rate limits)
+
+**Where:** `src/app/api/receipts/plan/route.ts`, `src/lib/outing.ts` (`assertNoVenueDayConflict`), `src/lib/http.ts` (`existingId` in `jsonError`)
+
+### 3. RSVP abuse — cap roster and fields
+
+- [ ] Cap invitees per receipt (e.g. 50–100)
+- [ ] Max lengths for `personName` / `personContact` (note already capped at 280)
+- [ ] Rate-limit `POST /api/receipts/*/rsvp` per IP and/or per receipt (add to Cloudflare + in-app lists below)
+
+**Where:** `src/lib/outing.ts` (`applyRsvp` / `newInvitee`), store `rsvp()` in `store-pg` / `store-memory`, RSVP route
+
+### Done when
+
+- [ ] Updating an RSVP without the right secret/token fails; name collision alone cannot overwrite another guest
+- [ ] Unauthenticated plan conflict responses never include another user’s receipt id
+- [ ] Roster cannot grow without bound; oversized name/contact rejected; RSVP POSTs rate-limited
 
 ---
 
@@ -92,7 +134,9 @@ Put Cloudflare **proxy** (orange cloud) on `api.splitthewine.app`. Free plan inc
 - [ ] Do **not** advertise `*.up.railway.app` — treat raw Railway URL as secret; prefer CF hostname only in apps + share links
 - [ ] **Rate limiting rules** (start conservative; tune after friend test):
   - [ ] `POST /api/receipts` (create) — low per IP / min
+  - [ ] `POST /api/receipts/plan` — low per IP / min (venue/day probe + id leak risk until § Plan/RSVP #2)
   - [ ] `POST /api/receipts/*/parse` — very low per IP / min (OpenRouter cost)
+  - [ ] `POST /api/receipts/*/rsvp` — moderate per IP / receipt (roster spam)
   - [ ] claim / join POSTs — moderate per IP / min
 - [ ] Optional: Bot Fight Mode for **browser** claim pages only — avoid challenging native app API clients the same way
 - [ ] Optional: WAF managed ruleset (default CF Free is fine for friend test)
