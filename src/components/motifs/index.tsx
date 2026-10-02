@@ -194,6 +194,7 @@ export function Motif({
   className,
   style,
   title,
+  preserveAspectRatio,
 }: {
   name: MotifName;
   /** Rendered edge length. Ignored when `className` sizes the element. */
@@ -202,6 +203,8 @@ export function Motif({
   style?: React.CSSProperties;
   /** Omit unless the motif carries meaning no nearby text already carries. */
   title?: string;
+  /** Only the watermark sets this — see `CardWash`. */
+  preserveAspectRatio?: string;
 }) {
   const motif = MOTIFS[name];
   const ratio = motif.height / motif.width;
@@ -212,6 +215,7 @@ export function Motif({
       height={Math.round(size * ratio)}
       className={className}
       style={style}
+      preserveAspectRatio={preserveAspectRatio}
       fill="none"
       stroke="currentColor"
       strokeWidth={S}
@@ -229,7 +233,18 @@ export function Motif({
 /**
  * Card watermark. Absolutely positioned and masked, so it reflows nothing —
  * the parent needs `position: relative` and `overflow: hidden`.
+ *
+ * `slice` anchored bottom-right is what makes this read as atmosphere instead of
+ * a drawing: `.stw-wash` caps the height so the motif can never climb into the
+ * content, and without `slice` that cap would letterboxes the splits into a
+ * small centred square instead of letting them bleed off the corner.
  */
 export function CardWash({ className }: { className?: string }) {
-  return <Motif name="split-wash" className={`stw-wash ${className ?? ""}`} />;
+  return (
+    <Motif
+      name="split-wash"
+      className={`stw-wash ${className ?? ""}`}
+      preserveAspectRatio="xMaxYMax slice"
+    />
+  );
 }

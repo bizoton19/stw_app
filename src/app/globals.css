@@ -208,12 +208,17 @@
 
   /* Card watermark — oversized split motif, bottom-right. The mask is not
      decoration: at a flat opacity the wash crossed the payment rows and read as
-     a rendering artifact, so it has to die before it reaches content. */
+     a rendering artifact, so it has to die before it reaches content.
+     `max-height` is the other half of that: the motif is square, so on a short
+     card an 86%-wide copy is taller than the card and climbs over the content
+     the mask was meant to protect. Capping the height keeps it in the bottom
+     corner whatever the card's proportions turn out to be. */
   .stw-wash {
     position: absolute;
     inset: auto -14% -14% auto;
     width: 86%;
     height: auto;
+    max-height: 58%;
     color: var(--stw-merlot);
     opacity: 0.038;
     pointer-events: none;
