@@ -33,14 +33,17 @@ export function NearbyPlaceCards({
       <p className="mb-2 text-[12px] font-semibold text-muted-foreground">Nearby</p>
       <ul className="flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {places.map((card) => {
-          const photos = placePhotos(card);
+          const photos = placePhotos(
+            card,
+            typeof window === "undefined" ? "" : window.location.origin,
+          );
           const category = formatPlaceCategory(card.category);
           const ink = photos.length > 0 ? "text-[var(--stw-paper)]" : "text-foreground";
           return (
             <li key={card.placeId} className="w-[min(17.5rem,78%)] shrink-0 snap-start">
               <button
                 type="button"
-                className="relative h-[148px] w-full overflow-hidden rounded-2xl text-left"
+                className="relative h-[220px] w-full overflow-hidden rounded-2xl text-left"
                 onClick={() => onSelect(card)}
               >
                 <span className="absolute inset-0 flex">

@@ -8,10 +8,11 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { getApiUrl } from "@/lib/config";
 import { formatPlaceCategory, placePhotos, type NearbyPlaceCard } from "@/lib/nearby-places";
 import { colors } from "@/lib/theme";
 
-const CARD_HEIGHT = 148;
+const CARD_HEIGHT = 220;
 const CARD_GAP = 12;
 
 function CardPhoto({ url }: { url: string }) {
@@ -58,7 +59,7 @@ export function NearbyPlaceCards({
         contentContainerStyle={styles.row}
       >
         {places.map((card) => {
-          const photos = placePhotos(card);
+          const photos = placePhotos(card, getApiUrl());
           const category = formatPlaceCategory(card.category);
           return (
             <Pressable

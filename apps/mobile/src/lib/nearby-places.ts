@@ -222,20 +222,72 @@ export function venueFromNearbyCard(card: NearbyPlaceCard, confirmedAt: string) 
   };
 }
 
+const LOOPBACK_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "localhost"]);
+
+function apiBase(apiOrigin: string | null | undefined): URL | null {
+  const origin = (apiOrigin ?? "").trim().replace(/\/$/, "");
+  if (!origin) return null;
+  try {
+    return new URL(origin.includes("://") ? origin : `http://${origin}`);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Photo URLs the phone can load. A relative `/api/places/photo` path is
+ * resolved against the API origin. Absolute `0.0.0.0`, `127.0.0.1`, and
+ * `localhost` hosts are rewritten onto that same origin (path and query
+ * kept) so a dev bind address still works if the server sends one.
+ * Does not call Google.
+ */
+export function photoUrlForClient(
+  url: string | null | undefined,
+  apiOrigin: string | null | undefined,
+): string | null {
+  const safe = safePhotoUrl(url);
+  if (!safe) return null;
+  const base = apiBase(apiOrigin);
+  if (safe.startsWith("/") && !safe.startsWith("//")) {
+    if (!base) return safe;
+    return new URL(safe, base).toString();
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(safe);
+  } catch {
+    return safe;
+  }
+  if (!LOOPBACK_HOSTS.has(parsed.hostname.toLowerCase())) return safe;
+  if (!base) return safe;
+  parsed.protocol = base.protocol;
+  parsed.host = base.host;
+  return parsed.toString();
+}
+
 /** At most two photos already on the nearby card. Does not call Google. */
-export function placePhotos(card: {
-  photoUrl?: string | null;
-  photoUrls?: Array<string | null> | null;
-}): string[] {
+export function placePhotos(
+  card: {
+    photoUrl?: string | null;
+    photoUrls?: Array<string | null> | null;
+  },
+  apiOrigin?: string | null,
+): string[] {
   const listed = Array.isArray(card.photoUrls)
     ? card.photoUrls.flatMap((url) => {
         const safe = safePhotoUrl(url);
         return safe ? [safe] : [];
       })
     : [];
-  if (listed.length > 0) return listed.slice(0, 2);
-  const one = safePhotoUrl(card.photoUrl);
-  return one ? [one] : [];
+  const urls = listed.length > 0 ? listed.slice(0, 2) : [];
+  const chosen = urls.length > 0 ? urls : (() => {
+    const one = safePhotoUrl(card.photoUrl);
+    return one ? [one] : [];
+  })();
+  return chosen.flatMap((url) => {
+    const next = photoUrlForClient(url, apiOrigin);
+    return next ? [next] : [];
+  });
 }
 
 export function formatPlaceCategory(category: string | null | undefined): string | null {
@@ -258,6 +310,8 @@ export function formatPlaceRating(
 ): string | null {
   if (typeof rating !== "number" || !Number.isFinite(rating)) return null;
   const score = rating.toFixed(1);
-  if (typeof count !== "number" || !Number.isFinite(count)) return score;
-  return `${score} · ${Math.round(count).toLocaleString("en-US")}`;
+  if (typeof count !== "number" || !Number.isFinite(count)) return `Google rating ${score}`;
+  const n = Math.round(count);
+  const reviews = n === 1 ? "review" : "reviews";
+  return `Google rating ${score} · ${n.toLocaleString("en-US")} ${reviews}`;
 }

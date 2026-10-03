@@ -12,6 +12,7 @@ import {
   mergePlaceDetail,
   nearbyQuery,
   parsePlaceDetail,
+  photoUrlForClient,
   placeDetailsQuery,
   placePhotos,
   placesFromNearbyResponse,
@@ -187,8 +188,9 @@ test("nearby cards omit rating and website until one place details call", () => 
   assert.equal(venue.userRatingCount, 321);
   assert.equal(venue.websiteUri, "https://example.com");
   assert.equal(venue.photoUrl, card.photoUrl);
-  assert.equal(formatPlaceRating(venue.rating, venue.userRatingCount), "4.6 · 321");
-  assert.equal(formatPlaceRating(4.2, null), "4.2");
+  assert.equal(formatPlaceRating(venue.rating, venue.userRatingCount), "Google rating 4.6 · 321 reviews");
+  assert.equal(formatPlaceRating(4.2, null), "Google rating 4.2");
+  assert.equal(formatPlaceRating(5, 1), "Google rating 5.0 · 1 review");
   assert.equal(formatPlaceRating(null, 10), null);
 });
 
@@ -198,7 +200,7 @@ test("nearby cards are a short horizontal swipe with the photo as the background
   assert.match(html, /1 Main St, New York, NY/);
   assert.match(html, /Bar/);
   assert.match(html, /overflow-x-auto/);
-  assert.match(html, /h-\[148px\]/);
+  assert.match(html, /h-\[220px\]/);
   assert.match(html, /object-cover/);
   assert.match(html, /Powered by Google/);
   assert.match(html, /\/api\/places\/photo\?name=/);
@@ -246,7 +248,8 @@ test("place detail shows the nearby photo and rating only from place details", (
     />,
   );
   assert.match(html, /1 Main St, New York, NY/);
-  assert.match(html, /4\.6 · 321/);
+  assert.match(html, /Google rating 4\.6 · 321 reviews/);
+  assert.match(html, /\/api\/places\/static-map\?lat=40\.7128/);
   assert.match(html, /Coffee shop/);
   assert.match(html, /href="https:\/\/example.com"/);
   assert.match(html, /href="https:\/\/maps.google.com\/\?cid=1"/);
@@ -263,7 +266,8 @@ test("place detail shows the nearby photo and rating only from place details", (
   );
   assert.match(two, /photos%2Fref/);
   assert.match(two, /photos%2Ftwo/);
-  assert.equal(two.match(/<img /g)?.length, 2);
+  assert.equal(two.match(/<img /g)?.length, 3);
+  assert.match(two, /\/api\/places\/static-map\?lat=40\.7128/);
   assert.doesNotMatch(two, /4\.6/);
   assert.deepEqual(
     placePhotos({
@@ -284,6 +288,64 @@ test("place detail shows the nearby photo and rating only from place details", (
     ["https://api.test/a", "https://api.test/b"],
   );
   assert.deepEqual(placePhotos({ photoUrl: card.photoUrl, photoUrls: [] }), [card.photoUrl]);
+
+  const loopback =
+    "http://0.0.0.0:43147/api/places/photo?name=places%2Fabc%2Fphotos%2Fref&maxWidthPx=400";
+  const rewritten = photoUrlForClient(loopback, "http://192.168.1.20:43147");
+  assert.ok(rewritten);
+  const rewrittenUrl = new URL(rewritten);
+  assert.equal(rewrittenUrl.origin, "http://192.168.1.20:43147");
+  assert.equal(rewrittenUrl.pathname, "/api/places/photo");
+  assert.equal(rewrittenUrl.searchParams.get("name"), "places/abc/photos/ref");
+  assert.equal(rewrittenUrl.searchParams.get("maxWidthPx"), "400");
+  assert.equal(
+    new URL(photoUrlForClient("http://127.0.0.1:43147/api/places/photo?name=a", "https://lan.example:43147")!).origin,
+    "https://lan.example:43147",
+  );
+  assert.equal(
+    new URL(photoUrlForClient("http://localhost:43147/api/places/photo?name=a", "http://10.0.2.2:43147/")!).host,
+    "10.0.2.2:43147",
+  );
+  assert.equal(
+    photoUrlForClient("https://api.test/api/places/photo?name=a", "http://192.168.1.20:43147"),
+    "https://api.test/api/places/photo?name=a",
+  );
+  assert.equal(
+    photoUrlForClient("http://0.0.0.0:43147/api/places/photo?key=secret", "http://10.0.0.2:43147"),
+    null,
+  );
+  const shifted = placePhotos(
+    {
+      photoUrls: [loopback, "http://127.0.0.1:43147/api/places/photo?name=second"],
+    },
+    "http://192.168.1.20:43147",
+  );
+  assert.equal(shifted.length, 2);
+  assert.equal(new URL(shifted[0]!).origin, "http://192.168.1.20:43147");
+  assert.equal(new URL(shifted[1]!).origin, "http://192.168.1.20:43147");
+  assert.equal(new URL(shifted[1]!).searchParams.get("name"), "second");
+
+  const relative = photoUrlForClient(
+    "/api/places/photo?name=places%2Fabc%2Fphotos%2Fref&maxWidthPx=400",
+    "http://192.168.1.20:43147",
+  );
+  assert.ok(relative);
+  const relativeUrl = new URL(relative);
+  assert.equal(relativeUrl.origin, "http://192.168.1.20:43147");
+  assert.equal(relativeUrl.pathname, "/api/places/photo");
+  assert.equal(relativeUrl.searchParams.get("name"), "places/abc/photos/ref");
+  assert.equal(relativeUrl.searchParams.get("maxWidthPx"), "400");
+  assert.equal(
+    photoUrlForClient("/api/places/photo?name=a&maxWidthPx=400", ""),
+    "/api/places/photo?name=a&maxWidthPx=400",
+  );
+  assert.deepEqual(
+    placePhotos(
+      { photoUrl: "/api/places/photo?name=only", photoUrls: [] },
+      "http://10.0.2.2:43147",
+    ).map((url) => new URL(url).href),
+    ["http://10.0.2.2:43147/api/places/photo?name=only"],
+  );
 });
 
 test("selecting a nearby card does not call the typeahead bridge", () => {

@@ -4,7 +4,9 @@ import { router } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { goHostDesk } from "@/lib/navigation";
 import { currentNearbyPlan } from "@/lib/nearby-plan";
+import { getApiUrl } from "@/lib/config";
 import { fetchPlaceDetail } from "@/lib/places";
+import { staticMapUri } from "@/lib/place-pin";
 import {
   formatPlaceCategory,
   formatPlaceRating,
@@ -25,8 +27,15 @@ export default function NearbyPlaceScreen() {
   const [plan] = useState(() => currentNearbyPlan());
   const card = plan?.card ?? null;
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
-  const photos = card ? placePhotos(card) : [];
+  const photos = card ? placePhotos(card, getApiUrl()) : [];
+  const mapLat = detail?.lat ?? card?.lat;
+  const mapLng = detail?.lng ?? card?.lng;
+  const mapUri =
+    typeof mapLat === "number" && typeof mapLng === "number"
+      ? staticMapUri({ lat: mapLat, lng: mapLng, w: 600, h: 220, z: 15 })
+      : null;
   const [failed, setFailed] = useState<Record<string, boolean>>({});
+  const [mapFailed, setMapFailed] = useState(false);
   const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
   const category = formatPlaceCategory(detail?.category ?? card?.category);
   const address = detail?.formattedAddress ?? card?.formattedAddress;
@@ -86,6 +95,16 @@ export default function NearbyPlaceScreen() {
                 )}
               </View>
             ) : null}
+            {mapUri && !mapFailed ? (
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <Image
+                source={{ uri: mapUri }}
+                style={styles.map}
+                resizeMode="cover"
+                accessible={false}
+                onError={() => setMapFailed(true)}
+              />
+            ) : null}
             {address ? <Text style={styles.address}>{address}</Text> : null}
             {rating ? <Text style={styles.rating}>{rating}</Text> : null}
             {category ? <Text style={styles.category}>{category}</Text> : null}
@@ -121,10 +140,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.chrome,
   },
-  pair: { flexDirection: "row", gap: 8, height: 168 },
+  pair: { flexDirection: "row", gap: 8, height: 200 },
   pairPhoto: {
     flex: 1,
-    height: 168,
+    height: 200,
+    borderRadius: 16,
+    backgroundColor: colors.chrome,
+  },
+  map: {
+    width: "100%",
+    height: 180,
     borderRadius: 16,
     backgroundColor: colors.chrome,
   },

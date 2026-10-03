@@ -62,7 +62,13 @@ export function NearbyPlaceDetail({
     };
   }, [card.placeId, detailProp, onDetail]);
 
-  const photos = placePhotos(card);
+  const photos = placePhotos(card, typeof window === "undefined" ? "" : window.location.origin);
+  const lat = detail?.lat ?? card.lat;
+  const lng = detail?.lng ?? card.lng;
+  const staticMap =
+    typeof lat === "number" && typeof lng === "number"
+      ? `/api/places/static-map?lat=${lat}&lng=${lng}&w=600&h=220`
+      : null;
   const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
   const category = formatPlaceCategory(detail?.category ?? card.category);
   const address = detail?.formattedAddress ?? card.formattedAddress;
@@ -73,7 +79,7 @@ export function NearbyPlaceDetail({
     <div className="space-y-3">
       {photos.length === 1 ? <Hero url={photos[0]!} /> : null}
       {photos.length > 1 ? (
-        <div className="flex h-[168px] gap-2">
+        <div className="flex h-[200px] gap-2">
           {photos.map((url, index) => (
             <Hero
               key={`${url}-${index}`}
@@ -83,6 +89,7 @@ export function NearbyPlaceDetail({
           ))}
         </div>
       ) : null}
+      {staticMap ? <Hero url={staticMap} className="h-[180px] w-full rounded-2xl bg-[var(--stw-chrome)] object-cover" /> : null}
       {address ? <p className="text-[14px] leading-5 text-muted-foreground">{address}</p> : null}
       {rating ? <p className="text-[14px] font-semibold">{rating}</p> : null}
       {category ? <p className="text-[13px] text-muted-foreground">{category}</p> : null}
