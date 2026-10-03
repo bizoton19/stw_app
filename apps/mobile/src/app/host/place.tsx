@@ -12,7 +12,7 @@ import {
 import { router } from "expo-router";
 import { Globe, Map, MapPin, ShoppingBasket, Star, UtensilsCrossed, Wine } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
-import { PlacePhotoSheet } from "@/components/place-photo-sheet";
+import { ReceiptImageSheet } from "@/components/receipt-image-viewer";
 import { goHostDesk } from "@/lib/navigation";
 import { currentNearbyPlan } from "@/lib/nearby-plan";
 import { getApiUrl } from "@/lib/config";
@@ -148,7 +148,8 @@ export default function NearbyPlaceScreen() {
             ) : mapUri ? (
               <View style={styles.map} />
             ) : null}
-            <PlacePhotoSheet
+            <ReceiptImageSheet
+              mode="place"
               visible={openPhoto != null}
               uri={openPhoto}
               title={card.name}
