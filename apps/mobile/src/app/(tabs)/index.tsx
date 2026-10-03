@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -11,7 +11,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, Camera, ImageIcon, Trash2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiBar } from "@/components/api-bar";
-import { AppShell, PrimaryButton } from "@/components/chrome";
+import { AppShell, PrimaryButton, QuietButton } from "@/components/chrome";
 import { PressScale } from "@/components/press-scale";
 import { VenueMapThumb } from "@/components/venue-map-thumb";
 import {
@@ -25,6 +25,7 @@ import {
   clearHostedReceipt,
   getActiveHostReceiptId,
   hostedStatusLabel,
+  listHostedReceipts,
   refreshHostedReceiptStatuses,
   type HostedReceiptSummary,
 } from "@/lib/host-tabs";
@@ -56,6 +57,10 @@ function draftPlaceLabel(draft: PersistedHostDraft): string {
   return draft.venue?.name?.trim() || draft.restaurant.trim() || "Unfinished check";
 }
 
+/** Skip hammering GET /api/receipts/:id for every hosted tab on every focus. */
+const STATUS_REFRESH_MIN_MS = 20_000;
+let lastHostedStatusRefreshAt = 0;
+
 export default function HomeScreen() {
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -64,10 +69,16 @@ export default function HomeScreen() {
 
   const refresh = useCallback(() => {
     void (async () => {
+      // Paint AsyncStorage first so a just-published / just-closed tab shows immediately.
       setActiveId(await getActiveHostReceiptId());
-      setHosted(await refreshHostedReceiptStatuses());
+      const local = await listHostedReceipts();
+      setHosted(local);
       const saved = await loadHostDraft();
       setDraft(saved && draftHasProgress(saved) ? saved : null);
+      const now = Date.now();
+      if (now - lastHostedStatusRefreshAt < STATUS_REFRESH_MIN_MS) return;
+      lastHostedStatusRefreshAt = now;
+      setHosted(await refreshHostedReceiptStatuses(local));
     })();
   }, []);
 
@@ -76,10 +87,6 @@ export default function HomeScreen() {
       refresh();
     }, [refresh]),
   );
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   const active = useMemo(
     () => hosted.find((row) => row.id === activeId) ?? hosted[0] ?? null,
@@ -91,6 +98,13 @@ export default function HomeScreen() {
   );
 
   function openBoard(id: string) {
+    const row = hosted.find((r) => r.id === id);
+    // Planned outings (and draft after event-day promotion) stay on the plan board
+    // until the check is uploaded / published.
+    if (row?.status === "planning" || (row?.status === "draft" && row.receiptDay)) {
+      router.push(`/host/plan/${id}`);
+      return;
+    }
     router.push({
       pathname: "/r/[id]/settle",
       params: { id, host: "1" },
@@ -293,16 +307,19 @@ export default function HomeScreen() {
                           styles.statusPill,
                           active.status === "finalized"
                             ? styles.statusPillClosed
-                            : styles.statusPillOpen,
+                            : active.status === "planning"
+                              ? styles.statusPillDraft
+                              : styles.statusPillOpen,
                         ]}
                       >
-                        {active.status !== "finalized" ? (
+                        {active.status !== "finalized" && active.status !== "planning" ? (
                           <View style={styles.liveDot} />
                         ) : null}
                         <Text
                           style={[
                             styles.statusPillText,
                             active.status === "finalized" && styles.statusPillTextClosed,
+                            active.status === "planning" && styles.statusPillTextDraft,
                           ]}
                         >
                           {hostedStatusLabel(active.status)}
@@ -326,7 +343,11 @@ export default function HomeScreen() {
                           {active.restaurant || "Open check"}
                         </Text>
                         <Text style={styles.heroCta}>
-                          Tap for who owes what · claimed & remaining
+                          {active.status === "planning"
+                            ? "Tap to share invite & see RSVPs"
+                            : active.status === "draft"
+                              ? "Tap to upload the check"
+                              : "Tap for who owes what · claimed & remaining"}
                         </Text>
                       </View>
                     </View>
@@ -349,16 +370,21 @@ export default function HomeScreen() {
                 <View style={styles.emptyCard}>
                   <Text style={styles.emptyTitle}>No open tab yet</Text>
                   <Text style={styles.emptyBody}>
-                    Snap the check, confirm the lines, share a claim link. Tax and tip follow what
-                    people ordered.
+                    Snap the check tonight — or plan an outing and invite people before the bill.
                   </Text>
                   <PrimaryButton onPress={() => router.push("/host")}>
                     Start a tab
                   </PrimaryButton>
+                  <QuietButton onPress={() => router.push("/host/plan")}>
+                    Plan an outing?
+                  </QuietButton>
                 </View>
               ) : (
                 <View style={styles.startTabWrap}>
                   <PrimaryButton onPress={() => router.push("/host")}>Start a tab</PrimaryButton>
+                  <QuietButton onPress={() => router.push("/host/plan")}>
+                    Plan an outing?
+                  </QuietButton>
                   <Text style={styles.startTabHint}>
                     Guided path — or use the camera / upload icons above for a quick snap.
                   </Text>
@@ -525,7 +551,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   statusPillOpen: {
-    backgroundColor: "rgba(47, 93, 80, 0.12)",
+    backgroundColor: colors.selectWash,
   },
   statusPillClosed: {
     backgroundColor: "rgba(42, 36, 28, 0.08)",

@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { DoorOpen, Home, LayoutList, RotateCcw, Trash2, Utensils } from "lucide-react-native";
+import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
@@ -16,6 +17,8 @@ type Tab = {
 /**
  * Compact host live-board nav — icon + small label, shorter than stacked buttons.
  * On the claims screen (`mode="claims"`), the middle tab returns to the live board.
+ * Hidden while the keyboard is open so the keyboard covers this chrome instead of
+ * fighting it for space.
  */
 export function HostLiveTabBar({
   onHome,
@@ -43,6 +46,9 @@ export function HostLiveTabBar({
   onDelete?: () => void;
   stacked?: boolean;
 }) {
+  const keyboardOpen = useKeyboardVisible();
+  if (keyboardOpen) return null;
+
   const middle: Tab =
     mode === "claims"
       ? {

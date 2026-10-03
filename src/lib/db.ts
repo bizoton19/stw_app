@@ -1,7 +1,19 @@
 import { Pool, type PoolClient } from "pg";
 
-/** Dedicated schema on a shared Railway Postgres instance — other apps use their own schemas. */
-export const DB_SCHEMA = "split_the_wine";
+/**
+ * Dedicated schema on a shared Railway Postgres instance — other apps use their own schemas.
+ * Override with DB_SCHEMA (e.g. `split_the_wine_dev` for Plan-an-outing / staging).
+ * Only allow safe identifiers (no injection via env).
+ */
+function resolveDbSchema(): string {
+  const raw = process.env.DB_SCHEMA?.trim() || "split_the_wine";
+  if (!/^[a-z][a-z0-9_]*$/i.test(raw)) {
+    throw new Error(`Invalid DB_SCHEMA: ${raw}`);
+  }
+  return raw;
+}
+
+export const DB_SCHEMA = resolveDbSchema();
 
 const globalForDb = globalThis as typeof globalThis & {
   __splitTheWinePool?: Pool;
@@ -74,11 +86,37 @@ export async function ensureSchema(): Promise<void> {
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         );
+
+        -- Photo metadata (bytes live in blob store when configured).
+        -- Must live in ensureSchema so new DB_SCHEMA envs (e.g. split_the_wine_dev)
+        -- are not missing it until the first upload/delete.
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.receipt_images (
+          receipt_id text PRIMARY KEY REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
+          mime text NOT NULL,
+          bytes bytea,
+          byte_size integer,
+          storage_key text,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        );
+
+        -- Nearby top 7, 30 days per neighborhood cell. Photo bytes, kept per ref.
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_nearby_cache (
+          cell_key text PRIMARY KEY,
+          places jsonb NOT NULL,
+          stored_at timestamptz NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_photo_cache (
+          photo_name text PRIMARY KEY,
+          content_type text NOT NULL,
+          bytes bytea NOT NULL,
+          stored_at timestamptz NOT NULL DEFAULT now()
+        );
       `);
     })();
   }
   await globalForDb.__splitTheWineMigrated;
-  // Additive: safe if an older in-process migrate already completed without this table.
+  // Additive: safe if an older in-process migrate already completed without these.
   await getPool().query(`
     CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.host_push_tokens (
       receipt_id text NOT NULL REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
@@ -97,7 +135,39 @@ export async function ensureSchema(): Promise<void> {
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.receipt_images (
+      receipt_id text PRIMARY KEY REFERENCES ${DB_SCHEMA}.receipts(id) ON DELETE CASCADE,
+      mime text NOT NULL,
+      bytes bytea,
+      byte_size integer,
+      storage_key text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_nearby_cache (
+      cell_key text PRIMARY KEY,
+      places jsonb NOT NULL,
+      stored_at timestamptz NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_photo_cache (
+      photo_name text PRIMARY KEY,
+      content_type text NOT NULL,
+      bytes bytea NOT NULL,
+      stored_at timestamptz NOT NULL DEFAULT now()
+    );
   `);
+  // Older installs: bytes was NOT NULL / missing blob columns.
+  await getPool()
+    .query(`ALTER TABLE ${DB_SCHEMA}.receipt_images ALTER COLUMN bytes DROP NOT NULL`)
+    .catch(() => undefined);
+  await getPool().query(
+    `ALTER TABLE ${DB_SCHEMA}.receipt_images ADD COLUMN IF NOT EXISTS byte_size integer`,
+  );
+  await getPool().query(
+    `ALTER TABLE ${DB_SCHEMA}.receipt_images ADD COLUMN IF NOT EXISTS storage_key text`,
+  );
 }
 
 export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {

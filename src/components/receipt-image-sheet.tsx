@@ -27,7 +27,7 @@ export function ReceiptImageButton({
         onClick={() => setOpen(true)}
         className={
           className ??
-          "mb-3 inline-flex rounded-full border border-border bg-[#FFFcf8] px-3 py-2 text-[13px] font-semibold text-primary"
+          "mb-3 inline-flex rounded-full border border-border bg-[var(--stw-sheet)] px-3 py-2 text-[13px] font-semibold text-primary"
         }
       >
         View tab photo
@@ -86,18 +86,18 @@ export function ReceiptImageSheet({
         role="dialog"
         aria-modal="true"
         aria-label="Tab photo"
-        className="relative z-10 flex max-h-[92dvh] w-full max-w-[430px] flex-col rounded-t-2xl bg-[#F6F4F1] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:mx-4 sm:rounded-2xl"
+        className="relative z-10 flex max-h-[92dvh] w-full max-w-[430px] flex-col rounded-t-2xl bg-[var(--stw-paper)] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:mx-4 sm:rounded-2xl"
       >
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[rgba(42,36,28,0.18)]" />
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-[17px] font-extrabold tracking-tight text-[#2A241C]">Tab photo</h2>
+          <h2 className="text-[17px] font-extrabold tracking-tight text-[var(--stw-ink)]">Tab photo</h2>
           <button
             type="button"
             aria-label="Close"
             onClick={onClose}
             className="flex size-10 items-center justify-center rounded-full bg-[rgba(42,36,28,0.06)]"
           >
-            <X className="size-5 text-[#2A241C]" strokeWidth={2.25} />
+            <X className="size-5 text-[var(--stw-ink)]" strokeWidth={2.25} />
           </button>
         </div>
         <div className="overflow-auto overscroll-contain rounded-xl bg-[#1a1612] touch-pan-y">
@@ -109,7 +109,7 @@ export function ReceiptImageSheet({
             draggable={false}
           />
         </div>
-        <p className="mt-3 text-center text-[13px] font-semibold text-[#6B635A]">
+        <p className="mt-3 text-center text-[13px] font-semibold text-[var(--stw-ink-soft)]">
           Pinch to zoom · Hold to save · Tap outside or ✕ to close
         </p>
       </div>

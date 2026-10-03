@@ -72,6 +72,12 @@ export function isGlassesPour(item: Pick<Item, "pour">): boolean {
   return item.pour?.mode === "glasses" && (item.pour.glassesPerPrintedUnit ?? 0) > 0;
 }
 
+/** Claim-row motif: carafe for a shared/split pour, stem for a single drink. */
+export function usesCarafeMotif(item: Pick<Item, "name" | "pour">): boolean {
+  if (isGlassesPour(item)) return true;
+  return CARAFE.test(item.name ?? "");
+}
+
 export function claimUnitLabel(item: Pick<Item, "pour">, n: number): string {
   if (isGlassesPour(item)) return n === 1 ? "glass" : "glasses";
   return n === 1 ? "left" : "left";

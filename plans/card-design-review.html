@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Split the Wine — card design + theme review (first pass)</title>
+<style>
+  /* ---------- Theme definitions ----------
+     `linen` is the current shipped contract (plans/ui-enhance.guide.md §3).
+     The other three are OVERRIDES, opt-in, deletable. See the rollback note. */
+  [data-theme="linen"] {
+    --paper:#F6F4F1; --sheet:#FFFCF8; --ink:#2A241C; --ink-soft:#7A7268;
+    --muted:#8A847C; --line:#E6E0D8; --accent:#6E2E35; --accent-fg:#FBF8F5;
+    --wash:rgba(110,46,53,.05); --grain:.035;
+  }
+  [data-theme="candlelight"] {
+    --paper:#EFE7DC; --sheet:#F8F2E8; --ink:#241C14; --ink-soft:#6E6253;
+    --muted:#857A6A; --line:#DCD0BE; --accent:#7A2630; --accent-fg:#FBF5EC;
+    --wash:rgba(201,137,42,.09); --grain:.05;
+  }
+  [data-theme="cellar"] {
+    --paper:#171310; --sheet:#1F1915; --ink:#F2EBE1; --ink-soft:#A89C8C;
+    --muted:#8C8072; --line:rgba(242,235,225,.13); --accent:#C4566A; --accent-fg:#1A1411;
+    --wash:rgba(196,86,106,.10); --grain:.06;
+  }
+  /* `patio` was cut — bottle-green CTA stopped reading as Split the Wine and collided with
+     the `select` green that already means "claimed". Palette parked in card-design-themes.md §3.4. */
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; padding:40px 20px 80px;
+    background:#E8E4DF; color:#1C1917;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    line-height:1.5;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:26px;letter-spacing:-.02em;margin:0 0 6px}
+  h2{font-size:17px;letter-spacing:-.01em;margin:48px 0 4px}
+  h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#78716C;margin:28px 0 10px;font-weight:700}
+  p.lead{margin:0 0 4px;color:#57534E;max-width:70ch}
+  p.sub{margin:0 0 18px;font-size:13.5px;color:#78716C;max-width:70ch}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:#fff;padding:1px 5px;border-radius:4px;border:1px solid #DDD8D2}
+  .warn{
+    margin:20px 0 0;padding:14px 16px;border-radius:10px;
+    background:#FFF8F2;border:1px solid #E8D6C4;font-size:13.5px;color:#5C4A3A;max-width:74ch;
+  }
+  .warn strong{color:#7A2630}
+
+  /* ---------- Motif sheet ---------- */
+  .motifs{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;
+    background:#F6F4F1;border:1px solid #E6E0D8;border-radius:14px;padding:16px;
+  }
+  .motif{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:14px 8px 10px;border-radius:10px;background:#FFFCF8;border:1px solid #EFE9E1;
+    color:#6E2E35;
+  }
+  .motif svg{width:52px;height:52px;display:block}
+  /* never stretch the tear line — preserveAspectRatio must stay default or the notches deform */
+  .motif.wide svg{width:100%;height:auto}
+  .motif b{font-size:11px;font-weight:600;color:#57534E;letter-spacing:.01em}
+  .motif small{font-size:10px;color:#A8A29E}
+
+  /* ---------- Theme switcher ---------- */
+  .switch{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 22px}
+  .switch button{
+    font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    padding:8px 14px;border-radius:999px;border:1px solid #D6D1CB;background:#fff;color:#44403C;
+  }
+  .switch button[aria-pressed="true"]{background:#2A241C;color:#FBF8F5;border-color:#2A241C}
+
+  /* ---------- Phone / card mockups ---------- */
+  .boards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:22px;align-items:start}
+  .board{min-width:0}
+  .board-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .board-head b{font-size:13.5px}
+  .board-head span{font-size:12px;color:#78716C}
+
+  .phone{
+    position:relative;overflow:hidden;
+    border-radius:22px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink);
+    padding:18px 18px 20px;
+  }
+  /* watermark: oversized split motif, pinned low-opacity */
+  .phone .wash{
+    position:absolute;inset:auto -14% -14% auto;width:86%;color:var(--accent);
+    opacity:.038;pointer-events:none;
+    -webkit-mask-image:linear-gradient(to top,#000,transparent);
+    mask-image:linear-gradient(to top,#000,transparent);
+  }
+  [data-theme="cellar"] .phone .wash{opacity:.075}
+  .phone > *{position:relative}
+
+  .chrome{display:flex;align-items:center;gap:8px;margin-bottom:14px;color:var(--accent)}
+  .chrome svg{width:22px;height:22px}
+  .chrome b{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+  .chrome .live{
+    margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--accent);
+  }
+  .rule{height:2px;border-radius:2px;background:var(--line);margin-bottom:16px;overflow:hidden}
+  .rule i{display:block;height:100%;width:62%;background:var(--accent);border-radius:2px}
+
+  .kicker{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+  .kicker svg{width:15px;height:15px;color:var(--accent);opacity:.8}
+  .title{font-size:25px;line-height:1.16;letter-spacing:-.025em;font-weight:700;margin:0 0 7px}
+  .lead{font-size:14px;color:var(--ink-soft);margin:0 0 16px}
+
+  .totalbox{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:16px;border-radius:13px;border:1px solid var(--line);background:var(--sheet);
+    margin-bottom:12px;
+  }
+  .totalbox span{font-size:14px;font-weight:600;color:var(--ink-soft)}
+  .totalbox b{font-size:26px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+
+  .linkbox{padding:14px;border-radius:13px;border:1px solid var(--line);background:var(--sheet);margin-bottom:12px}
+  .linkbox small{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:6px;text-transform:uppercase}
+  .linkbox span{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);word-break:break-all}
+
+  /* Tear line as CSS: end notches only read as cut-outs between two sheets, so in-card we use the dashes alone. */
+  .perf{position:relative;height:12px;margin:2px 0 12px}
+  .perf::before{content:"";position:absolute;left:6px;right:6px;top:50%;border-top:1.5px dashed var(--line)}
+
+  .actions{display:flex;gap:8px;margin-bottom:14px}
+  .act{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+    padding:11px 4px;border-radius:12px;border:1px solid var(--line);background:var(--sheet);
+    font-size:11.5px;font-weight:600;color:var(--ink-soft);
+  }
+  .act svg{width:19px;height:19px;color:var(--accent)}
+
+  .cta{
+    display:block;width:100%;text-align:center;padding:14px;border-radius:999px;
+    background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:700;border:0;
+  }
+  .cta.quiet{background:transparent;color:var(--ink-soft);font-weight:600;font-size:13.5px;padding:10px}
+
+  /* owe card */
+  .owe{padding:18px;border-radius:14px;border:1px solid var(--line);background:var(--sheet);margin-bottom:14px}
+  .owe small{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .owe b{display:block;font-size:38px;line-height:1.05;letter-spacing:-.035em;font-weight:800;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+  .owe em{font-style:normal;font-size:13px;color:var(--ink-soft)}
+  .owe .pourmark{position:absolute;right:16px;top:14px;width:30px;height:30px;color:var(--accent);opacity:.26}
+
+  /* claim rows */
+  .rows{border-top:1px solid var(--line)}
+  .row{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+  /* Centred by flex, not by hand-tuned offsets — the check must sit dead centre at every size. */
+  .disc{
+    width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);flex:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .disc svg{width:12px;height:12px;color:var(--accent-fg);opacity:0}
+  .row.on .disc{background:var(--accent);border-color:var(--accent)}
+  .row.on .disc svg{opacity:1}
+  .row .nm,.payrow .nm{flex:1;min-width:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+  .row .nm i,.payrow .nm i{display:block;font-style:normal;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
+  .row .nm i svg{width:12px;height:12px;vertical-align:-2px;margin-right:4px;color:var(--accent);opacity:.75}
+  .row .left{font-size:12.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+  .row.on .left{color:var(--accent)}
+
+  /* Pay rows keep OFFICIAL brand tiles in every theme — see plan §3.1. */
+  .payrow{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .paytile{width:34px;height:34px;border-radius:10px;object-fit:cover;flex:none}
+  .paycta{font-size:13px;font-weight:700;color:var(--accent)}
+
+  .footnote{margin-top:12px;font-size:11.5px;color:var(--muted);text-align:center}
+
+  table.plan{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:10px;background:#fff;border-radius:10px;overflow:hidden}
+  table.plan th,table.plan td{text-align:left;padding:9px 12px;border-bottom:1px solid #EAE6E1;vertical-align:top}
+  table.plan th{background:#F6F4F1;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:#57534E}
+  table.plan tr:last-child td{border-bottom:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Card design + theme review — first pass</h1>
+  <p class="lead">Bespoke SVG motifs across the three card surfaces that carry them. Nothing is wired into the app yet.</p>
+  <p class="sub">Motif sources live in <code>plans/motifs/*.svg</code>. Plan: <code>plans/card-design-themes.md</code>.</p>
+
+  <div class="warn">
+    <strong>Scope — decided.</strong> Ship <code>linen</code> (day) and <code>candlelight</code>, where candlelight is an
+    <strong>automatic dusk variant</strong> applied from <strong>19:00–06:00</strong> local — not a manual pick, no theme picker in the UI.
+    <code>cellar</code> is kept here only as a deferred dark-mode reference.
+    <code>patio</code> was <strong>cut</strong> and its palette parked for a different project.
+    Payment-method tiles stay official brand colour in every theme.
+  </div>
+
+  <h2>1 · Motif sheet</h2>
+  <p class="sub">Authored here, not downloaded — no license baggage. Every file is stroke-only and uses <code>currentColor</code>, so one file themes itself.</p>
+  <div class="motifs">
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.7 5.2h4.6v4.2h-4.6z"/><path d="M21.1 9.4h5.8v4.6h-5.8z"/><path d="M16.7 14h14.6v24.4a4.2 4.2 0 0 1-4.2 4.2h-6.2a4.2 4.2 0 0 1-4.2-4.2z"/><path d="M16.7 21.2l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9" opacity=".85"/><path d="M16.7 28.8l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9" opacity=".85"/><path d="M16.7 36.4l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9" opacity=".85"/></svg>
+      <b>split-bottle</b><small>signature</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9h18l-1.6 11.4a7.6 7.6 0 0 1-14.8 0z"/><path d="M16.4 17.6h15.2" stroke-dasharray="0.1 3.4" opacity=".7"/><path d="M24 27.8v10"/><path d="M17.8 38.6h12.4"/></svg>
+      <b>stem</b><small>drink line</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5c8.6 5.4 12.6 12.4 11.4 20.8"/><path d="M25.9 27.3c-.5 2.4-1.8 4.3-3.9 5.6" opacity=".8"/><ellipse cx="24" cy="37.5" rx="10.5" ry="3.2"/><path d="M13.5 37.5c3.2 1.6 7 2.4 10.5 2.4s7.3-.8 10.5-2.4" opacity=".45"/></svg>
+      <b>pour</b><small>settle moment</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5h24v29.8l-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6z"/><path d="M17.2 14.2h13.6" opacity=".85"/><path d="M17.2 20.2h13.6" opacity=".7"/><path d="M17.2 26.2h8.4" opacity=".55"/></svg>
+      <b>check-stub</b><small>the tab</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(-13 17 24)"><path d="M9 11h13l-1.2 8.4a5.6 5.6 0 0 1-10.6 0z"/><path d="M15.5 25.2v9"/><path d="M10.8 35.2h9.4"/></g><g transform="rotate(13 31 24)"><path d="M26 11h13l-1.2 8.4a5.6 5.6 0 0 1-10.6 0z"/><path d="M32.5 25.2v9"/><path d="M27.8 35.2h9.4"/></g></svg>
+      <b>coupe-pair</b><small>share / invite</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 6h6.8v6.4l6 9.2a9 9 0 0 1 1.4 4.8v9.4a6 6 0 0 1-6 6H20.2a6 6 0 0 1-6-6v-9.4a9 9 0 0 1 1.4-4.8l6-9.2z"/><path d="M14.4 28.6l3.4 1 2.6-1.2 2.8 1.3 2.7-1.3 2.7 1.2 2.9-1" opacity=".85"/><path d="M19.4 12.4h9.2" opacity=".6"/></svg>
+      <b>carafe</b><small>shared lines</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5h12a2.4 2.4 0 0 1 2.4 2.4v26.2a2.4 2.4 0 0 1-2.4 2.4H18a2.4 2.4 0 0 1-2.4-2.4V10.9A2.4 2.4 0 0 1 18 8.5z"/><path d="M16.4 17.4h15.2" opacity=".6"/><path d="M16.4 24h15.2" opacity=".6"/><path d="M16.4 30.6h15.2" opacity=".6"/></svg>
+      <b>cork</b><small>night opened</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15.5h34a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M5 20.5h38" opacity=".55"/><path d="M5 27.5h38" opacity=".55"/><path d="M19.6 24h8.8" opacity=".8"/></svg>
+      <b>label-band</b><small>venue kicker</small>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M24 7v6.4"/><path d="M24.4 10.6c2.6-.4 4.6-1.8 5.6-3.8" opacity=".7"/><circle cx="24" cy="17.6" r="4.2"/><circle cx="18.2" cy="25" r="4.2"/><circle cx="29.8" cy="25" r="4.2"/><circle cx="24" cy="32.4" r="4.2"/><circle cx="24" cy="25" r="4.2" opacity=".4"/></svg>
+      <b>grapes</b><small>decorative only</small>
+    </div>
+    <div class="motif wide" style="grid-column:1/-1">
+      <svg viewBox="0 0 240 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M0 5a5 5 0 0 0 5-5v10a5 5 0 0 0-5-5z" fill="currentColor" stroke="none" opacity=".28"/><path d="M240 5a5 5 0 0 1-5-5v10a5 5 0 0 1 5-5z" fill="currentColor" stroke="none" opacity=".28"/><path d="M10 5h220" stroke-dasharray="1.6 5.4" opacity=".75"/></svg>
+      <b>perforation</b><small>tear-line divider, replaces generic 1px rules</small>
+    </div>
+  </div>
+
+  <h2>2 · Themes on real cards</h2>
+  <p class="sub">Same markup, same copy, different token sets. In the product the switch is the clock, not a button — these controls exist only for review.</p>
+  <div class="switch" id="switch">
+    <button data-t="linen" aria-pressed="true">Linen · day</button>
+    <button data-t="candlelight" aria-pressed="false">Candlelight · auto dusk 19:00</button>
+    <button data-t="cellar" aria-pressed="false">Cellar · deferred</button>
+  </div>
+
+  <div class="boards" id="boards">
+
+    <!-- ============ SHARE CARD ============ -->
+    <div class="board" data-theme="linen">
+      <div class="board-head"><b>Share card</b><span>host · step 8 of 8</span></div>
+      <div class="phone">
+        <svg class="wash" viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" preserveAspectRatio="none"><path d="M-10 34l16 4.6 12.6-5.6 13.6 6.2 13.2-6.2 13.2 5.8 13.6-5.4 13.4 5.6 13.6-5.2 14 5.4 13.8-4.8"/><path d="M-10 74l16 4.6 12.6-5.6 13.6 6.2 13.2-6.2 13.2 5.8 13.6-5.4 13.4 5.6 13.6-5.2 14 5.4 13.8-4.8"/><path d="M-10 114l16 4.6 12.6-5.6 13.6 6.2 13.2-6.2 13.2 5.8 13.6-5.4 13.4 5.6 13.6-5.2 14 5.4 13.8-4.8"/></svg>
+        <div class="chrome">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.7 5.2h4.6v4.2h-4.6z"/><path d="M21.1 9.4h5.8v4.6h-5.8z"/><path d="M16.7 14h14.6v24.4a4.2 4.2 0 0 1-4.2 4.2h-6.2a4.2 4.2 0 0 1-4.2-4.2z"/><path d="M16.7 21.2l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/><path d="M16.7 28.8l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/><path d="M16.7 36.4l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/></svg>
+          <b>Split the Wine</b>
+        </div>
+        <div class="rule"><i style="width:100%"></i></div>
+        <div class="kicker">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(-13 17 24)"><path d="M9 11h13l-1.2 8.4a5.6 5.6 0 0 1-10.6 0z"/><path d="M15.5 25.2v9"/><path d="M10.8 35.2h9.4"/></g><g transform="rotate(13 31 24)"><path d="M26 11h13l-1.2 8.4a5.6 5.6 0 0 1-10.6 0z"/><path d="M32.5 25.2v9"/><path d="M27.8 35.2h9.4"/></g></svg>
+          Share
+        </div>
+        <p class="title">Josephine</p>
+        <p class="lead">Send this. They claim what they consumed.</p>
+        <div class="totalbox"><span>Check total</span><b>$284.50</b></div>
+        <div class="perf"></div>
+        <div class="linkbox"><small>Claim link</small><span>splitthewine.app/r/8a04d69d17</span></div>
+        <div class="actions">
+          <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copy</div>
+          <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>Share</div>
+          <div class="act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 20h1"/></svg>QR</div>
+        </div>
+        <button class="cta">Done — go Home</button>
+        <button class="cta quiet">Open the live board</button>
+      </div>
+    </div>
+
+    <!-- ============ SETTLE / YOU OWE ============ -->
+    <div class="board" data-theme="linen">
+      <div class="board-head"><b>Settle card</b><span>guest · the money moment</span></div>
+      <div class="phone">
+        <svg class="wash" viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" preserveAspectRatio="none"><path d="M-10 34l16 4.6 12.6-5.6 13.6 6.2 13.2-6.2 13.2 5.8 13.6-5.4 13.4 5.6 13.6-5.2 14 5.4 13.8-4.8"/><path d="M-10 74l16 4.6 12.6-5.6 13.6 6.2 13.2-6.2 13.2 5.8 13.6-5.4 13.4 5.6 13.6-5.2 14 5.4 13.8-4.8"/><path d="M-10 114l16 4.6 12.6-5.6 13.6 6.2 13.2-6.2 13.2 5.8 13.6-5.4 13.4 5.6 13.6-5.2 14 5.4 13.8-4.8"/></svg>
+        <div class="chrome">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.7 5.2h4.6v4.2h-4.6z"/><path d="M21.1 9.4h5.8v4.6h-5.8z"/><path d="M16.7 14h14.6v24.4a4.2 4.2 0 0 1-4.2 4.2h-6.2a4.2 4.2 0 0 1-4.2-4.2z"/><path d="M16.7 21.2l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/><path d="M16.7 28.8l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/><path d="M16.7 36.4l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/></svg>
+          <b>Split the Wine</b><span class="live">Live</span>
+        </div>
+        <div class="rule"><i></i></div>
+        <div class="kicker">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5h24v29.8l-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6z"/></svg>
+          Your share
+        </div>
+        <p class="title">What you owe</p>
+        <div class="owe" style="position:relative">
+          <svg class="pourmark" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5c8.6 5.4 12.6 12.4 11.4 20.8"/><path d="M25.9 27.3c-.5 2.4-1.8 4.3-3.9 5.6"/><ellipse cx="24" cy="37.5" rx="10.5" ry="3.2"/></svg>
+          <small>You owe</small>
+          <b>$42.18</b>
+          <em>3 drinks · plus your share of tax and tip</em>
+        </div>
+        <div class="rows" style="border-top:0">
+          <div class="payrow"><img class="paytile" src="../public/pay/venmo.png" alt="Venmo" /><div class="nm">Venmo<i>@alex-h</i></div><div class="paycta">Pay</div></div>
+          <div class="payrow"><img class="paytile" src="../public/pay/cashapp.png" alt="Cash App" /><div class="nm">Cash App<i>$alexh</i></div><div class="paycta">Pay</div></div>
+          <div class="payrow"><img class="paytile" src="../public/pay/paypal.png" alt="PayPal" /><div class="nm">PayPal<i>alex@example.com</i></div><div class="paycta">Pay</div></div>
+        </div>
+        <div class="footnote">Tapping a method opens the host’s app.</div>
+      </div>
+    </div>
+
+    <!-- ============ CLAIM ROWS ============ -->
+    <div class="board" data-theme="linen">
+      <div class="board-head"><b>Claim rows</b><span>guest · 2D only, no WebGL</span></div>
+      <div class="phone">
+        <svg class="wash" viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" preserveAspectRatio="none"><path d="M-10 114l16 4.6 12.6-5.6 13.6 6.2 13.2-6.2 13.2 5.8 13.6-5.4 13.4 5.6 13.6-5.2 14 5.4 13.8-4.8"/></svg>
+        <div class="chrome">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.7 5.2h4.6v4.2h-4.6z"/><path d="M21.1 9.4h5.8v4.6h-5.8z"/><path d="M16.7 14h14.6v24.4a4.2 4.2 0 0 1-4.2 4.2h-6.2a4.2 4.2 0 0 1-4.2-4.2z"/><path d="M16.7 21.2l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/><path d="M16.7 28.8l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/><path d="M16.7 36.4l3 .9 2.4-1.1 2.6 1.2 2.5-1.2 2.5 1.1 2.6-.9"/></svg>
+          <b>Split the Wine</b><span class="live">Live</span>
+        </div>
+        <div class="rule"><i style="width:62%"></i></div>
+        <div class="kicker">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15.5h34a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M5 20.5h38"/><path d="M5 27.5h38"/></svg>
+          The Bar
+        </div>
+        <p class="title">What did you have?</p>
+        <p class="lead">Claiming as Alex · tap everything that’s yours</p>
+        <div class="rows">
+          <div class="row on"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Josephine Old Fashioned<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9h18l-1.6 11.4a7.6 7.6 0 0 1-14.8 0z"/><path d="M24 27.8v10"/><path d="M17.8 38.6h12.4"/></svg>$15.00 each</i></div><div class="left">8 left</div></div>
+          <div class="row"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Monkey 47 &amp; tonic<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9h18l-1.6 11.4a7.6 7.6 0 0 1-14.8 0z"/><path d="M24 27.8v10"/><path d="M17.8 38.6h12.4"/></svg>$17.00 each</i></div><div class="left">2 left</div></div>
+          <div class="row"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Carafe of Sancerre<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 6h6.8v6.4l6 9.2a9 9 0 0 1 1.4 4.8v9.4a6 6 0 0 1-6 6H20.2a6 6 0 0 1-6-6v-9.4a9 9 0 0 1 1.4-4.8l6-9.2z"/></svg>shared · $52.00</i></div><div class="left">1 left</div></div>
+          <div class="row"><div class="disc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="nm">Gem lettuce<i><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5h24v29.8l-4 2.6-4-2.6-4 2.6-4-2.6-4 2.6-4-2.6z"/></svg>$14.00 each</i></div><div class="left">3 left</div></div>
+        </div>
+        <div style="margin-top:16px"><button class="cta">Claim 1 item</button></div>
+      </div>
+    </div>
+
+  </div>
+
+  <h2>3 · Where Three.js earns its place (and where it doesn’t)</h2>
+  <table class="plan">
+    <tr><th>Surface</th><th>Verdict</th><th>Why</th></tr>
+    <tr><td>Marketing hero</td><td><b>Yes</b></td><td>Desktop, no battery pressure, no claim deadline. Best showcase for a real scene.</td></tr>
+    <tr><td>Settle “You owe”</td><td><b>Maybe — one pour</b></td><td>Single emotional beat. A 1.5s liquid fill reading the theme accent. Must have a static SVG fallback.</td></tr>
+    <tr><td>Share card</td><td><b>Not v1</b></td><td>The win here is a crisp, screenshot-worthy SVG card. WebGL adds load time to the step where the host is rushing.</td></tr>
+    <tr><td>Claim rows</td><td><b>No</b></td><td>Scroll performance and thumb latency at a dim table. 2D forever.</td></tr>
+    <tr><td>Native (Expo)</td><td><b>Defer</b></td><td>R3F on RN needs <code>expo-gl</code> + native modules; breaks the Expo-Go-compatible constraint.</td></tr>
+  </table>
+
+  <h2>4 · Rollback</h2>
+  <table class="plan">
+    <tr><th>Step</th><th>Action</th></tr>
+    <tr><td>Dusk looks wrong</td><td>Make <code>duskTheme()</code> always return <code>linen</code> — one function, one line.</td></tr>
+    <tr><td>Hate candlelight entirely</td><td>Delete its entry from the theme map. Resolve falls back to <code>linen</code>, which is pixel-identical to today.</td></tr>
+    <tr><td>Hate the motifs</td><td>Motif components render <code>null</code> behind one flag; layout is unaffected because nothing reserves motif space.</td></tr>
+    <tr><td>Hate the 3D</td><td>Scene is lazy-loaded behind its SVG fallback; removing the import leaves the fallback.</td></tr>
+  </table>
+
+</div>
+
+<script>
+  const boards = document.getElementById('boards');
+  document.getElementById('switch').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-t]');
+    if (!btn) return;
+    document.querySelectorAll('#switch button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    boards.querySelectorAll('.board').forEach(b => b.setAttribute('data-theme', btn.dataset.t));
+  });
+</script>
+</body>
+</html>

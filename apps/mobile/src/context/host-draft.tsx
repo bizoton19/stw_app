@@ -74,7 +74,9 @@ type HostDraft = {
   togglePaymentMethod: (method: PayMethod) => void;
   setPaymentHandle: (method: PayMethod, handle: string) => void;
   setNote: (v: string) => void;
-  runParse: () => Promise<{ reason: string } | null>;
+  /** Bind host draft to an existing planning outing (same id for attach-receipt). */
+  adoptOuting: (receiptId: string) => Promise<void>;
+  runParse: () => Promise<{ reason: string; skipRestaurant?: boolean } | null>;
   recordParseReview: (choice: ParseReviewChoice) => Promise<void>;
   publish: () => Promise<void>;
   clearSavedDraft: () => Promise<void>;
@@ -262,7 +264,32 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     return created.receiptId;
   }, [receiptId]);
 
-  const runParse = useCallback(async (): Promise<{ reason: string } | null> => {
+  const adoptOuting = useCallback(async (id: string) => {
+    const { getHostToken } = await import("@/lib/session");
+    if (!getHostToken(id)) {
+      throw new Error("Missing host token for this outing.");
+    }
+    setReceiptId(id);
+    try {
+      const receipt = await api<import("@/lib/types").PublicReceipt>(`/api/receipts/${id}`, {
+        hostToken: getHostToken(id),
+      });
+      if (receipt.venue) {
+        setVenue(receipt.venue);
+        setRestaurant(receipt.venue.name || receipt.restaurant || "");
+      }
+      if (receipt.receiptDate) setReceiptDate(receipt.receiptDate);
+      if (receipt.hostInfo?.note) setNote(receipt.hostInfo.note);
+      if (receipt.hostInfo?.payments?.length) setPayments(receipt.hostInfo.payments);
+    } catch {
+      /* board can still attach with id alone */
+    }
+  }, []);
+
+  const runParse = useCallback(async (): Promise<{
+    reason: string;
+    skipRestaurant?: boolean;
+  } | null> => {
     draftEpochRef.current += 1;
     setError(null);
     try {
@@ -278,8 +305,13 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         return { reason };
       }
       applyReceipt(receipt);
-      // Belt-and-suspenders if a late hydrate tried to restore an old pin.
-      setVenue(null);
+      const keepVenue = receipt.status === "planning" && receipt.venue;
+      if (keepVenue && receipt.venue) {
+        setVenue(receipt.venue);
+        setRestaurant(receipt.venue.name || receipt.restaurant || "");
+      } else {
+        setVenue(null);
+      }
       if (reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");
       } else if (reason === "failed") {
@@ -293,7 +325,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       } else {
         setError(null);
       }
-      return { reason };
+      return { reason, skipRestaurant: Boolean(keepVenue) };
     } catch (err) {
       const code =
         (err as { code?: string; message?: string }).code ??
@@ -487,6 +519,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       togglePaymentMethod,
       setPaymentHandle,
       setNote,
+      adoptOuting,
       runParse,
       recordParseReview,
       publish,
@@ -494,6 +527,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       addPayment,
+      adoptOuting,
       claimUrl,
       clearSavedDraft,
       error,

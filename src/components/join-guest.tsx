@@ -33,14 +33,14 @@ export function JoinGuest({
       total={3}
       hideProgress
       kicker={place}
-      title={isHost ? "You're hosting — claim under what name?" : `Here is the tab for ${place}`}
+      motif="label-band"
+      title={isHost ? "You're hosting — claim under what name?" : "Claim what you ordered"}
       stepKey="join"
       footer={
         <ContinueButton
           disabled={!name.trim()}
           onClick={() => {
-            const guest = { name: name.trim(), contact: contact.trim() };
-            saveGuest(receiptId, guest);
+            const guest = saveGuest(receiptId, { name: name.trim(), contact: contact.trim() });
             onJoined(guest);
           }}
         >
@@ -52,7 +52,7 @@ export function JoinGuest({
       <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
         {isHost
           ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
-          : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
+          : "Just a name — no app, no account."}
       </p>
       {hasImage ? <ReceiptImageButton receiptId={receiptId} hasImage /> : null}
       <Label htmlFor="guest-name" className="mb-2 text-[13px] font-medium">

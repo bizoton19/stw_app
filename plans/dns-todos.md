@@ -3,10 +3,28 @@
 Custom hostname for the Railway Next.js app (API + claim board + settle).
 
 **Chosen origin:** `https://api.splitthewine.app`  
+**Dev / RSVP staging:** `https://apidev.splitthewine.app` → Railway service `api-dev` (`DB_SCHEMA=split_the_wine_dev`)  
 **Landing (unchanged):** `https://www.splitthewine.app` (Netlify / marketing)  
-**Temporary Railway URL (retire after cutover):** `https://api-production-72488.up.railway.app`
+**Temporary Railway URL (retire after cutover):** `https://api-production-72488.up.railway.app`  
+**Dev Railway URL:** `https://api-dev-production-c2d1.up.railway.app`
 
 One Railway service serves `/api/*` and `/r/[id]` — no separate proxy. DNS + Railway custom domain is enough.
+
+---
+
+## Dev API (`apidev`)
+
+- [x] Railway service **`api-dev`** (same Postgres, `DB_SCHEMA=split_the_wine_dev`)
+- [x] Custom domain `apidev.splitthewine.app` + Cloudflare `CNAME` → Railway edge target
+- [ ] Cert **Active** / DNS verified (keep DNS grey-cloud until Railway shows verified, then orange-cloud like `api`)
+- [x] Env: `DB_SCHEMA=split_the_wine_dev`, `OPENROUTER_HTTP_REFERER=https://apidev.splitthewine.app`, `ALLOWED_ORIGINS` includes apidev + www
+- [ ] Mobile Expo Go / preview builds: `EXPO_PUBLIC_API_URL` + `EXPO_PUBLIC_SHARE_URL` → `https://apidev.splitthewine.app` (use railway.app hostname until cert is ready)
+- [x] **GitHub auto-deploy (blocked until Railway GitHub access is fixed):**
+  - Intended: `main` → **`api`** (prod); `plan-an-outing` → **`api-dev`** (staging)
+  - Today: **no deployment triggers** on either service (not staging-only). Reconnect GitHub in Railway project settings, then add branch triggers.
+  - Until then: `railway up -s api-dev` / `railway up -s api` after pushes. See `.cursor/rules/railway-deploy.mdc`.
+- [x] **Node 20 pin** (`.nvmrc`, `package.json` engines, `mise.toml`) — required for **both** services; Next 16 rejects Node 18.
+- [x] **Expo / EAS `dev` profile** → staging API. Expo Go: `.env.local`. Internal build: `eas build --profile dev`. Prod TestFlight stays `--profile production`.
 
 ---
 

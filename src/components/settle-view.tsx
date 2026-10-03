@@ -3,17 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Banknote, ChevronLeft, Copy, Share2 } from "lucide-react";
+import { ChevronLeft, Copy, Share2 } from "lucide-react";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { QuietButton } from "@/components/interview-chrome";
 import { HostSupportTip } from "@/components/host-support-tip";
 import { LineKindIcon } from "@/components/line-kind-icon";
+import { CardWash, Motif } from "@/components/motifs";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { WineMark } from "@/components/wine-mark";
 import { hostPayments, validateHostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
 import { openHostPayWeb, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
+import { findMine, personRowKey, sameGuest } from "@/lib/guest-id";
+import { useBindGuestClaims } from "@/hooks/use-bind-guest-claims";
 import { api, getGuest, getHostToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment, PublicReceipt } from "@/lib/types";
@@ -62,9 +65,8 @@ export function SettleView({
     0,
   );
 
-  const mine = guest
-    ? totals.people.find((p) => p.personName === guest.name)
-    : undefined;
+  const mine = findMine(totals.people, guest);
+  useBindGuestClaims(receipt.id, receipt.claims, onChange ?? (() => undefined));
   const canPayLater = !isHost && Boolean(mine && mine.totalCents > 0);
 
   useEffect(() => {
@@ -215,7 +217,7 @@ export function SettleView({
           <div className="-ml-2 flex h-11 items-center">
             <button
               type="button"
-              aria-label="Back to settle payment"
+              aria-label="Back to pay the host"
               onClick={() => {
                 setPayLater(false);
                 setSaveHint(null);
@@ -283,7 +285,7 @@ export function SettleView({
           </div>
         </div>
 
-        <div className="shrink-0 space-y-1 border-t border-[#D4CDC3] bg-[#EDE8E1] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
+        <div className="shrink-0 space-y-1 border-t border-[var(--stw-chrome-border)] bg-[var(--stw-chrome)] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
           <Link
             href={`/r/${receipt.id}`}
             className="pressable inline-flex h-12 w-full items-center justify-center rounded-full text-[15px] font-medium"
@@ -307,15 +309,20 @@ export function SettleView({
             <ChevronLeft className="size-6" />
           </Link>
         </div>
-        <p className="text-[13px] font-medium text-ink-soft">
-          {receipt.restaurant || "The check"}
+        <p className="flex items-center gap-1.5 text-[13px] font-medium text-ink-soft">
+          <Motif
+            name={isHost ? "label-band" : "check-stub"}
+            size={15}
+            className="text-primary opacity-80"
+          />
+          {isHost ? receipt.restaurant || "The check" : "Your share"}
         </p>
         <h1 className="text-[1.65rem] font-semibold tracking-tight">
-          {isHost ? "Live board" : "Settle Payment"}
+          {isHost ? "Live board" : "Pay the host"}
         </h1>
         <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-          Drinks plus a share of tax and tip. Tapping a payment method opens the host&apos;s app
-          when possible — nothing is charged from Split the Wine.
+          Drinks plus a share of tax and tip.
+          {isHost ? "" : " Nothing is charged from Split the Wine."}
         </p>
         {message ? <p className="mt-3 text-[14px] text-destructive">{message}</p> : null}
 
@@ -341,7 +348,7 @@ export function SettleView({
                   role="switch"
                   checked={showTotalDetails}
                   onChange={(e) => setShowTotalDetails(e.target.checked)}
-                  className="size-4 accent-[#2F5D50]"
+                  className="size-4 accent-[var(--stw-select)]"
                 />
               </label>
             </li>
@@ -354,7 +361,12 @@ export function SettleView({
                   className="flex items-center justify-between gap-3 text-[14px] tabular-nums"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <LineKindIcon name={item.name} kind={item.kind} size={12} />
+                    <LineKindIcon
+                      name={item.name}
+                      kind={item.kind}
+                      pour={item.pour}
+                      size={12}
+                    />
                     <span className="truncate font-medium">{item.name}</span>
                   </span>
                   <span className="shrink-0 text-muted-foreground">
@@ -372,7 +384,7 @@ export function SettleView({
 
         <div className="mt-5 space-y-1 border-y border-border py-3 text-[14px]">
           <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
-            <Banknote className="size-3.5" strokeWidth={2} aria-hidden />
+            <Motif name="check-stub" size={14} className="text-primary opacity-80" />
             The tab
           </p>
           <div className="flex justify-between">
@@ -392,10 +404,24 @@ export function SettleView({
         </div>
 
         {mine && mine.totalCents > 0 ? (
-          <div className="mt-5 rounded-[14px] border border-border bg-[#FBFAF8] p-3.5">
-            <p className="text-[13px] font-semibold text-ink-soft">You owe</p>
-            <p className="mt-0.5 text-[1.75rem] font-bold tabular-nums">
+          <div className="relative mt-5 overflow-hidden rounded-[14px] border border-border bg-[var(--stw-sheet)] p-3.5">
+            <CardWash />
+            {/* Corner pour — matches the review board's settle moment mark. */}
+            <Motif
+              name="pour"
+              size={30}
+              className="pointer-events-none absolute right-3.5 top-3.5 text-primary opacity-[0.26]"
+            />
+            <div className="relative">
+            <p className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              You owe
+            </p>
+            <p className="mt-1 text-[2rem] font-extrabold tabular-nums tracking-tight">
               {centsToLabel(mine.totalCents)}
+            </p>
+            <p className="mt-0.5 text-[13px] text-ink-soft">
+              {mine.lines.length} {mine.lines.length === 1 ? "item" : "items"}
+              {" · "}plus your share of tax and tip
             </p>
             {payments.length > 0 ? (
               <>
@@ -403,6 +429,9 @@ export function SettleView({
                   You can pay your share of {centsToLabel(mine.totalCents)} to the host
                   {hostName !== "the host" ? `, ${hostName},` : ""} via the following payment
                   method{payments.length === 1 ? "" : "s"}:
+                </p>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                  We never hold your money — this opens your payment app pre-filled.
                 </p>
                 <ul className="mt-3 space-y-2">
                   {payments.map((payment) => {
@@ -448,18 +477,24 @@ export function SettleView({
                 </ul>
                 {payHint ? (
                   <p className="mt-2 text-[12px] text-muted-foreground">{payHint}</p>
-                ) : null}
+                ) : (
+                  <p className="mt-2 text-center text-[11.5px] text-muted-foreground">
+                    Tapping a method opens {hostName}&apos;s app — nothing is charged here.
+                  </p>
+                )}
               </>
             ) : (
               <p className="mt-3 text-[13px] text-muted-foreground">
                 The host hasn&apos;t added a payment method yet.
               </p>
             )}
+            </div>
           </div>
         ) : null}
 
-        <p className="mt-6 mb-3 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
-          <Banknote className="size-3.5" strokeWidth={2} aria-hidden />
+        <div className="stw-perf mt-6" aria-hidden />
+        <p className="mb-3 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+          <Motif name="coupe-pair" size={15} className="text-primary opacity-80" />
           Everyone&apos;s share
         </p>
         <ul className="space-y-6">
@@ -470,12 +505,16 @@ export function SettleView({
           ) : (
             totals.people.map((person) => {
               const amount = centsToLabel(person.totalCents);
-              const isYou = guest?.name === person.personName;
+              const isYou = sameGuest(person, guest);
               return (
-                <li key={`${person.personName}\0${person.personContact ?? ""}`}>
+                <li key={personRowKey(person)}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <ClaimerAvatar name={person.personName} size={32} />
+                      <ClaimerAvatar
+                        name={person.personName}
+                        colorKey={person.guestId || person.personName}
+                        size={32}
+                      />
                       <div className="min-w-0">
                         <p className="font-medium">
                           {person.personName}
@@ -589,7 +628,7 @@ export function SettleView({
         ) : null}
       </div>
 
-      <div className="shrink-0 space-y-1 border-t border-[#D4CDC3] bg-[#EDE8E1] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
+      <div className="shrink-0 space-y-1 border-t border-[var(--stw-chrome-border)] bg-[var(--stw-chrome)] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
         {canPayLater ? (
           <QuietButton onClick={() => setPayLater(true)}>I&apos;ll pay later</QuietButton>
         ) : null}

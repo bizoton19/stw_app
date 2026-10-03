@@ -1,4 +1,20 @@
-export type ReceiptStatus = "draft" | "open" | "finalized";
+export type ReceiptStatus = "planning" | "draft" | "open" | "finalized";
+
+/** Guest roster row for a planning outing (ephemeral with the tab). */
+export type InviteeResponse = "invited" | "going" | "maybe" | "cant";
+
+export type Invitee = {
+  id: string;
+  personName: string;
+  personContact?: string | null;
+  /** Legacy personalized-invite token; new flow uses one group link only. */
+  inviteToken: string;
+  response: InviteeResponse;
+  /** Optional note from the guest when they RSVP or change it. */
+  note?: string | null;
+  inviteSentAt?: string | null;
+  updatedAt: string;
+};
 
 export type PayMethod =
   | "venmo"
@@ -38,6 +54,8 @@ export type Fee = {
 export type Claim = {
   id: string;
   itemId: string;
+  /** Stable joiner id. Missing on claims saved before guest identity shipped. */
+  guestId?: string;
   personName: string;
   personContact?: string;
   units: number;
@@ -71,6 +89,14 @@ export type ReceiptVenue = {
   category?: string | null;
   source: VenueSource;
   confirmedAt: string;
+  /** Google rating (1–5) after Place Details for a picked place. Nearby omits this. */
+  rating?: number | null;
+  /** Count behind `rating`. Nearby omits this. */
+  userRatingCount?: number | null;
+  /** Proxied `/api/places/photo` URL. Never a Google URL with an API key. */
+  photoUrl?: string | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
 };
 
 export type Receipt = {
@@ -81,6 +107,15 @@ export type Receipt = {
   venue?: ReceiptVenue | null;
   /** Date printed on the check, if vision found one — ISO `YYYY-MM-DD`. */
   receiptDate?: string | null;
+  /**
+   * Planned outing datetime (ISO). Used while status=planning; may mirror
+   * receiptDate’s calendar day after the check is attached.
+   */
+  nightAt?: string | null;
+  /** Optional expected claimant headcount (soft signal). */
+  expectedPartySize?: number | null;
+  /** Planning roster — Invited → Going / Maybe / Can’t. */
+  invitees?: Invitee[];
   items: Item[];
   fees: Fee[];
   claims: Claim[];
@@ -96,6 +131,8 @@ export type Receipt = {
 };
 
 export type PersonTotal = {
+  /** Set when every claim in this row carries a guestId. */
+  guestId?: string;
   personName: string;
   personContact?: string;
   itemCents: number;

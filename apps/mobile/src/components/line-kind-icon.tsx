@@ -1,31 +1,41 @@
-import { GlassWater, UtensilsCrossed } from "lucide-react-native";
 import { View, type StyleProp, type ViewStyle } from "react-native";
+import { Motif, type MotifName } from "@/components/motifs";
+import { useCardTheme } from "@/lib/card-theme/dusk";
 import { classifyLineKind, type LineKind } from "@/lib/line-kind";
-import { colors } from "@/lib/theme";
-import type { ItemKind } from "@/lib/types";
+import { usesCarafeMotif } from "@/lib/pour";
+import type { CardTheme } from "@/lib/card-theme/themes";
+import type { ItemKind, ItemPour } from "@/lib/types";
 
-const TINT: Record<LineKind, { bg: string; fg: string }> = {
-  drink: { bg: colors.kindDrinkWash, fg: colors.kindDrink },
-  food: { bg: colors.kindFoodWash, fg: colors.kindFood },
-};
+/** Matches web: stem = drink, carafe = shared pour, torn stub = food/tab. */
+const MOTIF: Record<LineKind, MotifName> = { drink: "stem", food: "check-stub" };
+
+function tint(theme: CardTheme, kind: LineKind) {
+  return kind === "drink"
+    ? { bg: theme.kindDrinkWash, fg: theme.kindDrink }
+    : { bg: theme.kindFoodWash, fg: theme.kindFood };
+}
 
 export function LineKindIcon({
   name,
   kind,
+  pour,
   size = 14,
   style,
 }: {
   name: string;
   /** Prefer vision/storage kind; fall back to name heuristic. */
   kind?: ItemKind | null;
+  pour?: ItemPour | null;
   size?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const theme = useCardTheme();
   const resolved: LineKind | null =
     kind === "food" || kind === "drink" ? kind : classifyLineKind(name);
   if (!resolved) return null;
-  const tint = TINT[resolved];
-  const Icon = resolved === "drink" ? GlassWater : UtensilsCrossed;
+  const { bg, fg } = tint(theme, resolved);
+  const motif: MotifName =
+    resolved === "drink" && usesCarafeMotif({ name, pour }) ? "carafe" : MOTIF[resolved];
   return (
     <View
       style={[
@@ -35,13 +45,15 @@ export function LineKindIcon({
           borderRadius: 7,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: tint.bg,
+          backgroundColor: bg,
         },
         style,
       ]}
-      accessibilityLabel={resolved === "drink" ? "Drink" : "Food"}
+      accessibilityLabel={
+        resolved === "food" ? "Food" : motif === "carafe" ? "Shared drink" : "Drink"
+      }
     >
-      <Icon size={size} color={tint.fg} strokeWidth={2.25} />
+      <Motif name={motif} size={size + 2} color={fg} />
     </View>
   );
 }

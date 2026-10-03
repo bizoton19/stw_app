@@ -26,9 +26,11 @@ export function jsonError(err: unknown) {
           ? 409
           : code === "invalid"
             ? 400
-            : code === "places_upstream"
-              ? 502
-              : 500;
+            : code === "google_places_not_configured"
+              ? 503
+              : code === "places_upstream"
+                ? 502
+                : 500;
   return NextResponse.json(
     { error: code, remaining, itemId, itemName, claimedBy, existingId, message },
     { status },

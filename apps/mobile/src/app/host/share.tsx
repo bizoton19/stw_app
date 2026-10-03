@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Share, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
@@ -9,6 +9,7 @@ import { useHostDraft } from "@/context/host-draft";
 import { registerHostClaimPush } from "@/lib/host-push";
 import { centsToLabel } from "@/lib/money";
 import { goHostDesk } from "@/lib/navigation";
+import { shareLink } from "@/lib/share-link";
 import { colors } from "@/lib/theme";
 
 export default function HostShare() {
@@ -42,6 +43,7 @@ export default function HostShare() {
         step={8}
         total={8}
         kicker="Share"
+        motif="coupe-pair"
         title="Send this. They claim what they consumed."
         sparse
         onBack={goHostDesk}
@@ -75,6 +77,10 @@ export default function HostShare() {
           <Text style={styles.total}>{centsToLabel(total)}</Text>
         </View>
 
+        <View style={styles.perf} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <View style={styles.perfDash} />
+        </View>
+
         <View style={styles.urlBox}>
           <Text style={styles.urlLabel}>Claim link</Text>
           <Text selectable style={styles.url}>
@@ -99,8 +105,8 @@ export default function HostShare() {
               label="Share"
               onPress={async () => {
                 try {
-                  await Share.share({
-                    message: `Claim what you ordered on ${place}: ${draft.claimUrl}`,
+                  await shareLink({
+                    message: `Claim what you ordered on ${place}:`,
                     url: draft.claimUrl,
                   });
                 } catch {
@@ -172,8 +178,16 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.5,
   },
+  /** Tear line between total and claim link — CSS `.stw-perf` on web. */
+  perf: { height: 12, marginTop: 4, marginBottom: 4, justifyContent: "center" },
+  perfDash: {
+    marginHorizontal: 6,
+    borderTopWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.border,
+  },
   urlBox: {
-    marginTop: 16,
+    marginTop: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 14,

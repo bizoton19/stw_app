@@ -17,14 +17,20 @@ export default function HostParsing() {
     started.current = true;
     void (async () => {
       let reason: string | null = null;
+      let skipRestaurant = false;
       try {
         const result = await draft.runParse();
         reason = result?.reason ?? null;
+        skipRestaurant = Boolean(result?.skipRestaurant);
       } catch {
         // runParse already maps transport errors; if create/parse throws, still continue.
       }
       if (reason === "not_receipt") {
         router.replace("/host/capture");
+        return;
+      }
+      if (skipRestaurant) {
+        router.replace("/host/items");
         return;
       }
       router.replace("/host/restaurant");
@@ -38,6 +44,7 @@ export default function HostParsing() {
         total={8}
         hideProgress
         kicker="Reading"
+        motif="check-stub"
         title="Looking over every pour…"
         onBack={() => router.back()}
         onHome={goHostDesk}

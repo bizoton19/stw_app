@@ -14,6 +14,8 @@ export async function GET(req: Request) {
     if (!placeId.trim()) {
       return Response.json({ error: "invalid" }, { status: 400 });
     }
+    // Mapbox Search Box retrieve. This id is a mapbox_id, not a Google place id.
+    // Do not forward it to Google Place Details — use /api/places/bridge (name + lat/lng).
     const place = await mapboxDetails({
       placeId: placeId.trim(),
       session: session || crypto.randomUUID(),

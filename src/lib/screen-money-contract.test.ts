@@ -8,7 +8,7 @@ import {
   SAMPLE_PARSE,
   SAMPLE_RESTAURANT,
 } from "./sample-tab";
-import { computeTotals, remainingForItem } from "./totals";
+import { computeTotals, remainingForItem, shareSoFarCents } from "./totals";
 import type { Fee, Item, Receipt } from "./types";
 
 /**
@@ -111,6 +111,35 @@ describe("screen money contract — sample tab labels", () => {
     assert.equal(centsToLabel(maya.totalCents), centsToLabel(maya.itemCents + maya.feeCents));
     assert.equal(totals.unclaimedItemCents, SAMPLE_ITEM_SUBTOTAL_CENTS - 2200);
     assert.equal(centsToLabel(totals.unclaimedItemCents), "$873.80");
+
+    // Claim board quiet line — same total, tax & tip included, not a fee table.
+    assert.equal(shareSoFarCents(receipt, "Maya"), maya.totalCents);
+    assert.ok(maya.totalCents > maya.itemCents);
+    assert.equal(
+      `Your share so far · ${centsToLabel(shareSoFarCents(receipt, "Maya"))} (incl. tax & tip)`,
+      `Your share so far · ${centsToLabel(maya.totalCents)} (incl. tax & tip)`,
+    );
+    assert.equal(shareSoFarCents(receipt, "Nobody"), 0);
+    assert.equal(shareSoFarCents(receipt, "  "), 0);
+
+    const wine = receipt.items.find((i) => i.name.startsWith("BQ Wine"));
+    assert.ok(wine);
+    const withQueue = shareSoFarCents(receipt, "Maya", [{ itemId: wine.id, units: 1 }]);
+    assert.ok(withQueue > maya.totalCents);
+    const projected = computeTotals({
+      ...receipt,
+      claims: [
+        ...receipt.claims,
+        {
+          id: "preview",
+          itemId: wine.id,
+          personName: "Maya",
+          units: 1,
+          createdAt: "2025-09-20T01:00:02.000Z",
+        },
+      ],
+    }).people.find((p) => p.personName === "Maya");
+    assert.equal(withQueue, projected?.totalCents);
   });
 
   it("fully claimed sample tab: one person owes the whole grand total", () => {

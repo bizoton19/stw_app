@@ -1,0 +1,103 @@
+"use client";
+
+import { useState } from "react";
+import { formatPlaceCategory, placePhotos, type NearbyPlaceCard } from "@/lib/nearby-place-card";
+
+function CardPhoto({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <span className="absolute inset-0 bg-[var(--stw-chrome)]" />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      className="absolute inset-0 h-full w-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+/** Short horizontal swipe of nearby places. A tap opens detail; it does not select. */
+export function NearbyPlaceCards({
+  places,
+  onSelect,
+  loading = false,
+}: {
+  places: NearbyPlaceCard[];
+  onSelect: (card: NearbyPlaceCard) => void;
+  /** True while GET /api/places/nearby has not returned. */
+  loading?: boolean;
+}) {
+  if (places.length === 0) {
+    if (!loading) return null;
+    return (
+      <div className="mt-3 min-w-0 max-w-full">
+        <p className="mb-2 text-[12px] font-semibold text-muted-foreground">Nearby</p>
+        <div
+          role="status"
+          aria-busy="true"
+          className="flex h-[220px] w-[min(17.5rem,78%)] items-center justify-center gap-2 rounded-2xl bg-[var(--stw-chrome)] text-muted-foreground"
+        >
+          <span
+            className="size-6 shrink-0 animate-spin rounded-full border-[1.5px] border-border border-t-primary"
+            aria-hidden="true"
+          />
+          <span className="text-[13px] font-medium">Loading nearby places</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-3 min-w-0 max-w-full">
+      <p className="mb-2 text-[12px] font-semibold text-muted-foreground">Nearby</p>
+      <ul className="flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {places.map((card) => {
+          const photo =
+            placePhotos(card, typeof window === "undefined" ? "" : window.location.origin)[0] ??
+            null;
+          const category = formatPlaceCategory(card.category);
+          const ink = photo ? "text-[var(--stw-paper)]" : "text-foreground";
+          return (
+            <li key={card.placeId} className="w-[min(17.5rem,78%)] shrink-0 snap-start">
+              <button
+                type="button"
+                className="relative h-[220px] w-full overflow-hidden rounded-2xl text-left"
+                onClick={() => onSelect(card)}
+              >
+                {photo ? (
+                  <CardPhoto url={photo} />
+                ) : (
+                  <span className="absolute inset-0 bg-[var(--stw-chrome)]" />
+                )}
+                <span
+                  className={
+                    photo
+                      ? "absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(36,28,20,0.82)] via-[rgba(36,28,20,0.28)] to-transparent px-3 pb-2.5 pt-8"
+                      : "absolute inset-x-0 bottom-0 px-3 pb-2.5 pt-8"
+                  }
+                >
+                  <span className={`line-clamp-1 text-[16px] font-semibold leading-5 ${ink}`}>
+                    {card.name}
+                  </span>
+                  {card.formattedAddress ? (
+                    <span className={`mt-0.5 line-clamp-1 text-[12px] leading-4 ${ink} opacity-90`}>
+                      {card.formattedAddress}
+                    </span>
+                  ) : null}
+                  {category ? (
+                    <span className={`mt-0.5 line-clamp-1 text-[11px] leading-4 ${ink} opacity-80`}>
+                      {category}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-[11px] text-muted-foreground">Powered by Google</p>
+    </div>
+  );
+}

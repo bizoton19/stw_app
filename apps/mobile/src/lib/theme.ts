@@ -1,24 +1,15 @@
-export const colors = {
-  paper: "#F6F4F1",
-  ink: "#2A241C",
-  inkSoft: "#7A7268",
-  muted: "#8A847C",
-  border: "#E6E0D8",
-  /** Sticky bottom chrome (interview footer + host tab bar) — warmer than paper. */
-  chrome: "#EDE8E1",
-  chromeBorder: "#D4CDC3",
-  merlot: "#6E2E35",
-  merlotFg: "#FBF8F5",
-  /** Selected claim lines — bottle green, contrasts merlot CTAs on warm paper. */
-  select: "#2F5D50",
-  selectWash: "rgba(47, 93, 80, 0.14)",
-  danger: "#A33B32",
-  /** Line-kind chips — distinct from CTA merlot + select green. */
-  kindDrink: "#9C1F3D",
-  kindDrinkWash: "rgba(156, 31, 61, 0.16)",
-  kindFood: "#C9892A",
-  kindFoodWash: "rgba(201, 137, 42, 0.22)",
-};
+import { cardThemes } from "@/lib/card-theme/themes";
+
+/**
+ * The day palette, and the only palette most of the app sees.
+ *
+ * Roughly 250 of these references are baked into module-scope `StyleSheet.create`
+ * objects, which are evaluated once at import — so this export cannot follow the
+ * clock. Dusk on native is therefore opt-in per component via `useCardTheme()`
+ * (see `card-theme/dusk.ts`); screens that want it must read tokens at render
+ * time. `linen` holds the shipped values, so nothing moved by pointing here.
+ */
+export const colors = cardThemes.linen;
 
 export const space = {
   hairline: 1,

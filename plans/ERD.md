@@ -13,7 +13,7 @@ This is the **current physical** model — not the planned B2B `tab_facts` / usa
 
 | Store | What lives there |
 |---|---|
-| **Postgres** `split_the_wine.*` | Receipt document (jsonb), claim→receipt index, host push tokens, image metadata |
+| **Postgres** `split_the_wine.*` | Receipt document (jsonb), claim→receipt index, host push tokens, image metadata, launch waitlist (`launch_notify`) |
 | **Object storage** (Railway Bucket / S3-compatible) | Receipt photo bytes (`storage_key`) |
 | **Native AsyncStorage** | Host token, guest identity, claim-owner tokens, hosted-tab list (device-local) |
 | **In-memory (no `DATABASE_URL`)** | Same logical model in process maps + optional `.data/receipt-images/` |
@@ -65,10 +65,24 @@ erDiagram
   }
 ```
 
+`launch_notify` is a separate table (no FK to receipts). Diagram:
+
+```mermaid
+erDiagram
+  LAUNCH_NOTIFY {
+    text email PK "lowercase mailbox"
+    text_array platforms "ios and/or android"
+    text source "slug, default coming-soon"
+    timestamptz created_at "first signup"
+    timestamptz updated_at "last upsert"
+  }
+```
+
 ### Indexes (physical)
 
 - `receipts_updated_at_idx` on `receipts(updated_at DESC)`
 - `host_push_tokens_receipt_idx` on `host_push_tokens(receipt_id)`
+- `launch_notify` primary key on `email` (no secondary index)
 - PKs as above
 
 ---
@@ -219,6 +233,30 @@ When `DATABASE_URL` is unset:
 
 Same logical document as `body`; no physical FK tables.
 
+Waitlist signups are the exception: with no `DATABASE_URL`, `POST /api/waitlist` still returns success and logs the row. It does **not** write `launch_notify` until Postgres is configured.
+
+---
+
+## `launch_notify` (marketing waitlist)
+
+Standalone table — no foreign key to receipts, claims, or push tokens. One row per email.
+
+**Purpose:** people who asked for a single email when the iOS and Android apps ship. Not an account and not a newsletter list.
+
+**Writer:** `POST /api/waitlist` ([`src/app/api/waitlist/route.ts`](../src/app/api/waitlist/route.ts)) upserts this table.
+
+| Column | Notes |
+|---|---|
+| `email` | Primary key. Trimmed, lowercased ASCII mailbox, 6–254 chars |
+| `platforms` | `text[]`, only `ios` and/or `android`. Empty array if they did not pick one. Unknown values are dropped |
+| `source` | Short slug (`coming-soon`, `partner.launch`, …). Missing or unsafe strings are stored as `coming-soon` |
+| `created_at` | Set on first insert, left alone on repeat signup |
+| `updated_at` | Bumped on every upsert |
+
+Repeat signup for the same email replaces `platforms` and `source` (the form sends the current choice, not a delta) and sets `updated_at = now()`.
+
+The browser client is the marketing page `https://www.splitthewine.app/coming-soon`. That origin has to be listed in `ALLOWED_ORIGINS` or the browser will not be allowed to read the response. The handler validates the body, ignores a filled honeypot (`bot-field` / `company`) without inserting, and rate-limits per IP, per email, and globally in the API process.
+
 ---
 
 ## Not physical yet (planned only)
@@ -262,6 +300,14 @@ receipt_images (
   bytes bytea,              -- legacy / nullable
   byte_size integer,
   storage_key text,         -- blob object key
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+launch_notify (
+  email text PRIMARY KEY,
+  platforms text[] NOT NULL DEFAULT '{}',
+  source text,
+  created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ```

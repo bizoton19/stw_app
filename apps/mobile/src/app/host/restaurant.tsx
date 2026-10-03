@@ -23,6 +23,7 @@ export default function HostRestaurant() {
         step={3}
         total={8}
         kicker="The place"
+        motif="label-band"
         title="Confirm the place on the check"
         onBack={() => router.back()}
         onHome={goHostDesk}
@@ -33,9 +34,9 @@ export default function HostRestaurant() {
             <FooterHint>
               {placeLocked
                 ? "This place pins on the claim board for your guests."
-                : draft.restaurant.trim()
-                  ? "Pick a match from the list — we won’t continue until you tap one."
-                  : "Start typing — nearby matches appear as you go."}
+                : draft.restaurant.trim().length < 2
+                  ? "Swipe nearby places, or type at least two letters to search."
+                  : "Pick a match from the list — we won’t continue until you tap one."}
             </FooterHint>
             <PrimaryButton disabled={!placeLocked} onPress={() => router.push("/host/items")}>
               Continue
