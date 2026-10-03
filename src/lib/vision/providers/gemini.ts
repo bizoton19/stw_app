@@ -6,7 +6,7 @@ import {
   type VisionProvider,
 } from "../types";
 
-export const GEMINI_VISION_MODEL = "gemini-2.5-flash-lite";
+export const GEMINI_VISION_MODEL = "gemini-3.5-flash-lite";
 
 const GEMINI_GENERATE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models";
