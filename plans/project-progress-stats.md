@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-03 ~08:20 −04:00 · tag `candidate-release-2026-10-03` |
+| **This snapshot** | 2026-10-03 ~08:30 −04:00 · after `candidate-release-2026-10-03` |
 | **Elapsed** | **~12.8 days** |
-| **Commits on this branch** | **251** (refresh with `git rev-list --count HEAD`) |
+| **Commits on this branch** | **254** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -89,6 +89,7 @@ git log --reverse -1 --format='%aI %s'
 - Labeled **`candidate-release-2026-10-03`** on `plan-an-outing` (friend-test / store-prep freeze point before Places hybrid work).
 - Receipt read is snappier: skip host classify by default, sharp-downscale before Gemini, **15s** extract timeout, default model **gemini-3.5-flash-lite**.
 - Home paints hosted tabs from local storage first; close/reopen apply the POST receipt and GET no longer takes a Postgres row lock.
+- Nearby food and drink (top 7) comes from Google Places through the server. Picking a Mapbox or MapKit suggestion asks Google for that place’s id by name and location; the receipt keeps Google when that works, and the Mapbox or Apple pin when it does not. There is no Places key in the app — without one, the proxy says so and does not call Google.
 
 ## How to extend this file
 

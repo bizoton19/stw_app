@@ -89,6 +89,14 @@ export type ReceiptVenue = {
   category?: string | null;
   source: VenueSource;
   confirmedAt: string;
+  /** Google rating (1–5) when the typeahead bridge resolved a place id. */
+  rating?: number | null;
+  /** Count behind `rating`. */
+  userRatingCount?: number | null;
+  /** Proxied `/api/places/photo` URL. Never a Google URL with an API key. */
+  photoUrl?: string | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
 };
 
 export type Receipt = {

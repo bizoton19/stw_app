@@ -78,6 +78,69 @@ export async function searchPlaces(
   return mapboxSuggest(q, coords, session);
 }
 
+type BridgedPlace = {
+  placeId?: string;
+  name?: string;
+  formattedAddress?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  category?: string | null;
+  provider?: string;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  photoUrl?: string | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
+};
+
+/**
+ * Text Search by name + coordinates. The Mapbox/MapKit id is not a Google id
+ * and is not sent. A miss or a missing server key keeps the original provider.
+ */
+async function bridgeToGooglePlace(venue: ReceiptVenue): Promise<ReceiptVenue> {
+  if (
+    typeof venue.lat !== "number" ||
+    typeof venue.lng !== "number" ||
+    !Number.isFinite(venue.lat) ||
+    !Number.isFinite(venue.lng) ||
+    !venue.name.trim()
+  ) {
+    return venue;
+  }
+  try {
+    const params = new URLSearchParams({
+      name: venue.name.trim(),
+      lat: String(venue.lat),
+      lng: String(venue.lng),
+    });
+    const data = await api<{ bridged?: boolean; place?: BridgedPlace | null }>(
+      `/api/places/bridge?${params}`,
+    );
+    const place = data.place;
+    if (!data.bridged || !place || place.provider !== "google" || !place.placeId) {
+      return venue;
+    }
+    return {
+      name: place.name || venue.name,
+      placeId: place.placeId,
+      provider: "google",
+      formattedAddress: place.formattedAddress ?? venue.formattedAddress ?? null,
+      lat: typeof place.lat === "number" ? place.lat : venue.lat,
+      lng: typeof place.lng === "number" ? place.lng : venue.lng,
+      category: place.category ?? venue.category ?? null,
+      source: "places",
+      confirmedAt: venue.confirmedAt,
+      rating: place.rating ?? null,
+      userRatingCount: place.userRatingCount ?? null,
+      photoUrl: place.photoUrl ?? null,
+      websiteUri: place.websiteUri ?? null,
+      googleMapsUri: place.googleMapsUri ?? null,
+    };
+  } catch {
+    return venue;
+  }
+}
+
 export async function resolvePlaceDetails(
   prediction: PlacePrediction,
   session: string,
@@ -89,7 +152,7 @@ export async function resolvePlaceDetails(
     typeof prediction.lat === "number" &&
     typeof prediction.lng === "number"
   ) {
-    return {
+    return bridgeToGooglePlace({
       name: prediction.name,
       placeId: prediction.placeId,
       provider: "apple",
@@ -99,7 +162,7 @@ export async function resolvePlaceDetails(
       category: prediction.category ?? null,
       source: "places",
       confirmedAt,
-    };
+    });
   }
 
   const data = await api<{
@@ -116,7 +179,7 @@ export async function resolvePlaceDetails(
     `/api/places/details?placeId=${encodeURIComponent(prediction.placeId)}&session=${encodeURIComponent(session)}`,
   );
 
-  return {
+  return bridgeToGooglePlace({
     name: data.place.name || prediction.name,
     placeId: data.place.placeId,
     provider: data.place.provider === "apple" ? "apple" : "mapbox",
@@ -131,7 +194,7 @@ export async function resolvePlaceDetails(
     category: data.place.category,
     source: "places",
     confirmedAt,
-  };
+  });
 }
 
 export async function resolveVenueFromName(
