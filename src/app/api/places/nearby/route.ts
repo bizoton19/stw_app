@@ -21,8 +21,9 @@ export const dynamic = "force-dynamic";
  * `GET /api/places/google` for the one place the user picks.
  *
  * 200: `{ places: GooglePlaceCard[], provider: "google", limit: 7, cached }`
- * `places[].photoUrl` is this API’s `/api/places/photo` URL (max width 400).
- * A stored photo ref is not fetched from Google again.
+ * `places[].photoUrls` is at most two absolute `/api/places/photo` URLs.
+ * `places[].photoUrl` is the first of those, or null. Photo bytes are cached
+ * indefinitely by Google photo id and are not fetched again.
  * 400 invalid coordinates. 503 when `GOOGLE_PLACES_API_KEY` is missing or blank
  * and this cell is not already cached. 502 when Google fails.
  *

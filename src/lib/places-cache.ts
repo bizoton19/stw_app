@@ -12,7 +12,8 @@ import path from "node:path";
  *
  * Nearby rows last 30 days per neighborhood cell. Openings and closures
  * inside that window stay stale on purpose: one Google Nearby call per cell
- * per month. Photo bytes are kept for the life of the photo ref.
+ * per month. Photo bytes are kept indefinitely, keyed by Google photo id,
+ * with no expiry and no refetch.
  */
 
 export const NEARBY_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;

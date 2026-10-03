@@ -14,6 +14,7 @@ import {
   NEARBY_CACHE_MAX_AGE_SECONDS,
   NEARBY_CACHE_TTL_MS,
   NEARBY_LIMIT,
+  NEARBY_PHOTO_LIMIT,
   PHOTO_CACHE_CONTROL,
   PHOTO_MAX_WIDTH_PX,
   searchNearby,
@@ -160,6 +161,8 @@ describe("google places nearby", () => {
     assert.equal(first.places[0]?.photoUrl?.includes("googleapis.com"), false);
     assert.match(first.places[0]?.photoUrl ?? "", /\/api\/places\/photo\?/);
     assert.match(first.places[0]?.photoUrl ?? "", /maxWidthPx=400/);
+    assert.equal(first.places[0]?.photoUrls?.length, 1);
+    assert.equal(first.places[0]?.photoUrl, first.places[0]?.photoUrls?.[0]);
 
     const cell = geohash(40.7128, -74.006, 6);
     let nudgedLat = 40.7128;
@@ -299,6 +302,44 @@ describe("google places nearby", () => {
     assert.equal(body.locationRestriction?.circle?.center?.latitude, 38.9072);
     assert.equal(body.locationRestriction?.circle?.center?.longitude, -77.0369);
     assert.equal(body.locationRestriction?.circle?.radius, 1500);
+  });
+
+  it("returns at most two proxied photos and keeps photoUrl as the first", async () => {
+    process.env.GOOGLE_PLACES_API_KEY = KEY;
+    installFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            places: [
+              googlePlace({
+                photos: [
+                  { name: "places/ChIJgoogle123/photos/FirstPhoto1" },
+                  { name: "places/ChIJgoogle123/photos/SecondPhoto" },
+                  { name: "places/ChIJgoogle123/photos/ThirdPhotoX" },
+                  { name: "places/ChIJgoogle123/photos/FirstPhoto1" },
+                  { name: "not-a-photo" },
+                ],
+                rating: 4.9,
+                userRatingCount: 10,
+                websiteUri: "https://joes.example/bar",
+              }),
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    );
+    const result = await searchNearby({ lat: 40.7128, lng: -74.006, origin: "https://api.test" });
+    const place = result.places[0];
+    assert.equal(place?.photoUrls?.length, NEARBY_PHOTO_LIMIT);
+    assert.equal(place?.photoUrl, place?.photoUrls?.[0]);
+    assert.match(place?.photoUrls?.[0] ?? "", /FirstPhoto1/);
+    assert.match(place?.photoUrls?.[1] ?? "", /SecondPhoto/);
+    assert.equal(place?.photoUrls?.some((url) => url.includes("ThirdPhotoX")), false);
+    assert.equal(place?.photoUrls?.every((url) => url.startsWith("https://api.test/api/places/photo?")), true);
+    assert.equal(place?.photoUrls?.some((url) => url.includes(KEY) || url.includes("googleapis.com")), false);
+    assert.equal("rating" in (place ?? {}), false);
+    assert.equal("userRatingCount" in (place ?? {}), false);
+    assert.equal("websiteUri" in (place ?? {}), false);
   });
 
   it("rejects bad coordinates without calling Google", async () => {
@@ -545,6 +586,20 @@ describe("google places photo", () => {
     assert.equal(afterRestart.status, 200);
     assert.deepEqual([...(new Uint8Array(await afterRestart.arrayBuffer()))], [9, 8, 7]);
     assert.equal(calls.length, 2);
+
+    let now = 1_700_000_000_000;
+    setGooglePlacesClockForTests(() => now);
+    now += NEARBY_CACHE_TTL_MS + 1;
+    const samePhotoId = await photoGET(
+      new Request(
+        "http://api.test/api/places/photo?name=places%2FChIJotherplace%2Fphotos%2FAbCd_12",
+      ),
+    );
+    assert.equal(samePhotoId.status, 200);
+    assert.deepEqual([...(new Uint8Array(await samePhotoId.arrayBuffer()))], [9, 8, 7]);
+    assert.equal(samePhotoId.headers.get("Cache-Control"), PHOTO_CACHE_CONTROL);
+    assert.equal(calls.length, 2);
+    assert.equal(calls.some((call) => call.url.includes(KEY)), false);
     assert.match(calls[0]!.url, /\/places\/ChIJgoogle123\/photos\/AbCd_12\/media\?/);
     assert.match(calls[0]!.url, new RegExp(`maxWidthPx=${PHOTO_MAX_WIDTH_PX}`));
     assert.equal(calls[0]!.url.includes("maxWidthPx=4000"), false);

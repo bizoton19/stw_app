@@ -12,9 +12,11 @@ export const dynamic = "force-dynamic";
  * Query: `name` (required) `places/{placeId}/photos/{ref}`,
  * `maxWidthPx` (optional, default 400, never above 400).
  *
- * 200: image bytes. The server stores each photo ref and does not call Google
- * again for that ref. 400 bad name. 503 when `GOOGLE_PLACES_API_KEY` is
- * missing or blank and this ref is not stored. 502 when Google fails.
+ * 200: image bytes. Stored indefinitely under the Google photo id (the last
+ * segment of `places/{placeId}/photos/{photoId}`). No expiry and no Google
+ * refetch once that id is stored. The API key stays off the URL. 400 bad
+ * name. 503 when `GOOGLE_PLACES_API_KEY` is missing or blank and this id is
+ * not stored. 502 when Google fails.
  */
 export async function GET(req: Request) {
   try {

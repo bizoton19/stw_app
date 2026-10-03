@@ -12,7 +12,8 @@
  * coordinates or coordinates outside the requested radius are dropped. The
  * nearby mask does not include rating, userRatingCount, or websiteUri —
  * those bill the whole search as Enterprise.
- * Photos are proxied. A stored photo ref is not fetched from Google again.
+ * Photos are proxied. Up to two nearby photos are cached indefinitely by
+ * Google photo id and are not fetched again.
  * The typeahead bridge uses Text Search
  * (`places:searchText`) with the place **name** and **lat/lng** and an
  * Essentials (IDs Only) field mask. Place Details Enterprise runs only for
@@ -40,6 +41,7 @@ const PLACES_BASE = "https://places.googleapis.com/v1";
 export { NEARBY_CACHE_MAX_AGE_SECONDS, NEARBY_CACHE_TTL_MS, PHOTO_CACHE_CONTROL };
 
 export const NEARBY_LIMIT = 7;
+export const NEARBY_PHOTO_LIMIT = 2;
 export const NEARBY_GEOHASH_PRECISION = 6;
 export const PHOTO_MAX_WIDTH_PX = 400;
 export const DEFAULT_NEARBY_RADIUS_M = 1500;
@@ -104,8 +106,13 @@ export type GooglePlaceCard = {
   /** Present after Place Details for a picked place. Nearby and bridge omit these. */
   rating?: number | null;
   userRatingCount?: number | null;
-  /** Proxied `/api/places/photo` URL. Never a Google URL that carries the API key. */
+  /** First proxied photo. Same string as `photoUrls[0]` when that array is set. */
   photoUrl: string | null;
+  /**
+   * Nearby only. At most two absolute `/api/places/photo` URLs.
+   * `photoUrl` is the first entry so older clients keep working.
+   */
+  photoUrls?: string[];
   websiteUri?: string | null;
   googleMapsUri: string | null;
 };
@@ -126,7 +133,7 @@ type NormalizedPlace = {
   category: string | null;
   rating: number | null;
   userRatingCount: number | null;
-  photoName: string | null;
+  photoNames: string[];
   websiteUri: string | null;
   googleMapsUri: string | null;
 };
@@ -193,6 +200,12 @@ export function geohash(lat: number, lng: number, precision = NEARBY_GEOHASH_PRE
     }
   }
   return hash;
+}
+
+/** Last segment of `places/{placeId}/photos/{photoId}`. */
+export function googlePhotoId(resourceName: string): string {
+  const name = assertPhotoResourceName(resourceName);
+  return name.slice(name.lastIndexOf("/") + 1);
 }
 
 export function proxiedPhotoPath(photoName: string, maxWidthPx = PHOTO_MAX_WIDTH_PX): string {
@@ -297,11 +310,18 @@ function normalizePlace(row: unknown): NormalizedPlace | null {
   const placeId = rawId.replace(/^places\//, "");
   const name = typeof place.displayName?.text === "string" ? place.displayName.text.trim() : "";
   if (!placeId || !name) return null;
-  const photoNameRaw = place.photos?.find((p) => typeof p?.name === "string")?.name;
-  const photoName =
-    typeof photoNameRaw === "string" && PHOTO_NAME.test(photoNameRaw.trim())
-      ? photoNameRaw.trim()
-      : null;
+  const photoNames: string[] = [];
+  const seenPhotoIds = new Set<string>();
+  for (const photo of place.photos ?? []) {
+    if (photoNames.length >= NEARBY_PHOTO_LIMIT) break;
+    if (typeof photo?.name !== "string") continue;
+    const photoName = photo.name.trim();
+    if (!PHOTO_NAME.test(photoName) || photoName.split("/").includes("..")) continue;
+    const photoId = photoName.slice(photoName.lastIndexOf("/") + 1);
+    if (seenPhotoIds.has(photoId)) continue;
+    seenPhotoIds.add(photoId);
+    photoNames.push(photoName);
+  }
   const lat = finiteNumber(place.location?.latitude);
   const lng = finiteNumber(place.location?.longitude);
   const rating = finiteNumber(place.rating);
@@ -315,7 +335,7 @@ function normalizePlace(row: unknown): NormalizedPlace | null {
     category: typeof place.primaryType === "string" ? place.primaryType : null,
     rating,
     userRatingCount: userRatingCount == null ? null : Math.max(0, Math.round(userRatingCount)),
-    photoName,
+    photoNames,
     websiteUri: httpUrl(place.websiteUri),
     googleMapsUri: httpUrl(place.googleMapsUri),
   };
@@ -337,8 +357,11 @@ function toCard(
   origin: string,
   fields: "pro" | "enterprise",
 ): GooglePlaceCard {
-  const path = place.photoName ? proxiedPhotoPath(place.photoName) : null;
   const base = origin.replace(/\/$/, "");
+  const photoUrls = place.photoNames.slice(0, NEARBY_PHOTO_LIMIT).map((photoName) => {
+    const path = proxiedPhotoPath(photoName);
+    return base ? `${base}${path}` : path;
+  });
   const card: GooglePlaceCard = {
     placeId: place.placeId,
     name: place.name,
@@ -347,9 +370,10 @@ function toCard(
     lng: place.lng,
     category: place.category,
     provider: "google",
-    photoUrl: path ? (base ? `${base}${path}` : path) : null,
+    photoUrl: photoUrls[0] ?? null,
     googleMapsUri: place.googleMapsUri,
   };
+  if (fields === "pro") card.photoUrls = photoUrls;
   if (fields === "enterprise") {
     card.rating = place.rating;
     card.userRatingCount = place.userRatingCount;
@@ -601,21 +625,23 @@ export async function fetchPlacePhoto(input: {
   maxWidthPx?: number | null;
 }): Promise<{ bytes: Uint8Array; contentType: string }> {
   const name = assertPhotoResourceName(input.name);
-  const cached = await readCachedPhoto(name);
+  const photoId = googlePhotoId(name);
+  const cached = await readCachedPhoto(photoId);
   if (cached) return cached;
-  const pending = photoInflight.get(name);
+  const pending = photoInflight.get(photoId);
   if (pending) return pending;
-  const promise = loadPlacePhoto(name, input.maxWidthPx);
-  photoInflight.set(name, promise);
+  const promise = loadPlacePhoto(name, photoId, input.maxWidthPx);
+  photoInflight.set(photoId, promise);
   try {
     return await promise;
   } finally {
-    photoInflight.delete(name);
+    photoInflight.delete(photoId);
   }
 }
 
 async function loadPlacePhoto(
   name: string,
+  photoId: string,
   maxWidthPx: number | null | undefined,
 ): Promise<{ bytes: Uint8Array; contentType: string }> {
   const key = requireGooglePlacesKey();
@@ -632,7 +658,7 @@ async function loadPlacePhoto(
     if (!location || location.includes(key)) {
       fail("places_upstream", "Google Places photo redirect was rejected.");
     }
-    return storePhoto(name, await readImage(await fetch(location, { cache: "no-store" })));
+    return storePhoto(photoId, await readImage(await fetch(location, { cache: "no-store" })));
   }
   if (!res.ok) {
     fail("places_upstream", `Google Places photo request failed (${res.status}).`);
@@ -644,16 +670,16 @@ async function loadPlacePhoto(
     if (!photoUri || photoUri.includes(key)) {
       fail("places_upstream", "Google Places photo response had no image.");
     }
-    return storePhoto(name, await readImage(await fetch(photoUri, { cache: "no-store" })));
+    return storePhoto(photoId, await readImage(await fetch(photoUri, { cache: "no-store" })));
   }
-  return storePhoto(name, await readImage(res));
+  return storePhoto(photoId, await readImage(res));
 }
 
 async function storePhoto(
-  name: string,
+  photoId: string,
   photo: { bytes: Uint8Array; contentType: string },
 ): Promise<{ bytes: Uint8Array; contentType: string }> {
-  await writeCachedPhoto(name, photo);
+  await writeCachedPhoto(photoId, photo);
   return photo;
 }
 
