@@ -6,11 +6,15 @@
  * `process.env.*` into the browser bundle. Mobile and web call the routes.
  *
  * Nearby uses `places:searchNearby` (top 7, popularity, primary food/drink
- * types, in-process cache ~8 min by geohash). Results with no coordinates
- * or coordinates outside the requested radius are dropped.
- * Photos are proxied. The typeahead bridge uses Text Search (`places:searchText`)
- * with the place **name** and **lat/lng** — the Find Place replacement. It never
- * calls Place Details and never forwards a Mapbox or MapKit id.
+ * types, Nearby Search Pro field mask, in-process cache ~8 min by geohash).
+ * Results with no coordinates or coordinates outside the requested radius
+ * are dropped. The nearby mask does not include rating, userRatingCount, or
+ * websiteUri — those bill the whole search as Enterprise.
+ * Photos are proxied and cached. The typeahead bridge uses Text Search
+ * (`places:searchText`) with the place **name** and **lat/lng** and an
+ * Essentials (IDs Only) field mask. Place Details Enterprise runs only for
+ * the one Google place a caller asks to detail. Mapbox and MapKit ids are
+ * never sent to Place Details.
  *
  * Without a non-empty key every function throws `google_places_not_configured`
  * before `fetch`.
@@ -27,8 +31,6 @@ export const DEFAULT_NEARBY_RADIUS_M = 1500;
 const MIN_RADIUS_M = 50;
 const MAX_RADIUS_M = 50_000;
 const BRIDGE_BIAS_RADIUS_M = 500;
-const BRIDGE_MAX_DISTANCE_M = 1_500;
-const BRIDGE_EXACT_MAX_DISTANCE_M = 5_000;
 const MAX_PHOTO_BYTES = 5_000_000;
 const MAX_NAME_LENGTH = 200;
 
@@ -38,18 +40,37 @@ const MAX_NAME_LENGTH = 200;
  */
 const NEARBY_PRIMARY_TYPES = ["restaurant", "bar", "cafe", "bakery", "coffee_shop"];
 
-const PLACE_FIELD_MASK = [
+/** Nearby Search Pro. Rating, userRatingCount, and websiteUri are Enterprise. */
+const NEARBY_FIELD_MASK = [
   "places.id",
   "places.displayName",
   "places.formattedAddress",
   "places.location",
-  "places.rating",
-  "places.userRatingCount",
   "places.photos",
-  "places.websiteUri",
   "places.googleMapsUri",
   "places.primaryType",
 ].join(",");
+
+/** Text Search Essentials (IDs Only). `places.name` is the resource name, not displayName. */
+const TEXT_SEARCH_ID_FIELD_MASK = ["places.id", "places.name"].join(",");
+
+/**
+ * Place Details for one picked place. Rating and websiteUri make this
+ * Enterprise. Photos stay on the nearby Pro response and the photo proxy.
+ */
+const PICKED_PLACE_FIELD_MASK = [
+  "id",
+  "displayName",
+  "formattedAddress",
+  "location",
+  "primaryType",
+  "googleMapsUri",
+  "rating",
+  "userRatingCount",
+  "websiteUri",
+].join(",");
+
+const GOOGLE_PLACE_ID = /^[A-Za-z0-9_-]{8,255}$/;
 
 const PHOTO_NAME =
   /^places\/[A-Za-z0-9._~-]+\/photos\/[A-Za-z0-9._~-]+$/;
@@ -64,11 +85,12 @@ export type GooglePlaceCard = {
   lng: number | null;
   category: string | null;
   provider: "google";
-  rating: number | null;
-  userRatingCount: number | null;
+  /** Present after Place Details for a picked place. Nearby and bridge omit these. */
+  rating?: number | null;
+  userRatingCount?: number | null;
   /** Proxied `/api/places/photo` URL. Never a Google URL that carries the API key. */
   photoUrl: string | null;
-  websiteUri: string | null;
+  websiteUri?: string | null;
   googleMapsUri: string | null;
 };
 
@@ -291,10 +313,14 @@ function readPlaces(data: unknown): NormalizedPlace[] {
   return out;
 }
 
-function toCard(place: NormalizedPlace, origin: string): GooglePlaceCard {
+function toCard(
+  place: NormalizedPlace,
+  origin: string,
+  fields: "pro" | "enterprise",
+): GooglePlaceCard {
   const path = place.photoName ? proxiedPhotoPath(place.photoName) : null;
   const base = origin.replace(/\/$/, "");
-  return {
+  const card: GooglePlaceCard = {
     placeId: place.placeId,
     name: place.name,
     formattedAddress: place.formattedAddress,
@@ -302,12 +328,15 @@ function toCard(place: NormalizedPlace, origin: string): GooglePlaceCard {
     lng: place.lng,
     category: place.category,
     provider: "google",
-    rating: place.rating,
-    userRatingCount: place.userRatingCount,
     photoUrl: path ? (base ? `${base}${path}` : path) : null,
-    websiteUri: place.websiteUri,
     googleMapsUri: place.googleMapsUri,
   };
+  if (fields === "enterprise") {
+    card.rating = place.rating;
+    card.userRatingCount = place.userRatingCount;
+    card.websiteUri = place.websiteUri;
+  }
+  return card;
 }
 
 function placeInsideNearbyRadius(
@@ -343,13 +372,18 @@ function writeNearbyCache(key: string, places: NormalizedPlace[]): void {
   nearbyCache.set(key, { expiresAt: clock() + NEARBY_CACHE_TTL_MS, places });
 }
 
-async function googlePost(methodPath: "places:searchNearby" | "places:searchText", body: unknown, key: string): Promise<unknown> {
+async function googlePost(
+  methodPath: "places:searchNearby" | "places:searchText",
+  body: unknown,
+  key: string,
+  fieldMask: string,
+): Promise<unknown> {
   const res = await fetch(`${PLACES_BASE}/${methodPath}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": key,
-      "X-Goog-FieldMask": PLACE_FIELD_MASK,
+      "X-Goog-FieldMask": fieldMask,
     },
     body: JSON.stringify(body),
     cache: "no-store",
@@ -358,6 +392,33 @@ async function googlePost(methodPath: "places:searchNearby" | "places:searchText
     fail("places_upstream", `Google Places request failed (${res.status}).`);
   }
   return res.json();
+}
+
+export function assertGooglePlaceId(raw: string): string {
+  const trimmed = raw.trim().replace(/^places\//, "");
+  if (!GOOGLE_PLACE_ID.test(trimmed)) {
+    fail("invalid", "placeId must be a Google place id.");
+  }
+  return trimmed;
+}
+
+function readTextSearchPlaceId(data: unknown): string | null {
+  const places = (data as { places?: unknown } | null)?.places;
+  if (!Array.isArray(places)) return null;
+  for (const row of places) {
+    if (!row || typeof row !== "object") continue;
+    const place = row as { id?: unknown; name?: unknown };
+    const rawId = typeof place.id === "string" ? place.id.trim() : "";
+    const resource = typeof place.name === "string" ? place.name.trim() : "";
+    const candidate = rawId || resource;
+    if (!candidate) continue;
+    try {
+      return assertGooglePlaceId(candidate);
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 export async function searchNearby(input: {
@@ -373,7 +434,7 @@ export async function searchNearby(input: {
   const cached = readNearbyCache(cacheKey);
   if (cached) {
     return {
-      places: cached.slice(0, NEARBY_LIMIT).map((place) => toCard(place, input.origin ?? "")),
+      places: cached.slice(0, NEARBY_LIMIT).map((place) => toCard(place, input.origin ?? "", "pro")),
       provider: "google",
       limit: NEARBY_LIMIT,
       cached: true,
@@ -395,40 +456,18 @@ export async function searchNearby(input: {
       },
     },
     key,
+    NEARBY_FIELD_MASK,
   );
   const places = readPlaces(data)
     .filter((place) => placeInsideNearbyRadius(place, coords.lat, coords.lng, radius))
     .slice(0, NEARBY_LIMIT);
   writeNearbyCache(cacheKey, places);
   return {
-    places: places.map((place) => toCard(place, input.origin ?? "")),
+    places: places.map((place) => toCard(place, input.origin ?? "", "pro")),
     provider: "google",
     limit: NEARBY_LIMIT,
     cached: false,
   };
-}
-
-function normalizePlaceName(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-function nameScore(query: string, candidate: string): number {
-  const a = normalizePlaceName(query);
-  const b = normalizePlaceName(candidate);
-  if (!a || !b) return 0;
-  if (a === b) return 100;
-  if (b.startsWith(a) || a.startsWith(b)) return 80;
-  const tokens = a.split(" ");
-  const candidateTokens = new Set(b.split(" "));
-  if (tokens.length > 0 && tokens.every((token) => candidateTokens.has(token))) return 60;
-  return 0;
 }
 
 function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -442,37 +481,19 @@ function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number):
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
-function pickBridgeMatch(
-  query: string,
-  lat: number,
-  lng: number,
-  places: NormalizedPlace[],
-): NormalizedPlace | null {
-  let best: { place: NormalizedPlace; score: number; distance: number } | null = null;
-  for (const place of places) {
-    const score = nameScore(query, place.name);
-    if (score <= 0 || place.lat == null || place.lng == null) continue;
-    const distance = distanceMeters(lat, lng, place.lat, place.lng);
-    const allowed = score >= 100 ? BRIDGE_EXACT_MAX_DISTANCE_M : BRIDGE_MAX_DISTANCE_M;
-    if (distance > allowed) continue;
-    if (!best || score > best.score || (score === best.score && distance < best.distance)) {
-      best = { place, score, distance };
-    }
-  }
-  return best?.place ?? null;
-}
-
 /**
  * Resolve a typeahead selection to a Google place id.
- * Uses Text Search by name + coordinates. `placeId` is intentionally not a
- * parameter — Mapbox and MapKit ids must not be sent to Place Details.
- * Returns null when Google has no confident match. Throws when the key is missing.
+ * Text Search Essentials (IDs Only) by name + coordinates. The response keeps
+ * the queried name and coordinates. Rating and website come from
+ * `fetchPickedGooglePlace` after the user opens that one place.
+ * `placeId` is intentionally not a parameter — Mapbox and MapKit ids must
+ * not be sent to Place Details. Returns null when Google returns no id.
+ * Throws when the key is missing.
  */
 export async function bridgePlaceToGoogle(input: {
   name: string;
   lat: number;
   lng: number;
-  origin?: string;
 }): Promise<GooglePlaceCard | null> {
   const name = input.name.trim();
   if (!name || name.length > MAX_NAME_LENGTH) {
@@ -484,7 +505,7 @@ export async function bridgePlaceToGoogle(input: {
     "places:searchText",
     {
       textQuery: name,
-      maxResultCount: 5,
+      maxResultCount: 1,
       rankPreference: "DISTANCE",
       languageCode: "en",
       locationBias: {
@@ -495,9 +516,50 @@ export async function bridgePlaceToGoogle(input: {
       },
     },
     key,
+    TEXT_SEARCH_ID_FIELD_MASK,
   );
-  const match = pickBridgeMatch(name, coords.lat, coords.lng, readPlaces(data));
-  return match ? toCard(match, input.origin ?? "") : null;
+  const placeId = readTextSearchPlaceId(data);
+  if (!placeId) return null;
+  return {
+    placeId,
+    name,
+    formattedAddress: null,
+    lat: coords.lat,
+    lng: coords.lng,
+    category: null,
+    provider: "google",
+    photoUrl: null,
+    googleMapsUri: null,
+  };
+}
+
+/**
+ * Place Details Enterprise for the one place the user picked.
+ * Not used by nearby search. Callers that do not need rating or website
+ * should skip this.
+ */
+export async function fetchPickedGooglePlace(input: {
+  placeId: string;
+  origin?: string;
+}): Promise<GooglePlaceCard> {
+  const placeId = assertGooglePlaceId(input.placeId);
+  const key = requireGooglePlacesKey();
+  const endpoint = `${PLACES_BASE}/places/${encodeURIComponent(placeId)}`;
+  const res = await fetch(endpoint, {
+    headers: {
+      "X-Goog-Api-Key": key,
+      "X-Goog-FieldMask": PICKED_PLACE_FIELD_MASK,
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    fail("places_upstream", `Google Places request failed (${res.status}).`);
+  }
+  const place = normalizePlace(await res.json());
+  if (!place) {
+    fail("places_upstream", "Google Places details had no place.");
+  }
+  return toCard(place, input.origin ?? "", "enterprise");
 }
 
 async function readImage(res: Response): Promise<{ bytes: Uint8Array; contentType: string }> {

@@ -82,9 +82,9 @@ export type ReceiptVenue = {
   category?: string | null;
   source: VenueSource;
   confirmedAt: string;
-  /** Google rating (1–5) when the typeahead bridge resolved a place id. */
+  /** Google rating (1–5) after Place Details for a picked place. Nearby omits this. */
   rating?: number | null;
-  /** Count behind `rating`. */
+  /** Count behind `rating`. Nearby omits this. */
   userRatingCount?: number | null;
   /** Proxied `/api/places/photo` URL. Never a Google URL with an API key. */
   photoUrl?: string | null;

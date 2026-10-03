@@ -15,8 +15,13 @@ export const dynamic = "force-dynamic";
  * italian_restaurant still match). Places with no coordinates, or
  * coordinates outside the radius, are omitted.
  *
+ * Field mask is Nearby Search Pro. The response omits `rating`,
+ * `userRatingCount`, and `websiteUri`. Those are loaded later with
+ * `GET /api/places/google` for the one place the user picks.
+ *
  * 200: `{ places: GooglePlaceCard[], provider: "google", limit: 7, cached }`
- * `places[].photoUrl` is this API’s `/api/places/photo` URL (max width 400).
+ * `places[].photoUrl` is this API’s `/api/places/photo` URL (max width 400),
+ * still proxied and cached.
  * 400 invalid coordinates. 503 when `GOOGLE_PLACES_API_KEY` is missing or blank
  * (no Google call). 502 when Google fails.
  *

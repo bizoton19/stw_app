@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { GET as bridgeGET } from "../app/api/places/bridge/route";
+import { GET as pickedGET } from "../app/api/places/google/route";
 import { GET as nearbyGET } from "../app/api/places/nearby/route";
 import { GET as photoGET } from "../app/api/places/photo/route";
 import {
@@ -38,6 +39,10 @@ function installFetch(handler: (call: Call) => Response | Promise<Response>): { 
     return handler(call);
   };
   return { calls };
+}
+
+function fieldMask(call: Call): string[] {
+  return (call.headers.get("X-Goog-FieldMask") ?? "").split(",").filter(Boolean);
 }
 
 function googlePlace(over: Record<string, unknown> = {}) {
@@ -143,6 +148,9 @@ describe("google places nearby", () => {
     assert.equal(first.limit, NEARBY_LIMIT);
     assert.equal(first.places.length, 1);
     assert.equal(first.places[0]?.provider, "google");
+    assert.equal("rating" in (first.places[0] ?? {}), false);
+    assert.equal("userRatingCount" in (first.places[0] ?? {}), false);
+    assert.equal("websiteUri" in (first.places[0] ?? {}), false);
     assert.equal(first.places[0]?.photoUrl?.includes(KEY), false);
     assert.equal(first.places[0]?.photoUrl?.includes("googleapis.com"), false);
     assert.match(first.places[0]?.photoUrl ?? "", /\/api\/places\/photo\?/);
@@ -166,7 +174,16 @@ describe("google places nearby", () => {
 
     const call = calls[0]!;
     assert.equal(call.url, "https://places.googleapis.com/v1/places:searchNearby");
+    assert.equal(call.url.includes("/v1/places/"), false);
     assert.equal(call.headers.get("X-Goog-Api-Key"), KEY);
+    const nearbyMask = fieldMask(call);
+    assert.equal(nearbyMask.includes("places.rating"), false);
+    assert.equal(nearbyMask.includes("places.userRatingCount"), false);
+    assert.equal(nearbyMask.includes("places.websiteUri"), false);
+    assert.equal(nearbyMask.includes("places.photos"), true);
+    assert.equal(nearbyMask.includes("places.displayName"), true);
+    assert.equal(nearbyMask.includes("places.location"), true);
+    assert.equal(nearbyMask.includes("places.primaryType"), true);
     assert.equal(call.url.includes(MAPBOX_ID), false);
     const body = JSON.parse(call.body ?? "{}") as {
       maxResultCount?: number;
@@ -238,8 +255,14 @@ describe("google places nearby", () => {
       ["ChIJdc"],
     );
     assert.equal(data.places[0]?.category, "italian_restaurant");
-
+    assert.equal("rating" in (data.places[0] ?? {}), false);
+    assert.equal("websiteUri" in (data.places[0] ?? {}), false);
     assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.url, "https://places.googleapis.com/v1/places:searchNearby");
+    const nearbyMask = fieldMask(calls[0]!);
+    assert.equal(nearbyMask.includes("places.rating"), false);
+    assert.equal(nearbyMask.includes("places.userRatingCount"), false);
+    assert.equal(nearbyMask.includes("places.websiteUri"), false);
     const body = JSON.parse(calls[0]!.body ?? "{}") as {
       rankPreference?: string;
       includedTypes?: string[];
@@ -281,12 +304,14 @@ describe("google places bridge", () => {
         new Response(
           JSON.stringify({
             places: [
-              googlePlace({
-                id: "ChIJother",
+              {
+                id: "ChIJgoogle123",
+                name: "places/ChIJgoogle123",
                 displayName: { text: "Some Other Cafe" },
-                location: { latitude: 40.7128, longitude: -74.006 },
-              }),
-              googlePlace(),
+                rating: 4.6,
+                userRatingCount: 321,
+                websiteUri: "https://joes.example/bar",
+              },
             ],
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
@@ -303,37 +328,41 @@ describe("google places bridge", () => {
       place?: {
         placeId: string;
         provider: string;
-        rating: number;
-        userRatingCount: number;
-        photoUrl: string;
-        websiteUri: string;
-        googleMapsUri: string;
         name: string;
+        lat: number;
+        lng: number;
+        photoUrl: string | null;
+        googleMapsUri: string | null;
       };
     };
     assert.equal(res.status, 200);
     assert.equal(data.bridged, true);
     assert.equal(data.place?.placeId, "ChIJgoogle123");
+    assert.equal(data.place?.name, "Joe's Bar");
     assert.equal(data.place?.provider, "google");
-    assert.equal(data.place?.rating, 4.6);
-    assert.equal(data.place?.userRatingCount, 321);
-    assert.equal(data.place?.websiteUri, "https://joes.example/bar");
-    assert.equal(data.place?.googleMapsUri, "https://maps.google.com/?cid=1");
-    assert.equal(data.place?.photoUrl.includes(KEY), false);
-    assert.match(data.place?.photoUrl ?? "", /maxWidthPx=400/);
+    assert.equal(data.place?.lat, 40.7128);
+    assert.equal(data.place?.lng, -74.006);
+    assert.equal(data.place?.photoUrl, null);
+    assert.equal(data.place?.googleMapsUri, null);
+    assert.equal("rating" in (data.place ?? {}), false);
+    assert.equal("userRatingCount" in (data.place ?? {}), false);
+    assert.equal("websiteUri" in (data.place ?? {}), false);
 
     assert.equal(calls.length, 1);
     const call = calls[0]!;
     assert.equal(call.url, "https://places.googleapis.com/v1/places:searchText");
-    assert.equal(call.url.includes("/places/"), false);
+    assert.equal(call.url.includes("/v1/places/"), false);
     assert.equal(call.url.includes(MAPBOX_ID), false);
     assert.equal(call.headers.get("X-Goog-Api-Key"), KEY);
+    assert.deepEqual(fieldMask(call), ["places.id", "places.name"]);
     const body = JSON.parse(call.body ?? "{}") as {
       textQuery?: string;
+      maxResultCount?: number;
       placeId?: string;
       locationBias?: { circle?: { center?: { latitude?: number; longitude?: number } } };
     };
     assert.equal(body.textQuery, "Joe's Bar");
+    assert.equal(body.maxResultCount, 1);
     assert.equal(body.placeId, undefined);
     assert.equal(body.locationBias?.circle?.center?.latitude, 40.7128);
     assert.equal(body.locationBias?.circle?.center?.longitude, -74.006);
@@ -344,26 +373,23 @@ describe("google places bridge", () => {
       name: data.place!.name,
       placeId: data.place!.placeId,
       provider: "google",
-      formattedAddress: "1 Main St, New York, NY",
-      lat: 40.7128,
-      lng: -74.006,
-      category: "bar",
+      formattedAddress: null,
+      lat: data.place!.lat,
+      lng: data.place!.lng,
+      category: null,
       source: "places",
       confirmedAt: "2026-10-03T00:00:00.000Z",
-      rating: data.place!.rating,
-      userRatingCount: data.place!.userRatingCount,
       photoUrl: data.place!.photoUrl,
-      websiteUri: data.place!.websiteUri,
       googleMapsUri: data.place!.googleMapsUri,
     };
     assert.equal(venueLocationKey(venue), "place:google:ChIJgoogle123");
   });
 
-  it("returns no place when the name does not match", async () => {
+  it("returns no place when Text Search returns no id", async () => {
     process.env.GOOGLE_PLACES_API_KEY = KEY;
     installFetch(
       () =>
-        new Response(JSON.stringify({ places: [googlePlace()] }), {
+        new Response(JSON.stringify({ places: [] }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
@@ -377,7 +403,6 @@ describe("google places bridge", () => {
     const res = await bridgeGET(
       new Request("http://api.test/api/places/bridge?name=Completely%20Different&lat=40.7128&lng=-74.006"),
     );
-    // Second call hits fetch again (bridge is not cached). The mock still returns Joe's.
     const body = (await res.json()) as { bridged?: boolean; place?: null };
     assert.equal(body.bridged, false);
     assert.equal(body.place, null);
@@ -396,6 +421,72 @@ describe("google places bridge", () => {
       assert.match(block, /lng:/);
       assert.equal(block.includes("placeId"), false);
     }
+  });
+});
+
+describe("picked google place", () => {
+  it("loads rating and website for one place and rejects a mapbox id", async () => {
+    process.env.GOOGLE_PLACES_API_KEY = KEY;
+    const { calls } = installFetch(
+      () =>
+        new Response(JSON.stringify(googlePlace({ photos: undefined })), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+
+    const res = await pickedGET(
+      new Request("http://api.test/api/places/google?placeId=ChIJgoogle123"),
+    );
+    const data = (await res.json()) as {
+      place?: {
+        placeId: string;
+        rating: number;
+        userRatingCount: number;
+        websiteUri: string;
+        photoUrl: string | null;
+      };
+    };
+    assert.equal(res.status, 200);
+    assert.equal(data.place?.placeId, "ChIJgoogle123");
+    assert.equal(data.place?.rating, 4.6);
+    assert.equal(data.place?.userRatingCount, 321);
+    assert.equal(data.place?.websiteUri, "https://joes.example/bar");
+    assert.equal(data.place?.photoUrl, null);
+
+    assert.equal(calls.length, 1);
+    const call = calls[0]!;
+    assert.equal(call.url, "https://places.googleapis.com/v1/places/ChIJgoogle123");
+    assert.equal(call.url.includes(KEY), false);
+    assert.equal(call.method, "GET");
+    assert.deepEqual(fieldMask(call), [
+      "id",
+      "displayName",
+      "formattedAddress",
+      "location",
+      "primaryType",
+      "googleMapsUri",
+      "rating",
+      "userRatingCount",
+      "websiteUri",
+    ]);
+    assert.equal(fieldMask(call).includes("photos"), false);
+    assert.equal(fieldMask(call).includes("reviews"), false);
+
+    const blocked = await pickedGET(
+      new Request(`http://api.test/api/places/google?placeId=${encodeURIComponent(MAPBOX_ID)}`),
+    );
+    assert.equal(blocked.status, 400);
+    assert.equal(calls.length, 1);
+  });
+
+  it("does not call Google without a key", async () => {
+    const { calls } = installFetch(() => {
+      throw new Error("Google must not be called");
+    });
+    const res = await pickedGET(new Request("http://api.test/api/places/google?placeId=ChIJgoogle123"));
+    assert.equal(res.status, 503);
+    assert.equal(calls.length, 0);
   });
 });
 
