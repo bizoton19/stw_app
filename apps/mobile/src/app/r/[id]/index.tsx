@@ -14,6 +14,7 @@ import { hapticNotify } from "@/lib/haptics";
 import { hostNoteText } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { postRsvp } from "@/lib/api";
+import { personRowKey, sameGuest } from "@/lib/guest-id";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
 import { goHostDesk } from "@/lib/navigation";
@@ -490,22 +491,31 @@ function History() {
   const claimants = useMemo(() => {
     const map = new Map<
       string,
-      { personName: string; personContact?: string; claims: Claim[] }
+      { guestId?: string; personName: string; personContact?: string; seenAt: string; claims: Claim[] }
     >();
     for (const claim of receipt.claims) {
-      const key = `${claim.personName}\0${claim.personContact ?? ""}`;
+      const key = personRowKey(claim);
       let row = map.get(key);
       if (!row) {
         row = {
+          guestId: claim.guestId,
           personName: claim.personName,
           personContact: claim.personContact,
+          seenAt: claim.createdAt,
           claims: [],
         };
         map.set(key, row);
+      } else if (claim.createdAt >= row.seenAt) {
+        row.seenAt = claim.createdAt;
+        row.personName = claim.personName;
+        if (claim.personContact) row.personContact = claim.personContact;
+        if (claim.guestId) row.guestId = claim.guestId;
       }
       row.claims.push(claim);
     }
-    return [...map.values()].sort((a, b) => a.personName.localeCompare(b.personName));
+    return [...map.values()].sort(
+      (a, b) => a.personName.localeCompare(b.personName) || (a.guestId ?? "").localeCompare(b.guestId ?? ""),
+    );
   }, [receipt.claims]);
 
   if (claimants.length === 0) return null;
@@ -526,14 +536,15 @@ function History() {
         style={styles.claimScroller}
       >
         {claimants.map((person) => {
-          const isYou = flow.guest?.name === person.personName;
+          const isYou = sameGuest(person, flow.guest);
           return (
-            <View
-              key={`${person.personName}\0${person.personContact ?? ""}`}
-              style={styles.claimCard}
-            >
+            <View key={personRowKey(person)} style={styles.claimCard}>
               <View style={styles.claimCardHead}>
-                <ClaimerAvatar name={person.personName} size={32} />
+                <ClaimerAvatar
+                  name={person.personName}
+                  colorKey={person.guestId || person.personName}
+                  size={32}
+                />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.claimCardName} numberOfLines={1}>
                     {person.personName}

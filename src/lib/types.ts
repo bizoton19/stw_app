@@ -54,6 +54,8 @@ export type Fee = {
 export type Claim = {
   id: string;
   itemId: string;
+  /** Stable joiner id. Missing on claims saved before guest identity shipped. */
+  guestId?: string;
   personName: string;
   personContact?: string;
   units: number;
@@ -121,6 +123,8 @@ export type Receipt = {
 };
 
 export type PersonTotal = {
+  /** Set when every claim in this row carries a guestId. */
+  guestId?: string;
   personName: string;
   personContact?: string;
   itemCents: number;

@@ -13,7 +13,8 @@ import {
   getClaimToken,
 } from "@/lib/session";
 import { api, type ApiError } from "@/lib/api";
-import type { GuestIdentity, PublicReceipt } from "@/lib/types";
+import { bindOwnedClaims } from "@/lib/bind-guest";
+import type { GuestDraft, GuestIdentity, PublicReceipt } from "@/lib/types";
 
 type ClaimFlow = {
   id: string;
@@ -31,7 +32,7 @@ type ClaimFlow = {
   /** True when any selected line still has >1 unit left (qty screen needed). */
   needsQty: boolean;
   setMessage: (v: string | null) => void;
-  join: (guest: GuestIdentity) => Promise<void>;
+  join: (guest: GuestDraft) => Promise<void>;
   toggle: (itemId: string) => void;
   setUnit: (itemId: string, qty: number) => void;
   claimQueued: () => Promise<boolean>;
@@ -96,12 +97,27 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
   );
 
   const join = useCallback(
-    async (next: GuestIdentity) => {
-      await saveGuest(id, next);
-      setGuest(next);
+    async (next: GuestDraft) => {
+      const saved = await saveGuest(id, next);
+      setGuest(saved);
     },
     [id],
   );
+
+  useEffect(() => {
+    if (!receipt || !guest?.guestId) return;
+    let cancelled = false;
+    void bindOwnedClaims(receipt.id, guest.guestId, receipt.claims)
+      .then((changed) => {
+        if (changed && !cancelled) void refresh();
+      })
+      .catch(() => {
+        /* next visit retries */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [guest?.guestId, receipt, refresh]);
 
   const toggle = useCallback(
     (itemId: string) => {
@@ -156,6 +172,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           personName: guest.name,
           personContact: guest.contact || undefined,
+          guestId: guest.guestId,
           claims: queuedItems.map((item) => ({
             itemId: item.id,
             units: Math.min(Math.max(1, units[item.id] ?? 1), receipt.remaining[item.id] ?? 0),

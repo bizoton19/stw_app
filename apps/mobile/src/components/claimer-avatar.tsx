@@ -31,12 +31,15 @@ function initialsFor(name: string): string {
 
 export function ClaimerAvatar({
   name,
+  colorKey,
   size = 28,
 }: {
   name: string;
+  /** Color seed. Pass guestId so two people with the same display name differ. */
+  colorKey?: string;
   size?: number;
 }) {
-  const bg = colorForName(name);
+  const bg = colorForName(colorKey || name);
   const fontSize = Math.max(10, Math.round(size * 0.38));
   return (
     <View

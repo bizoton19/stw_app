@@ -84,7 +84,7 @@ export async function saveReceipt(
 
 export async function addClaim(
   id: string,
-  input: { itemId: string; personName: string; personContact?: string; units: number },
+  input: { itemId: string; personName: string; personContact?: string; guestId?: string; units: number },
 ) {
   return usingDatabase() ? pg.addClaim(id, input) : memory.addClaim(id, input);
 }
@@ -94,10 +94,18 @@ export async function addClaims(
   input: {
     personName: string;
     personContact?: string;
+    guestId?: string;
     claims: { itemId: string; units: number }[];
   },
 ) {
   return usingDatabase() ? pg.addClaims(id, input) : memory.addClaims(id, input);
+}
+
+export async function attachGuestClaims(
+  id: string,
+  input: { guestId: string; tokens?: Record<string, string> | null },
+) {
+  return usingDatabase() ? pg.attachGuestClaims(id, input) : memory.attachGuestClaims(id, input);
 }
 
 export async function removeClaim(

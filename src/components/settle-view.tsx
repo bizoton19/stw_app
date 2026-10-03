@@ -15,6 +15,8 @@ import { hostPayments, validateHostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
 import { openHostPayWeb, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
+import { findMine, personRowKey, sameGuest } from "@/lib/guest-id";
+import { useBindGuestClaims } from "@/hooks/use-bind-guest-claims";
 import { api, getGuest, getHostToken } from "@/lib/session";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment, PublicReceipt } from "@/lib/types";
@@ -63,9 +65,8 @@ export function SettleView({
     0,
   );
 
-  const mine = guest
-    ? totals.people.find((p) => p.personName === guest.name)
-    : undefined;
+  const mine = findMine(totals.people, guest);
+  useBindGuestClaims(receipt.id, receipt.claims, onChange ?? (() => undefined));
   const canPayLater = !isHost && Boolean(mine && mine.totalCents > 0);
 
   useEffect(() => {
@@ -492,12 +493,16 @@ export function SettleView({
           ) : (
             totals.people.map((person) => {
               const amount = centsToLabel(person.totalCents);
-              const isYou = guest?.name === person.personName;
+              const isYou = sameGuest(person, guest);
               return (
-                <li key={`${person.personName}\0${person.personContact ?? ""}`}>
+                <li key={personRowKey(person)}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <ClaimerAvatar name={person.personName} size={32} />
+                      <ClaimerAvatar
+                        name={person.personName}
+                        colorKey={person.guestId || person.personName}
+                        size={32}
+                      />
                       <div className="min-w-0">
                         <p className="font-medium">
                           {person.personName}

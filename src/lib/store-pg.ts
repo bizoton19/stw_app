@@ -4,6 +4,7 @@ import { DB_SCHEMA, ensureSchema, getPool, withTransaction } from "./db";
 import { dollarsToCents } from "./money";
 import { claimCapacity, normalizePour } from "./pour";
 import { SAMPLE_PARSE } from "./sample-tab";
+import { readGuestId } from "./guest-id";
 import { computeTotals, leftoverAssignments, remainingForItem, remainingMap, latestClaimerForItem } from "./totals";
 import { findVenueDayConflict, isValidatedVenue } from "./venue-day";
 import {
@@ -538,7 +539,7 @@ export async function saveReceipt(
 
 export async function addClaim(
   id: string,
-  input: { itemId: string; personName: string; personContact?: string; units: number },
+  input: { itemId: string; personName: string; personContact?: string; guestId?: string; units: number },
 ) {
   await ensureSchema();
   return withTransaction(async (client) => {
@@ -547,6 +548,7 @@ export async function addClaim(
       throw Object.assign(new Error("not_open"), { code: "conflict" });
     }
     const name = input.personName.trim();
+    const guestId = readGuestId(input.guestId);
     if (!name) {
       throw Object.assign(new Error("name_required"), { code: "invalid" });
     }
@@ -559,7 +561,7 @@ export async function addClaim(
     }
     const remaining = remainingForItem(item, receipt.claims);
     if (input.units > remaining) {
-      const claimedBy = latestClaimerForItem(receipt.claims, item.id, name);
+      const claimedBy = latestClaimerForItem(receipt.claims, item.id, name, guestId);
       throw Object.assign(new Error("not_enough_remaining"), {
         code: "not_enough_remaining",
         remaining,
@@ -578,6 +580,7 @@ export async function addClaim(
     const claim: InternalClaim = {
       id: `cl_${shortId()}`,
       itemId: item.id,
+      guestId,
       personName: name,
       personContact: input.personContact?.trim() || undefined,
       units: input.units,
@@ -591,6 +594,7 @@ export async function addClaim(
       claim: {
         id: claim.id,
         itemId: claim.itemId,
+        guestId: claim.guestId,
         personName: claim.personName,
         personContact: claim.personContact,
         units: claim.units,
@@ -607,6 +611,7 @@ export async function addClaims(
   input: {
     personName: string;
     personContact?: string;
+    guestId?: string;
     claims: { itemId: string; units: number }[];
   },
 ) {
@@ -617,6 +622,7 @@ export async function addClaims(
       throw Object.assign(new Error("not_open"), { code: "conflict" });
     }
     const name = input.personName.trim();
+    const guestId = readGuestId(input.guestId);
     if (!name) {
       throw Object.assign(new Error("name_required"), { code: "invalid" });
     }
@@ -639,7 +645,7 @@ export async function addClaims(
       }
       const remaining = remainingForItem(item, receipt.claims);
       if (units > remaining) {
-        const claimedBy = latestClaimerForItem(receipt.claims, itemId, name);
+        const claimedBy = latestClaimerForItem(receipt.claims, itemId, name, guestId);
         throw Object.assign(new Error("not_enough_remaining"), {
           code: "not_enough_remaining",
           remaining,
@@ -662,6 +668,7 @@ export async function addClaims(
       const claim: InternalClaim = {
         id: `cl_${shortId()}`,
         itemId,
+        guestId,
         personName: name,
         personContact: input.personContact?.trim() || undefined,
         units,
@@ -725,6 +732,45 @@ export async function removeClaim(
     await upsertReceipt(client, receipt);
     emit(receipt, "unclaim");
     return { receipt: toPublic(receipt), removed };
+  });
+}
+
+/** Stamp guestId onto claims this device can prove with owner tokens. Host token is not enough. */
+export async function attachGuestClaims(
+  id: string,
+  input: { guestId: string; tokens?: Record<string, string> | null },
+) {
+  const guestId = readGuestId(input.guestId);
+  if (!guestId) {
+    throw Object.assign(new Error("guest_id_required"), {
+      code: "invalid",
+      message: "guestId is required",
+    });
+  }
+  const tokens = input.tokens ?? {};
+  const ids = Object.keys(tokens);
+  if (ids.length > 500) {
+    throw Object.assign(new Error("too_many_tokens"), { code: "invalid" });
+  }
+  await ensureSchema();
+  return withTransaction(async (client) => {
+    const receipt = await requireReceipt(client, id, { forUpdate: true });
+    let updated = 0;
+    for (const claimId of ids) {
+      const token = tokens[claimId];
+      if (!token) continue;
+      const claim = receipt.claims.find((row) => row.id === claimId);
+      if (!claim || claim.autoLeftover) continue;
+      if (claim.ownerToken !== token) continue;
+      if (claim.guestId === guestId) continue;
+      claim.guestId = guestId;
+      updated += 1;
+    }
+    if (updated > 0) {
+      await upsertReceipt(client, receipt);
+      emit(receipt, "updated");
+    }
+    return { updated };
   });
 }
 

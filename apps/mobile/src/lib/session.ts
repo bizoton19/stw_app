@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { GuestIdentity } from "./types";
+import { isGuestId, resolveGuestId } from "./guest-id";
+import type { GuestDraft, GuestIdentity } from "./types";
 
 const HOST_PREFIX = "stw-host:";
 const GUEST_PREFIX = "stw-guest:";
@@ -21,6 +22,15 @@ async function persistGuest(id: string, guest: GuestIdentity) {
   await AsyncStorage.setItem(`${GUEST_PREFIX}${id}`, JSON.stringify(guest));
 }
 
+function coerceGuest(id: string, input: GuestDraft): GuestIdentity {
+  const existing = guests.get(id);
+  return {
+    guestId: resolveGuestId(input.guestId, existing?.guestId),
+    name: input.name.trim(),
+    contact: (input.contact ?? "").trim(),
+  };
+}
+
 async function persistTokens(id: string, map: Record<string, string>) {
   tokens.set(id, map);
   await AsyncStorage.setItem(`${TOKEN_PREFIX}${id}`, JSON.stringify(map));
@@ -37,7 +47,19 @@ export async function hydrateSession() {
       if (key.startsWith(HOST_PREFIX)) host.set(key.slice(HOST_PREFIX.length), value);
       else if (key.startsWith(GUEST_PREFIX)) {
         try {
-          guests.set(key.slice(GUEST_PREFIX.length), JSON.parse(value) as GuestIdentity);
+          const receiptId = key.slice(GUEST_PREFIX.length);
+          if (guests.has(receiptId)) continue;
+          const parsed = JSON.parse(value) as { guestId?: string; name?: string; contact?: string };
+          if (typeof parsed.name !== "string" || !parsed.name.trim()) continue;
+          const next = coerceGuest(receiptId, {
+            guestId: parsed.guestId,
+            name: parsed.name,
+            contact: typeof parsed.contact === "string" ? parsed.contact : "",
+          });
+          guests.set(receiptId, next);
+          if (!isGuestId(parsed.guestId)) {
+            await AsyncStorage.setItem(key, JSON.stringify(next));
+          }
         } catch {
           /* ignore */
         }
@@ -71,12 +93,23 @@ export async function ensureDemoHost(isHostQuery: boolean) {
   if (isHostQuery) await persistHost("demo", "demo-host");
 }
 
-export async function saveGuest(receiptId: string, guest: GuestIdentity) {
-  await persistGuest(receiptId, guest);
+export async function saveGuest(receiptId: string, guest: GuestDraft): Promise<GuestIdentity> {
+  const next = coerceGuest(receiptId, guest);
+  await persistGuest(receiptId, next);
+  return next;
 }
 
 export function getGuest(receiptId: string): GuestIdentity | null {
-  return guests.get(receiptId) ?? null;
+  const existing = guests.get(receiptId);
+  if (!existing) return null;
+  if (isGuestId(existing.guestId)) return existing;
+  const next = coerceGuest(receiptId, existing);
+  void persistGuest(receiptId, next);
+  return next;
+}
+
+export function getClaimTokens(receiptId: string): Record<string, string> {
+  return { ...(tokens.get(receiptId) ?? {}) };
 }
 
 export async function saveClaimToken(receiptId: string, claimId: string, token: string) {

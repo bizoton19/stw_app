@@ -14,16 +14,19 @@ export async function POST(
       itemId?: string;
       personName?: string;
       personContact?: string;
+      guestId?: string;
       units?: number;
       claims?: { itemId?: string; units?: number }[];
     };
     const personName = String(body.personName ?? "");
     const personContact = body.personContact;
+    const guestId = body.guestId;
 
     if (Array.isArray(body.claims)) {
       const result = await addClaims(id, {
         personName,
         personContact,
+        guestId,
         claims: body.claims.map((row) => ({
           itemId: String(row.itemId ?? ""),
           units: Number(row.units),
@@ -53,6 +56,7 @@ export async function POST(
       itemId: String(body.itemId ?? ""),
       personName,
       personContact,
+      guestId,
       units: Number(body.units),
     });
     void (async () => {

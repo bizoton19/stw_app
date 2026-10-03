@@ -48,6 +48,8 @@ export type Fee = {
 export type Claim = {
   id: string;
   itemId: string;
+  /** Stable joiner id. Missing on claims saved before guest identity shipped. */
+  guestId?: string;
   personName: string;
   personContact?: string;
   units: number;
@@ -105,6 +107,7 @@ export type Receipt = {
 };
 
 export type PersonTotal = {
+  guestId?: string;
   personName: string;
   personContact?: string;
   itemCents: number;
@@ -126,7 +129,10 @@ export type PublicReceipt = Receipt & {
   remaining: Record<string, number>;
 };
 
-export type GuestIdentity = { name: string; contact: string };
+export type GuestIdentity = { guestId: string; name: string; contact: string };
+
+/** Join / RSVP payload. `guestId` is omitted on first join and reused from storage. */
+export type GuestDraft = { guestId?: string; name: string; contact: string };
 
 export type PickedImage = {
   uri: string;
