@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
  * `GET /api/places/google` for the one place the user picks.
  *
  * 200: `{ places: GooglePlaceCard[], provider: "google", limit: 7, cached }`
- * `places[].photoUrls` is at most two `/api/places/photo` URLs.
+ * `places[].photoUrls` is at most three `/api/places/photo` URLs.
  * `places[].photoUrl` is the first of those, or null. Absolute URLs use the
  * request `x-forwarded-host` or `Host` (and `x-forwarded-proto`). A host of
  * `0.0.0.0` is ignored; the path is then relative. Photo bytes are cached

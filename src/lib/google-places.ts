@@ -12,7 +12,7 @@
  * coordinates or coordinates outside the requested radius are dropped. The
  * nearby mask does not include rating, userRatingCount, or websiteUri —
  * those bill the whole search as Enterprise.
- * Photos are proxied. Up to two nearby photos are cached indefinitely by
+ * Photos are proxied. Up to three nearby photos are cached indefinitely by
  * Google photo id and are not fetched again.
  * The typeahead bridge uses Text Search
  * (`places:searchText`) with the place **name** and **lat/lng** and an
@@ -41,7 +41,7 @@ const PLACES_BASE = "https://places.googleapis.com/v1";
 export { NEARBY_CACHE_MAX_AGE_SECONDS, NEARBY_CACHE_TTL_MS, PHOTO_CACHE_CONTROL };
 
 export const NEARBY_LIMIT = 7;
-export const NEARBY_PHOTO_LIMIT = 2;
+export const NEARBY_PHOTO_LIMIT = 3;
 export const NEARBY_GEOHASH_PRECISION = 6;
 export const PHOTO_MAX_WIDTH_PX = 400;
 export const DEFAULT_NEARBY_RADIUS_M = 1500;
@@ -109,7 +109,7 @@ export type GooglePlaceCard = {
   /** First proxied photo. Same string as `photoUrls[0]` when that array is set. */
   photoUrl: string | null;
   /**
-   * Nearby only. At most two absolute `/api/places/photo` URLs.
+   * Nearby only. At most three `/api/places/photo` URLs.
    * `photoUrl` is the first entry so older clients keep working.
    */
   photoUrls?: string[];

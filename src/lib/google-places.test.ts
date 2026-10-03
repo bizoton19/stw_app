@@ -305,7 +305,7 @@ describe("google places nearby", () => {
     assert.equal(body.locationRestriction?.circle?.radius, 1500);
   });
 
-  it("returns at most two proxied photos and keeps photoUrl as the first", async () => {
+  it("returns at most three proxied photos and keeps photoUrl as the first", async () => {
     process.env.GOOGLE_PLACES_API_KEY = KEY;
     installFetch(
       () =>
@@ -317,6 +317,7 @@ describe("google places nearby", () => {
                   { name: "places/ChIJgoogle123/photos/FirstPhoto1" },
                   { name: "places/ChIJgoogle123/photos/SecondPhoto" },
                   { name: "places/ChIJgoogle123/photos/ThirdPhotoX" },
+                  { name: "places/ChIJgoogle123/photos/FourthPhoto" },
                   { name: "places/ChIJgoogle123/photos/FirstPhoto1" },
                   { name: "not-a-photo" },
                 ],
@@ -335,7 +336,8 @@ describe("google places nearby", () => {
     assert.equal(place?.photoUrl, place?.photoUrls?.[0]);
     assert.match(place?.photoUrls?.[0] ?? "", /FirstPhoto1/);
     assert.match(place?.photoUrls?.[1] ?? "", /SecondPhoto/);
-    assert.equal(place?.photoUrls?.some((url) => url.includes("ThirdPhotoX")), false);
+    assert.match(place?.photoUrls?.[2] ?? "", /ThirdPhotoX/);
+    assert.equal(place?.photoUrls?.some((url) => url.includes("FourthPhoto")), false);
     assert.equal(place?.photoUrls?.every((url) => url.startsWith("https://api.test/api/places/photo?")), true);
     assert.equal(place?.photoUrls?.some((url) => url.includes(KEY) || url.includes("googleapis.com")), false);
     assert.equal("rating" in (place ?? {}), false);
