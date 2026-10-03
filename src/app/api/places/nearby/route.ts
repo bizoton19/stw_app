@@ -10,7 +10,10 @@ export const dynamic = "force-dynamic";
  * Nearby food and drink, Google Places Nearby (New), server proxy.
  *
  * Query: `lat` (required), `lng` (required), `radius` (optional meters,
- * default 1500, clamped 50–50000).
+ * default 1500, clamped 50–50000). Ranked by popularity. Primary types:
+ * restaurant, bar, cafe, bakery, coffee_shop (specific types such as
+ * italian_restaurant still match). Places with no coordinates, or
+ * coordinates outside the radius, are omitted.
  *
  * 200: `{ places: GooglePlaceCard[], provider: "google", limit: 7, cached }`
  * `places[].photoUrl` is this API’s `/api/places/photo` URL (max width 400).

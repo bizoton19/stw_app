@@ -5,7 +5,9 @@
  * header. Do not import this module from a Client Component — Next can inline
  * `process.env.*` into the browser bundle. Mobile and web call the routes.
  *
- * Nearby uses `places:searchNearby` (top 7, in-process cache ~8 min by geohash).
+ * Nearby uses `places:searchNearby` (top 7, popularity, primary food/drink
+ * types, in-process cache ~8 min by geohash). Results with no coordinates
+ * or coordinates outside the requested radius are dropped.
  * Photos are proxied. The typeahead bridge uses Text Search (`places:searchText`)
  * with the place **name** and **lat/lng** — the Find Place replacement. It never
  * calls Place Details and never forwards a Mapbox or MapKit id.
@@ -30,7 +32,11 @@ const BRIDGE_EXACT_MAX_DISTANCE_M = 5_000;
 const MAX_PHOTO_BYTES = 5_000_000;
 const MAX_NAME_LENGTH = 200;
 
-const NEARBY_INCLUDED_TYPES = ["restaurant", "bar", "cafe", "bakery", "coffee_shop"];
+/**
+ * General Table A primary types. Nearby Search still returns more specific
+ * primary types such as `italian_restaurant` when `restaurant` is included.
+ */
+const NEARBY_PRIMARY_TYPES = ["restaurant", "bar", "cafe", "bakery", "coffee_shop"];
 
 const PLACE_FIELD_MASK = [
   "places.id",
@@ -304,6 +310,16 @@ function toCard(place: NormalizedPlace, origin: string): GooglePlaceCard {
   };
 }
 
+function placeInsideNearbyRadius(
+  place: NormalizedPlace,
+  lat: number,
+  lng: number,
+  radius: number,
+): boolean {
+  if (place.lat == null || place.lng == null) return false;
+  return distanceMeters(lat, lng, place.lat, place.lng) <= radius;
+}
+
 function nearbyCacheKey(lat: number, lng: number, radius: number): string {
   const bucket = Math.round(radius / 100) * 100;
   return `${geohash(lat, lng, NEARBY_GEOHASH_PRECISION)}:${bucket}`;
@@ -367,9 +383,9 @@ export async function searchNearby(input: {
   const data = await googlePost(
     "places:searchNearby",
     {
-      includedTypes: NEARBY_INCLUDED_TYPES,
+      includedPrimaryTypes: NEARBY_PRIMARY_TYPES,
       maxResultCount: NEARBY_LIMIT,
-      rankPreference: "DISTANCE",
+      rankPreference: "POPULARITY",
       languageCode: "en",
       locationRestriction: {
         circle: {
@@ -380,7 +396,9 @@ export async function searchNearby(input: {
     },
     key,
   );
-  const places = readPlaces(data).slice(0, NEARBY_LIMIT);
+  const places = readPlaces(data)
+    .filter((place) => placeInsideNearbyRadius(place, coords.lat, coords.lng, radius))
+    .slice(0, NEARBY_LIMIT);
   writeNearbyCache(cacheKey, places);
   return {
     places: places.map((place) => toCard(place, input.origin ?? "")),

@@ -172,17 +172,94 @@ describe("google places nearby", () => {
       maxResultCount?: number;
       rankPreference?: string;
       includedTypes?: string[];
+      includedPrimaryTypes?: string[];
       locationRestriction?: { circle?: { center?: { latitude?: number; longitude?: number }; radius?: number } };
       placeId?: string;
     };
     assert.equal(body.maxResultCount, 7);
-    assert.equal(body.rankPreference, "DISTANCE");
+    assert.equal(body.rankPreference, "POPULARITY");
     assert.equal(body.placeId, undefined);
-    assert.ok(body.includedTypes?.includes("restaurant"));
+    assert.equal(body.includedTypes, undefined);
+    assert.deepEqual(body.includedPrimaryTypes, [
+      "restaurant",
+      "bar",
+      "cafe",
+      "bakery",
+      "coffee_shop",
+    ]);
     assert.equal(body.locationRestriction?.circle?.center?.latitude, 40.7128);
     assert.equal(body.locationRestriction?.circle?.center?.longitude, -74.006);
     assert.equal(body.locationRestriction?.circle?.radius, 1500);
     assert.equal(JSON.stringify(body).includes(MAPBOX_ID), false);
+  });
+
+  it("sends Washington DC coordinates unswapped and drops a Dubai place", async () => {
+    process.env.GOOGLE_PLACES_API_KEY = KEY;
+    const { calls } = installFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            places: [
+              googlePlace({
+                id: "ChIJdc",
+                displayName: { text: "Le Diplomate" },
+                formattedAddress: "1601 14th St NW, Washington, DC",
+                location: { latitude: 38.911, longitude: -77.032 },
+                primaryType: "italian_restaurant",
+              }),
+              googlePlace({
+                id: "ChIJdubai",
+                displayName: { text: "Dubai Grill" },
+                formattedAddress: "Dubai",
+                location: { latitude: 25.2048, longitude: 55.2708 },
+                primaryType: "restaurant",
+              }),
+              googlePlace({
+                id: "ChIJnoloc",
+                displayName: { text: "Missing Pin" },
+                location: undefined,
+                primaryType: "cafe",
+              }),
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    );
+
+    const res = await nearbyGET(
+      new Request("http://api.test/api/places/nearby?lat=38.9072&lng=-77.0369"),
+    );
+    assert.equal(res.status, 200);
+    const data = (await res.json()) as {
+      places: Array<{ placeId: string; category: string | null; lat: number | null; lng: number | null }>;
+    };
+    assert.deepEqual(
+      data.places.map((place) => place.placeId),
+      ["ChIJdc"],
+    );
+    assert.equal(data.places[0]?.category, "italian_restaurant");
+
+    assert.equal(calls.length, 1);
+    const body = JSON.parse(calls[0]!.body ?? "{}") as {
+      rankPreference?: string;
+      includedTypes?: string[];
+      includedPrimaryTypes?: string[];
+      locationRestriction?: {
+        circle?: { center?: { latitude?: number; longitude?: number }; radius?: number };
+      };
+    };
+    assert.equal(body.rankPreference, "POPULARITY");
+    assert.equal(body.includedTypes, undefined);
+    assert.deepEqual(body.includedPrimaryTypes, [
+      "restaurant",
+      "bar",
+      "cafe",
+      "bakery",
+      "coffee_shop",
+    ]);
+    assert.equal(body.locationRestriction?.circle?.center?.latitude, 38.9072);
+    assert.equal(body.locationRestriction?.circle?.center?.longitude, -77.0369);
+    assert.equal(body.locationRestriction?.circle?.radius, 1500);
   });
 
   it("rejects bad coordinates without calling Google", async () => {
