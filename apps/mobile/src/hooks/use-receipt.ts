@@ -10,19 +10,23 @@ export function useReceipt(id: string, opts?: { inviteToken?: string | null }) {
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState<"live" | "reconnecting" | "offline">("reconnecting");
 
+  const applyReceipt = useCallback((next: PublicReceipt) => {
+    setReceipt(next);
+    setError(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       const qs = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "";
       const next = await api<PublicReceipt>(`/api/receipts/${id}${qs}`);
-      setReceipt(next);
-      setError(null);
+      applyReceipt(next);
       return next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "offline");
       setLive("offline");
       return null;
     }
-  }, [id, inviteToken]);
+  }, [applyReceipt, id, inviteToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,5 +69,5 @@ export function useReceipt(id: string, opts?: { inviteToken?: string | null }) {
     };
   }, [id, refresh]);
 
-  return { receipt, error, live, refresh };
+  return { receipt, error, live, refresh, applyReceipt };
 }

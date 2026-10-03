@@ -310,8 +310,9 @@ export async function getPublicReceipt(
 ): Promise<PublicReceipt> {
   await ensureSchema();
   await seedDemoIfNeeded();
+  // Read path: no FOR UPDATE — home status refresh + board polls used to serialize on the row.
   return withTransaction(async (client) => {
-    const receipt = await requireReceipt(client, id, { forUpdate: true });
+    const receipt = await requireReceipt(client, id);
     if (promotePlanningToDraftIfDue(receipt)) {
       await upsertReceipt(client, receipt);
       emit(receipt, "updated");

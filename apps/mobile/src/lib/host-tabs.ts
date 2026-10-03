@@ -93,8 +93,10 @@ export async function listHostedReceipts(): Promise<HostedReceiptSummary[]> {
 }
 
 /** Refresh open/closed from the API so the desk stays accurate after close/reopen elsewhere. */
-export async function refreshHostedReceiptStatuses(): Promise<HostedReceiptSummary[]> {
-  const list = await listHostedReceipts();
+export async function refreshHostedReceiptStatuses(
+  preloaded?: HostedReceiptSummary[],
+): Promise<HostedReceiptSummary[]> {
+  const list = preloaded ?? (await listHostedReceipts());
   if (list.length === 0) return [];
   const { venueLocationKey } = await import("./venue-day");
   const next = await Promise.all(

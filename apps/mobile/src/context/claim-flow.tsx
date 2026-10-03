@@ -48,7 +48,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
   const id = String(params.id ?? "");
   const hostQuery = params.host === "1" || params.host === "true";
   const inviteToken = typeof params.invite === "string" ? params.invite : "";
-  const { receipt, error, live, refresh } = useReceipt(id, { inviteToken });
+  const { receipt, error, live, refresh, applyReceipt } = useReceipt(id, { inviteToken });
   const [guest, setGuest] = useState<GuestIdentity | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [queued, setQueued] = useState<string[]>([]);
@@ -239,10 +239,14 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     const token = getHostToken(id);
     setBusy(true);
     try {
-      await api(`/api/receipts/${id}/finalize`, { method: "POST", hostToken: token });
+      const result = await api<{ receipt: PublicReceipt }>(`/api/receipts/${id}/finalize`, {
+        method: "POST",
+        hostToken: token,
+      });
       const { patchHostedReceipt } = await import("@/lib/host-tabs");
       await patchHostedReceipt(id, { status: "finalized" });
-      await refresh();
+      if (result.receipt) applyReceipt(result.receipt);
+      else await refresh();
       return true;
     } catch {
       setMessage("Only the host can close claiming.");
@@ -250,16 +254,20 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, [id, refresh]);
+  }, [applyReceipt, id, refresh]);
 
   const reopen = useCallback(async () => {
     const token = getHostToken(id);
     setBusy(true);
     try {
-      await api(`/api/receipts/${id}/reopen`, { method: "POST", hostToken: token });
+      const result = await api<{ receipt: PublicReceipt }>(`/api/receipts/${id}/reopen`, {
+        method: "POST",
+        hostToken: token,
+      });
       const { patchHostedReceipt } = await import("@/lib/host-tabs");
       await patchHostedReceipt(id, { status: "open" });
-      await refresh();
+      if (result.receipt) applyReceipt(result.receipt);
+      else await refresh();
       return true;
     } catch {
       setMessage("Only the host can reopen claiming.");
@@ -267,7 +275,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, [id, refresh]);
+  }, [applyReceipt, id, refresh]);
 
   const deleteClosed = useCallback(async () => {
     const token = getHostToken(id);

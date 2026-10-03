@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -57,6 +57,10 @@ function draftPlaceLabel(draft: PersistedHostDraft): string {
   return draft.venue?.name?.trim() || draft.restaurant.trim() || "Unfinished check";
 }
 
+/** Skip hammering GET /api/receipts/:id for every hosted tab on every focus. */
+const STATUS_REFRESH_MIN_MS = 20_000;
+let lastHostedStatusRefreshAt = 0;
+
 export default function HomeScreen() {
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -65,13 +69,16 @@ export default function HomeScreen() {
 
   const refresh = useCallback(() => {
     void (async () => {
-      // Paint AsyncStorage first so a just-published tab shows immediately;
-      // status GETs can take a beat and used to leave Home empty until they finished.
+      // Paint AsyncStorage first so a just-published / just-closed tab shows immediately.
       setActiveId(await getActiveHostReceiptId());
-      setHosted(await listHostedReceipts());
+      const local = await listHostedReceipts();
+      setHosted(local);
       const saved = await loadHostDraft();
       setDraft(saved && draftHasProgress(saved) ? saved : null);
-      setHosted(await refreshHostedReceiptStatuses());
+      const now = Date.now();
+      if (now - lastHostedStatusRefreshAt < STATUS_REFRESH_MIN_MS) return;
+      lastHostedStatusRefreshAt = now;
+      setHosted(await refreshHostedReceiptStatuses(local));
     })();
   }, []);
 
@@ -80,10 +87,6 @@ export default function HomeScreen() {
       refresh();
     }, [refresh]),
   );
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   const active = useMemo(
     () => hosted.find((row) => row.id === activeId) ?? hosted[0] ?? null,
