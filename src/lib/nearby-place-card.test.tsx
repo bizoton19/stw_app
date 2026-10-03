@@ -223,6 +223,22 @@ test("nearby cards are a short horizontal swipe with the photo as the background
   assert.doesNotMatch(pair, /4\.6/);
 });
 
+test("web nearby list shows loading while the nearby request has not returned", () => {
+  const html = renderToStaticMarkup(
+    <NearbyPlaceCards places={[]} loading onSelect={() => {}} />,
+  );
+  assert.match(html, /Nearby/);
+  assert.match(html, /Loading nearby places/);
+  assert.match(html, /role="status"/);
+  assert.match(html, /aria-busy="true"/);
+  assert.match(html, /animate-spin/);
+  assert.match(html, /h-\[220px\]/);
+  assert.doesNotMatch(html, /Joes Bar/);
+  assert.doesNotMatch(html, /Powered by Google/);
+  assert.doesNotMatch(html, /[?&]key=/);
+  assert.doesNotMatch(html, /rating|website/i);
+});
+
 test("place detail shows the nearby photo and rating only from place details", () => {
   const before = renderToStaticMarkup(<NearbyPlaceDetail card={card} />);
   assert.match(before, /1 Main St, New York, NY/);

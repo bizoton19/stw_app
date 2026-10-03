@@ -23,11 +23,32 @@ function CardPhoto({ url }: { url: string }) {
 export function NearbyPlaceCards({
   places,
   onSelect,
+  loading = false,
 }: {
   places: NearbyPlaceCard[];
   onSelect: (card: NearbyPlaceCard) => void;
+  /** True while GET /api/places/nearby has not returned. */
+  loading?: boolean;
 }) {
-  if (places.length === 0) return null;
+  if (places.length === 0) {
+    if (!loading) return null;
+    return (
+      <div className="mt-3 min-w-0 max-w-full">
+        <p className="mb-2 text-[12px] font-semibold text-muted-foreground">Nearby</p>
+        <div
+          role="status"
+          aria-busy="true"
+          className="flex h-[220px] w-[min(17.5rem,78%)] items-center justify-center gap-2 rounded-2xl bg-[var(--stw-chrome)] text-muted-foreground"
+        >
+          <span
+            className="size-6 shrink-0 animate-spin rounded-full border-[1.5px] border-border border-t-primary"
+            aria-hidden="true"
+          />
+          <span className="text-[13px] font-medium">Loading nearby places</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mt-3 min-w-0 max-w-full">
       <p className="mb-2 text-[12px] font-semibold text-muted-foreground">Nearby</p>
