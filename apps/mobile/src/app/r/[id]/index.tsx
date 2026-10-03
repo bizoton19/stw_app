@@ -414,7 +414,8 @@ function PickBoard() {
       total={totalSteps}
       hideProgress={flow.isHost}
       kicker={receipt.restaurant || "The check"}
-          flow.isHost ? "You're hosting — claim under what name?" : "Claim what you ordered"
+      motif="label-band"
+      title="Claim what you ordered"
       onBack={flow.isHost ? goHostDesk : undefined}
       footer={footer}
       scroll={false}
