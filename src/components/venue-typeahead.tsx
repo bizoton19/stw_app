@@ -159,6 +159,7 @@ export function VenueTypeahead({
 }: Props) {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [nearby, setNearby] = useState<NearbyPlaceCard[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const sessionRef = useRef(newSession());
@@ -191,6 +192,7 @@ export function VenueTypeahead({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setNearbyLoading(true);
         setHint("Using nearby places to rank results.");
         setLocationReady(true);
       },
@@ -212,6 +214,8 @@ export function VenueTypeahead({
         if (!cancelled) setNearby(cards);
       } catch {
         if (!cancelled) setNearby([]);
+      } finally {
+        if (!cancelled) setNearbyLoading(false);
       }
     })();
     return () => {
@@ -406,7 +410,11 @@ export function VenueTypeahead({
         <p className="mt-2 text-[12px] text-muted-foreground">Receipt date · {dateLabel}</p>
       ) : null}
       {coords && shouldShowNearbyCards(value) ? (
-        <NearbyPlaceCards places={nearby} onSelect={selectNearbyCard} />
+        <NearbyPlaceCards
+          places={nearby}
+          loading={nearbyLoading}
+          onSelect={selectNearbyCard}
+        />
       ) : null}
       {value.trim().length >= 2 && predictions.length === 0 ? (
         <p className="mt-2 text-[12px] text-muted-foreground">
