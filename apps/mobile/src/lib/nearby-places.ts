@@ -21,8 +21,10 @@ export type NearbyPlaceCard = {
    */
   rating: number | null;
   userRatingCount: number | null;
-  /** Proxied `/api/places/photo` URL from nearby. Never a Google URL that carries an API key. */
+  /** First proxied `/api/places/photo` URL, or null. Same as `photoUrls[0]`. */
   photoUrl: string | null;
+  /** At most two proxied photo URLs from nearby. Never a Google URL with an API key. */
+  photoUrls: string[];
   websiteUri: string | null;
   googleMapsUri: string | null;
 };
@@ -89,6 +91,10 @@ export function parseNearbyPlaceCard(row: unknown): NearbyPlaceCard | null {
   const lat = finite(place.lat);
   const lng = finite(place.lng);
   if (lat == null || lng == null) return null;
+  const photoUrls = placePhotos({
+    photoUrl: text(place.photoUrl),
+    photoUrls: Array.isArray(place.photoUrls) ? place.photoUrls : null,
+  });
   return {
     placeId,
     name,
@@ -99,7 +105,8 @@ export function parseNearbyPlaceCard(row: unknown): NearbyPlaceCard | null {
     provider: "google",
     rating: null,
     userRatingCount: null,
-    photoUrl: safePhotoUrl(place.photoUrl),
+    photoUrl: photoUrls[0] ?? null,
+    photoUrls,
     websiteUri: null,
     googleMapsUri: text(place.googleMapsUri),
   };
@@ -161,6 +168,7 @@ export function mergePlaceDetail(card: NearbyPlaceCard, detail: PlaceDetail | nu
     websiteUri: detail.websiteUri,
     googleMapsUri: detail.googleMapsUri ?? card.googleMapsUri,
     photoUrl: card.photoUrl,
+    photoUrls: card.photoUrls,
   };
 }
 
@@ -214,7 +222,7 @@ export function venueFromNearbyCard(card: NearbyPlaceCard, confirmedAt: string) 
   };
 }
 
-/** Photos already on the card. Does not call Google. */
+/** At most two photos already on the nearby card. Does not call Google. */
 export function placePhotos(card: {
   photoUrl?: string | null;
   photoUrls?: Array<string | null> | null;
@@ -225,7 +233,7 @@ export function placePhotos(card: {
         return safe ? [safe] : [];
       })
     : [];
-  if (listed.length > 0) return listed.slice(0, 8);
+  if (listed.length > 0) return listed.slice(0, 2);
   const one = safePhotoUrl(card.photoUrl);
   return one ? [one] : [];
 }

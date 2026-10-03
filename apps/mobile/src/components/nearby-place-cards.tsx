@@ -14,17 +14,17 @@ import { colors } from "@/lib/theme";
 const CARD_HEIGHT = 148;
 const CARD_GAP = 12;
 
-function CardPhoto({ url }: { url: string | null }) {
+function CardPhoto({ url }: { url: string }) {
   const [failed, setFailed] = useState(false);
-  if (!url || failed) {
-    return <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.chrome }]} />;
+  if (failed) {
+    return <View style={styles.photo} />;
   }
   return (
     // Decorative. The place name is the button label.
     // eslint-disable-next-line jsx-a11y/alt-text
     <Image
       source={{ uri: url }}
-      style={StyleSheet.absoluteFill}
+      style={styles.photo}
       resizeMode="cover"
       accessible={false}
       onError={() => setFailed(true)}
@@ -58,7 +58,7 @@ export function NearbyPlaceCards({
         contentContainerStyle={styles.row}
       >
         {places.map((card) => {
-          const photo = placePhotos({ photoUrl: card.photoUrl })[0] ?? null;
+          const photos = placePhotos(card);
           const category = formatPlaceCategory(card.category);
           return (
             <Pressable
@@ -72,18 +72,24 @@ export function NearbyPlaceCards({
                 pressed && { opacity: 0.86 },
               ]}
             >
-              <CardPhoto url={photo} />
-              <View style={[styles.caption, !photo && styles.captionPlain]}>
-                <Text numberOfLines={1} style={[styles.name, !photo && styles.namePlain]}>
+              <View style={styles.photos}>
+                {photos.length === 0 ? (
+                  <View style={styles.photo} />
+                ) : (
+                  photos.map((url, index) => <CardPhoto key={`${url}-${index}`} url={url} />)
+                )}
+              </View>
+              <View style={[styles.caption, photos.length === 0 && styles.captionPlain]}>
+                <Text numberOfLines={1} style={[styles.name, photos.length === 0 && styles.namePlain]}>
                   {card.name}
                 </Text>
                 {card.formattedAddress ? (
-                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
+                  <Text numberOfLines={1} style={[styles.meta, photos.length === 0 && styles.metaPlain]}>
                     {card.formattedAddress}
                   </Text>
                 ) : null}
                 {category ? (
-                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
+                  <Text numberOfLines={1} style={[styles.meta, photos.length === 0 && styles.metaPlain]}>
                     {category}
                   </Text>
                 ) : null}
@@ -110,6 +116,15 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     borderRadius: 16,
     overflow: "hidden",
+    backgroundColor: colors.chrome,
+  },
+  photos: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "row",
+  },
+  photo: {
+    flex: 1,
+    height: "100%",
     backgroundColor: colors.chrome,
   },
   caption: {

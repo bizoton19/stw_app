@@ -32,6 +32,9 @@ const card: NearbyPlaceCard = {
   rating: 4.6,
   userRatingCount: 321,
   photoUrl: "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Fref&maxWidthPx=400",
+  photoUrls: [
+    "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Fref&maxWidthPx=400",
+  ],
   websiteUri: "https://example.com",
   googleMapsUri: "https://maps.google.com/?cid=1",
 };
@@ -99,6 +102,7 @@ test("nearby cards omit rating and website until one place details call", () => 
         ...card,
         placeId: "keyed-photo",
         photoUrl: "https://maps.googleapis.com/maps/api/place/photo?key=secret",
+        photoUrls: ["https://maps.googleapis.com/maps/api/place/photo?key=secret"],
       },
       ...Array.from({ length: 8 }, (_, i) => ({ ...card, placeId: `extra-${i}` })),
     ],
@@ -118,6 +122,25 @@ test("nearby cards omit rating and website until one place details call", () => 
   assert.equal(places[0]!.userRatingCount, null);
   assert.equal(places[0]!.websiteUri, null);
   assert.equal(places[0]!.photoUrl, card.photoUrl);
+  assert.deepEqual(places[0]!.photoUrls, [card.photoUrl]);
+  const second =
+    "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Ftwo&maxWidthPx=400";
+  const third =
+    "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Fthree&maxWidthPx=400";
+  const paired = placesFromNearbyResponse(200, {
+    places: [
+      {
+        ...card,
+        photoUrls: [card.photoUrl, second, third, "https://maps.googleapis.com/x?key=secret"],
+      },
+    ],
+  });
+  assert.deepEqual(paired[0]!.photoUrls, [card.photoUrl, second]);
+  assert.equal(paired[0]!.photoUrl, card.photoUrl);
+  const lone = { ...card } as Record<string, unknown>;
+  delete lone.photoUrls;
+  const fromCompat = placesFromNearbyResponse(200, { places: [lone] });
+  assert.deepEqual(fromCompat[0]!.photoUrls, [card.photoUrl]);
 
   const nearbyVenue = venueFromNearbyCard(places[0]!, "2026-10-03T12:00:00.000Z");
   assert.equal(nearbyVenue.provider, "google");
@@ -157,6 +180,7 @@ test("nearby cards omit rating and website until one place details call", () => 
   assert.equal(merged.userRatingCount, 321);
   assert.equal(merged.websiteUri, "https://example.com");
   assert.equal(merged.photoUrl, card.photoUrl);
+  assert.deepEqual(merged.photoUrls, [card.photoUrl]);
   assert.equal(mergePlaceDetail(places[0]!, detail && { ...detail, placeId: "other" }).rating, null);
   const venue = venueFromNearbyCard(merged, "2026-10-03T12:00:00.000Z");
   assert.equal(venue.rating, 4.6);
@@ -182,6 +206,18 @@ test("nearby cards are a short horizontal swipe with the photo as the background
   assert.doesNotMatch(html, /example\.com/);
   assert.doesNotMatch(html, /[?&]key=/);
   assert.equal(renderToStaticMarkup(<NearbyPlaceCards places={[]} onSelect={() => {}} />), "");
+  const secondPhoto =
+    "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Ftwo&maxWidthPx=400";
+  const pair = renderToStaticMarkup(
+    <NearbyPlaceCards
+      places={[{ ...card, photoUrl: card.photoUrl, photoUrls: [card.photoUrl!, secondPhoto] }]}
+      onSelect={() => {}}
+    />,
+  );
+  assert.match(pair, /photos%2Fref/);
+  assert.match(pair, /photos%2Ftwo/);
+  assert.equal(pair.match(/<img /g)?.length, 2);
+  assert.doesNotMatch(pair, /4\.6/);
 });
 
 test("place detail shows the nearby photo and rating only from place details", () => {
@@ -220,6 +256,15 @@ test("place detail shows the nearby photo and rating only from place details", (
   assert.match(html, /object-cover/);
   assert.equal(formatPlaceCategory("bar"), "Bar");
   assert.equal(httpHref("javascript:alert(1)"), null);
+  const secondPhoto =
+    "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Ftwo&maxWidthPx=400";
+  const two = renderToStaticMarkup(
+    <NearbyPlaceDetail card={{ ...card, photoUrl: card.photoUrl, photoUrls: [card.photoUrl!, secondPhoto] }} />,
+  );
+  assert.match(two, /photos%2Fref/);
+  assert.match(two, /photos%2Ftwo/);
+  assert.equal(two.match(/<img /g)?.length, 2);
+  assert.doesNotMatch(two, /4\.6/);
   assert.deepEqual(
     placePhotos({
       photoUrl: card.photoUrl,
@@ -227,6 +272,18 @@ test("place detail shows the nearby photo and rating only from place details", (
     }),
     [card.photoUrl, "https://api.test/api/places/photo?name=b&maxWidthPx=400"],
   );
+  assert.deepEqual(
+    placePhotos({
+      photoUrl: "https://api.test/fallback",
+      photoUrls: [
+        "https://api.test/a",
+        "https://api.test/b",
+        "https://api.test/c",
+      ],
+    }),
+    ["https://api.test/a", "https://api.test/b"],
+  );
+  assert.deepEqual(placePhotos({ photoUrl: card.photoUrl, photoUrls: [] }), [card.photoUrl]);
 });
 
 test("selecting a nearby card does not call the typeahead bridge", () => {

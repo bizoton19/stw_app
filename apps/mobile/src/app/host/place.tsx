@@ -25,9 +25,8 @@ export default function NearbyPlaceScreen() {
   const [plan] = useState(() => currentNearbyPlan());
   const card = plan?.card ?? null;
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
-  const photos = card ? placePhotos({ photoUrl: card.photoUrl }) : [];
-  const [hero, ...rest] = photos;
-  const [heroFailed, setHeroFailed] = useState(false);
+  const photos = card ? placePhotos(card) : [];
+  const [failed, setFailed] = useState<Record<string, boolean>>({});
   const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
   const category = formatPlaceCategory(detail?.category ?? card?.category);
   const address = detail?.formattedAddress ?? card?.formattedAddress;
@@ -70,28 +69,21 @@ export default function NearbyPlaceScreen() {
       >
         {card ? (
           <View style={styles.stack}>
-            {hero && !heroFailed ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image
-                source={{ uri: hero }}
-                style={styles.hero}
-                resizeMode="cover"
-                accessible={false}
-                onError={() => setHeroFailed(true)}
-              />
-            ) : null}
-            {rest.length > 0 ? (
-              <View style={styles.rest}>
-                {rest.map((url) => (
-                  // eslint-disable-next-line jsx-a11y/alt-text
-                  <Image
-                    key={url}
-                    source={{ uri: url }}
-                    style={styles.thumb}
-                    resizeMode="cover"
-                    accessible={false}
-                  />
-                ))}
+            {photos.length > 0 ? (
+              <View style={photos.length === 1 ? undefined : styles.pair}>
+                {photos.map((url, index) =>
+                  failed[`${url}-${index}`] ? null : (
+                    // eslint-disable-next-line jsx-a11y/alt-text
+                    <Image
+                      key={`${url}-${index}`}
+                      source={{ uri: url }}
+                      style={photos.length === 1 ? styles.hero : styles.pairPhoto}
+                      resizeMode="cover"
+                      accessible={false}
+                      onError={() => setFailed((current) => ({ ...current, [`${url}-${index}`]: true }))}
+                    />
+                  ),
+                )}
               </View>
             ) : null}
             {address ? <Text style={styles.address}>{address}</Text> : null}
@@ -129,11 +121,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.chrome,
   },
-  rest: { flexDirection: "row", gap: 8 },
-  thumb: {
-    width: 96,
-    height: 72,
-    borderRadius: 12,
+  pair: { flexDirection: "row", gap: 8, height: 168 },
+  pairPhoto: {
+    flex: 1,
+    height: 168,
+    borderRadius: 16,
     backgroundColor: colors.chrome,
   },
   address: { fontSize: 14, lineHeight: 20, color: colors.inkSoft },

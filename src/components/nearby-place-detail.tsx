@@ -12,7 +12,7 @@ import {
   type PlaceDetail,
 } from "@/lib/nearby-place-card";
 
-function Hero({ url }: { url: string }) {
+function Hero({ url, className }: { url: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
   return (
@@ -20,15 +20,15 @@ function Hero({ url }: { url: string }) {
     <img
       src={url}
       alt=""
-      className="h-[220px] w-full rounded-2xl bg-[var(--stw-chrome)] object-cover"
+      className={className ?? "h-[220px] w-full rounded-2xl bg-[var(--stw-chrome)] object-cover"}
       onError={() => setFailed(true)}
     />
   );
 }
 
 /**
- * Place detail. The photo is the nearby card’s `photoUrl`. Rating, review
- * count, and website come from `GET /api/places/google` for this one place.
+ * Place detail. Photos are the nearby card’s `photoUrls` (at most two).
+ * Rating, review count, and website come from `GET /api/places/google`.
  */
 export function NearbyPlaceDetail({
   card,
@@ -62,8 +62,7 @@ export function NearbyPlaceDetail({
     };
   }, [card.placeId, detailProp, onDetail]);
 
-  const photos = placePhotos({ photoUrl: card.photoUrl });
-  const [hero, ...rest] = photos;
+  const photos = placePhotos(card);
   const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
   const category = formatPlaceCategory(detail?.category ?? card.category);
   const address = detail?.formattedAddress ?? card.formattedAddress;
@@ -72,16 +71,17 @@ export function NearbyPlaceDetail({
 
   return (
     <div className="space-y-3">
-      {hero ? <Hero url={hero} /> : null}
-      {rest.length > 0 ? (
-        <ul className="flex gap-2 overflow-x-auto">
-          {rest.map((url) => (
-            <li key={url} className="shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="h-[72px] w-[96px] rounded-xl object-cover" />
-            </li>
+      {photos.length === 1 ? <Hero url={photos[0]!} /> : null}
+      {photos.length > 1 ? (
+        <div className="flex h-[168px] gap-2">
+          {photos.map((url, index) => (
+            <Hero
+              key={`${url}-${index}`}
+              url={url}
+              className="h-full min-w-0 flex-1 rounded-2xl bg-[var(--stw-chrome)] object-cover"
+            />
           ))}
-        </ul>
+        </div>
       ) : null}
       {address ? <p className="text-[14px] leading-5 text-muted-foreground">{address}</p> : null}
       {rating ? <p className="text-[14px] font-semibold">{rating}</p> : null}

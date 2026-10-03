@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-03 ~09:15 −04:00 · nearby swipe cards, rating only after one place is opened |
+| **This snapshot** | 2026-10-03 ~09:30 −04:00 · nearby cards show up to two photos |
 | **Elapsed** | **~12.8 days** |
-| **Commits on this branch** | **259** (refresh with `git rev-list --count HEAD`) |
+| **Commits on this branch** | **262** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -90,7 +90,7 @@ git log --reverse -1 --format='%aI %s'
 - Receipt read is snappier: skip host classify by default, sharp-downscale before Gemini, **15s** extract timeout, default model **gemini-3.5-flash-lite**.
 - Home paints hosted tabs from local storage first; close/reopen apply the POST receipt and GET no longer takes a Postgres row lock.
 - Nearby food and drink (top 7) comes from Google Places through the server. Picking a Mapbox or MapKit suggestion asks Google for that place’s id by name and location; the receipt keeps Google when that works, and the Mapbox or Apple pin when it does not. There is no Places key in the app — without one, the proxy says so and does not call Google.
-- On “Where are you going?” and the web restaurant step, nearby places swipe sideways as short photo cards (photo, name, address, category) until you type two letters. A tap opens that one place and loads its rating and website from Place Details; Plan here saves them with the nearby photo, and back returns to the place step. Typing still uses Mapbox or MapKit and the place-id bridge. If nearby or that details call cannot load, the row stays empty or the place still saves without a rating, and search still works.
+- On “Where are you going?” and the web restaurant step, nearby places swipe sideways as short photo cards (up to two photos, name, address, category) until you type two letters. A tap opens that one place, shows those same photos, and loads its rating and website from Place Details; Plan here saves them with the first nearby photo, and back returns to the place step. Typing still uses Mapbox or MapKit and the place-id bridge. If nearby or that details call cannot load, the row stays empty or the place still saves without a rating, and search still works.
 
 ## How to extend this file
 
