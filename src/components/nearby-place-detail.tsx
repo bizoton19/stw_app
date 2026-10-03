@@ -44,8 +44,8 @@ function Hero({ url, className }: { url: string; className?: string }) {
 }
 
 /**
- * Place detail. Photos are the nearby card’s `photoUrls` (at most two).
- * Rating, review count, and website come from `GET /api/places/google`.
+ * Place detail. Up to three photos come from the nearby card. Rating,
+ * review count, and website come from `GET /api/places/google`.
  */
 export function NearbyPlaceDetail({
   card,
@@ -94,14 +94,13 @@ export function NearbyPlaceDetail({
 
   return (
     <div className="space-y-3">
-      {photos.length === 1 ? <Hero url={photos[0]!} /> : null}
-      {photos.length > 1 ? (
-        <div className="flex h-[200px] gap-2">
+      {photos.length > 0 ? (
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto">
           {photos.map((url, index) => (
             <Hero
               key={`${url}-${index}`}
               url={url}
-              className="h-full min-w-0 flex-1 rounded-2xl bg-[var(--stw-chrome)] object-cover"
+              className="h-[220px] w-full min-w-full shrink-0 snap-start rounded-2xl bg-[var(--stw-chrome)] object-cover"
             />
           ))}
         </div>

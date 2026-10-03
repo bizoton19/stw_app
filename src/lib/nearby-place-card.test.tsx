@@ -137,7 +137,7 @@ test("nearby cards omit rating and website until one place details call", () => 
       },
     ],
   });
-  assert.deepEqual(paired[0]!.photoUrls, [card.photoUrl, second]);
+  assert.deepEqual(paired[0]!.photoUrls, [card.photoUrl, second, third]);
   assert.equal(paired[0]!.photoUrl, card.photoUrl);
   const lone = { ...card } as Record<string, unknown>;
   delete lone.photoUrls;
@@ -218,8 +218,8 @@ test("nearby cards are a short horizontal swipe with the photo as the background
     />,
   );
   assert.match(pair, /photos%2Fref/);
-  assert.match(pair, /photos%2Ftwo/);
-  assert.equal(pair.match(/<img /g)?.length, 2);
+  assert.doesNotMatch(pair, /photos%2Ftwo/);
+  assert.equal(pair.match(/<img /g)?.length, 1);
   assert.doesNotMatch(pair, /4\.6/);
 });
 
@@ -266,9 +266,27 @@ test("place detail shows the nearby photo and rating only from place details", (
   const two = renderToStaticMarkup(
     <NearbyPlaceDetail card={{ ...card, photoUrl: card.photoUrl, photoUrls: [card.photoUrl!, secondPhoto] }} />,
   );
+  assert.match(two, /overflow-x-auto/);
   assert.match(two, /photos%2Fref/);
   assert.match(two, /photos%2Ftwo/);
   assert.equal(two.match(/<img /g)?.length, 3);
+  const thirdPhoto =
+    "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Fthree&maxWidthPx=400";
+  const fourthPhoto =
+    "https://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2Ffour&maxWidthPx=400";
+  const gallery = renderToStaticMarkup(
+    <NearbyPlaceDetail
+      card={{
+        ...card,
+        photoUrl: card.photoUrl,
+        photoUrls: [card.photoUrl!, secondPhoto, thirdPhoto, fourthPhoto],
+      }}
+    />,
+  );
+  assert.match(gallery, /overflow-x-auto/);
+  assert.match(gallery, /photos%2Fthree/);
+  assert.doesNotMatch(gallery, /photos%2Ffour/);
+  assert.equal(gallery.match(/<img /g)?.length, 4);
   assert.match(two, /w=600&(?:amp;)?h=220&(?:amp;)?z=15/);
   assert.doesNotMatch(two, /access_token|api\.mapbox\.com/);
   assert.doesNotMatch(two, /4\.6/);
@@ -286,9 +304,10 @@ test("place detail shows the nearby photo and rating only from place details", (
         "https://api.test/a",
         "https://api.test/b",
         "https://api.test/c",
+        "https://api.test/d",
       ],
     }),
-    ["https://api.test/a", "https://api.test/b"],
+    ["https://api.test/a", "https://api.test/b", "https://api.test/c"],
   );
   assert.deepEqual(placePhotos({ photoUrl: card.photoUrl, photoUrls: [] }), [card.photoUrl]);
 
@@ -402,6 +421,9 @@ test("selecting a nearby card does not call the typeahead bridge", () => {
   assert.match(placeScreen, /router\.back/);
   assert.match(placeScreen, /fetchPlaceDetail/);
   assert.match(placeScreen, /mergePlaceDetail/);
+  assert.match(placeScreen, /horizontal/);
+  assert.match(placeScreen, /placePhotos\(card, getApiUrl\(\)\)/);
+  assert.doesNotMatch(placeScreen, /detail\.photoUrl|detail\?\.photoUrls/);
   assert.doesNotMatch(placeScreen, /\/api\/places\/bridge/);
   assert.doesNotMatch(placeScreen, /card\.rating|card\?\.websiteUri|card\.websiteUri/);
   const cardsWeb = readFileSync(
@@ -418,7 +440,12 @@ test("selecting a nearby card does not call the typeahead bridge", () => {
   );
   assert.doesNotMatch(cardsWeb, /placeDetailsQuery|\/api\/places\/google/);
   assert.doesNotMatch(cardsMobile, /placeDetailsQuery|\/api\/places\/google/);
+  assert.match(cardsMobile, /width: cardWidth/);
+  assert.match(cardsMobile, /height: CARD_HEIGHT/);
+  assert.doesNotMatch(cardsMobile, /flex:\s*1/);
   assert.match(detailWeb, /placeDetailsQuery/);
+  assert.match(detailWeb, /placePhotos\(card/);
+  assert.doesNotMatch(detailWeb, /detail\.photoUrl|detail\?\.photoUrls/);
   assert.match(
     readFileSync(new URL("../components/nearby-place-cards.tsx", import.meta.url), "utf8"),
     /overflow-x-auto/,

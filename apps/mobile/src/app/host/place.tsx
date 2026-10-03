@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { goHostDesk } from "@/lib/navigation";
@@ -27,6 +36,8 @@ export default function NearbyPlaceScreen() {
   const [plan] = useState(() => currentNearbyPlan());
   const card = plan?.card ?? null;
   const [detail, setDetail] = useState<PlaceDetail | null>(null);
+  const { width } = useWindowDimensions();
+  const slideWidth = Math.max(220, width - 40);
   const photos = card ? placePhotos(card, getApiUrl()) : [];
   const mapLat = detail?.lat ?? card?.lat;
   const mapLng = detail?.lng ?? card?.lng;
@@ -79,21 +90,33 @@ export default function NearbyPlaceScreen() {
         {card ? (
           <View style={styles.stack}>
             {photos.length > 0 ? (
-              <View style={photos.length === 1 ? undefined : styles.pair}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                snapToInterval={slideWidth + 12}
+                snapToAlignment="start"
+                disableIntervalMomentum
+              >
                 {photos.map((url, index) =>
-                  failed[`${url}-${index}`] ? null : (
+                  failed[`${url}-${index}`] ? (
+                    <View
+                      key={`${url}-${index}`}
+                      style={[styles.slide, { width: slideWidth }, index < photos.length - 1 && styles.slideGap]}
+                    />
+                  ) : (
                     // eslint-disable-next-line jsx-a11y/alt-text
                     <Image
                       key={`${url}-${index}`}
                       source={{ uri: url }}
-                      style={photos.length === 1 ? styles.hero : styles.pairPhoto}
+                      style={[styles.slide, { width: slideWidth }, index < photos.length - 1 && styles.slideGap]}
                       resizeMode="cover"
                       accessible={false}
                       onError={() => setFailed((current) => ({ ...current, [`${url}-${index}`]: true }))}
                     />
                   ),
                 )}
-              </View>
+              </ScrollView>
             ) : null}
             {mapUri && !mapFailed ? (
               // eslint-disable-next-line jsx-a11y/alt-text
@@ -136,19 +159,12 @@ export default function NearbyPlaceScreen() {
 
 const styles = StyleSheet.create({
   stack: { gap: 12 },
-  hero: {
-    width: "100%",
+  slide: {
     height: 220,
     borderRadius: 16,
     backgroundColor: colors.chrome,
   },
-  pair: { flexDirection: "row", gap: 8, height: 200 },
-  pairPhoto: {
-    flex: 1,
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: colors.chrome,
-  },
+  slideGap: { marginRight: 12 },
   map: {
     width: "100%",
     height: 180,

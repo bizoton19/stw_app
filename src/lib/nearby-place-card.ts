@@ -23,7 +23,7 @@ export type NearbyPlaceCard = {
   userRatingCount: number | null;
   /** First proxied `/api/places/photo` URL, or null. Same as `photoUrls[0]`. */
   photoUrl: string | null;
-  /** At most two proxied photo URLs from nearby. Never a Google URL with an API key. */
+  /** At most three proxied photo URLs from nearby. Never a Google URL with an API key. */
   photoUrls: string[];
   websiteUri: string | null;
   googleMapsUri: string | null;
@@ -290,7 +290,7 @@ export function staticMapForClient(
   return photoUrlForClient(path, apiOrigin) ?? path;
 }
 
-/** At most two photos already on the nearby card. Does not call Google. */
+/** At most three nearby photos. Does not call Google. The list card uses the first. */
 export function placePhotos(
   card: {
     photoUrl?: string | null;
@@ -304,7 +304,7 @@ export function placePhotos(
         return safe ? [safe] : [];
       })
     : [];
-  const urls = listed.length > 0 ? listed.slice(0, 2) : [];
+  const urls = listed.length > 0 ? listed.slice(0, 3) : [];
   const chosen = urls.length > 0 ? urls : (() => {
     const one = safePhotoUrl(card.photoUrl);
     return one ? [one] : [];

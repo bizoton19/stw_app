@@ -15,17 +15,17 @@ import { colors } from "@/lib/theme";
 const CARD_HEIGHT = 220;
 const CARD_GAP = 12;
 
-function CardPhoto({ url }: { url: string }) {
+function CardPhoto({ url, width, height }: { url: string; width: number; height: number }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
-    return <View style={styles.photo} />;
+    return <View style={{ width, height, backgroundColor: colors.chrome }} />;
   }
   return (
     // Decorative. The place name is the button label.
     // eslint-disable-next-line jsx-a11y/alt-text
     <Image
       source={{ uri: url }}
-      style={styles.photo}
+      style={{ width, height }}
       resizeMode="cover"
       accessible={false}
       onError={() => setFailed(true)}
@@ -59,7 +59,7 @@ export function NearbyPlaceCards({
         contentContainerStyle={styles.row}
       >
         {places.map((card) => {
-          const photos = placePhotos(card, getApiUrl());
+          const photo = placePhotos(card, getApiUrl())[0] ?? null;
           const category = formatPlaceCategory(card.category);
           return (
             <Pressable
@@ -73,24 +73,22 @@ export function NearbyPlaceCards({
                 pressed && { opacity: 0.86 },
               ]}
             >
-              <View style={styles.photos}>
-                {photos.length === 0 ? (
-                  <View style={styles.photo} />
-                ) : (
-                  photos.map((url, index) => <CardPhoto key={`${url}-${index}`} url={url} />)
-                )}
-              </View>
-              <View style={[styles.caption, photos.length === 0 && styles.captionPlain]}>
-                <Text numberOfLines={1} style={[styles.name, photos.length === 0 && styles.namePlain]}>
+              {photo ? (
+                <CardPhoto url={photo} width={cardWidth} height={CARD_HEIGHT} />
+              ) : (
+                <View style={{ width: cardWidth, height: CARD_HEIGHT, backgroundColor: colors.chrome }} />
+              )}
+              <View style={[styles.caption, !photo && styles.captionPlain]}>
+                <Text numberOfLines={1} style={[styles.name, !photo && styles.namePlain]}>
                   {card.name}
                 </Text>
                 {card.formattedAddress ? (
-                  <Text numberOfLines={1} style={[styles.meta, photos.length === 0 && styles.metaPlain]}>
+                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
                     {card.formattedAddress}
                   </Text>
                 ) : null}
                 {category ? (
-                  <Text numberOfLines={1} style={[styles.meta, photos.length === 0 && styles.metaPlain]}>
+                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
                     {category}
                   </Text>
                 ) : null}
@@ -117,15 +115,6 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: colors.chrome,
-  },
-  photos: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: "row",
-  },
-  photo: {
-    flex: 1,
-    height: "100%",
     backgroundColor: colors.chrome,
   },
   caption: {
