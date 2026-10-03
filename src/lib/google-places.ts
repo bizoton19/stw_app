@@ -6,11 +6,14 @@
  * `process.env.*` into the browser bundle. Mobile and web call the routes.
  *
  * Nearby uses `places:searchNearby` (top 7, popularity, primary food/drink
- * types, Nearby Search Pro field mask, in-process cache ~8 min by geohash).
- * Results with no coordinates or coordinates outside the requested radius
- * are dropped. The nearby mask does not include rating, userRatingCount, or
- * websiteUri — those bill the whole search as Enterprise.
- * Photos are proxied and cached. The typeahead bridge uses Text Search
+ * types, Nearby Search Pro field mask). Each neighborhood cell is stored for
+ * 30 days in Postgres, or on local disk when there is no database. Stale
+ * openings and closures in that window are accepted. Results with no
+ * coordinates or coordinates outside the requested radius are dropped. The
+ * nearby mask does not include rating, userRatingCount, or websiteUri —
+ * those bill the whole search as Enterprise.
+ * Photos are proxied. A stored photo ref is not fetched from Google again.
+ * The typeahead bridge uses Text Search
  * (`places:searchText`) with the place **name** and **lat/lng** and an
  * Essentials (IDs Only) field mask. Place Details Enterprise runs only for
  * the one Google place a caller asks to detail. Mapbox and MapKit ids are
@@ -20,10 +23,23 @@
  * before `fetch`.
  */
 
+import {
+  clearPlacesCache,
+  forgetPlacesCacheMemory,
+  NEARBY_CACHE_MAX_AGE_SECONDS,
+  NEARBY_CACHE_TTL_MS,
+  PHOTO_CACHE_CONTROL,
+  readCachedPhoto,
+  readNearbyPlaces,
+  writeCachedPhoto,
+  writeNearbyPlaces,
+} from "./places-cache";
+
 const PLACES_BASE = "https://places.googleapis.com/v1";
 
+export { NEARBY_CACHE_MAX_AGE_SECONDS, NEARBY_CACHE_TTL_MS, PHOTO_CACHE_CONTROL };
+
 export const NEARBY_LIMIT = 7;
-export const NEARBY_CACHE_TTL_MS = 8 * 60 * 1000;
 export const NEARBY_GEOHASH_PRECISION = 6;
 export const PHOTO_MAX_WIDTH_PX = 400;
 export const DEFAULT_NEARBY_RADIUS_M = 1500;
@@ -115,16 +131,19 @@ type NormalizedPlace = {
   googleMapsUri: string | null;
 };
 
-type CacheEntry = {
-  expiresAt: number;
-  places: NormalizedPlace[];
-};
-
-const nearbyCache = new Map<string, CacheEntry>();
 let clock = () => Date.now();
+const nearbyInflight = new Map<string, Promise<NearbySearchResult>>();
+const photoInflight = new Map<string, Promise<{ bytes: Uint8Array; contentType: string }>>();
 
-export function clearNearbyCache(): void {
-  nearbyCache.clear();
+export async function clearNearbyCache(): Promise<void> {
+  nearbyInflight.clear();
+  photoInflight.clear();
+  await clearPlacesCache();
+}
+
+/** @internal Drops process memory so tests can prove the durable store. */
+export function forgetPlacesCacheProcessMemoryForTests(): void {
+  forgetPlacesCacheMemory();
 }
 
 /** @internal Tests advance the nearby TTL without waiting. */
@@ -354,24 +373,6 @@ function nearbyCacheKey(lat: number, lng: number, radius: number): string {
   return `${geohash(lat, lng, NEARBY_GEOHASH_PRECISION)}:${bucket}`;
 }
 
-function readNearbyCache(key: string): NormalizedPlace[] | null {
-  const hit = nearbyCache.get(key);
-  if (!hit) return null;
-  if (hit.expiresAt <= clock()) {
-    nearbyCache.delete(key);
-    return null;
-  }
-  return hit.places;
-}
-
-function writeNearbyCache(key: string, places: NormalizedPlace[]): void {
-  if (nearbyCache.size > 400) {
-    const oldest = nearbyCache.keys().next().value;
-    if (oldest) nearbyCache.delete(oldest);
-  }
-  nearbyCache.set(key, { expiresAt: clock() + NEARBY_CACHE_TTL_MS, places });
-}
-
 async function googlePost(
   methodPath: "places:searchNearby" | "places:searchText",
   body: unknown,
@@ -429,18 +430,35 @@ export async function searchNearby(input: {
 }): Promise<NearbySearchResult> {
   const coords = assertCoords(input.lat, input.lng);
   const radius = clampRadius(input.radius);
-  const key = requireGooglePlacesKey();
   const cacheKey = nearbyCacheKey(coords.lat, coords.lng, radius);
-  const cached = readNearbyCache(cacheKey);
+  const origin = input.origin ?? "";
+  const cached = await readNearbyPlaces<NormalizedPlace>(cacheKey, clock());
   if (cached) {
     return {
-      places: cached.slice(0, NEARBY_LIMIT).map((place) => toCard(place, input.origin ?? "", "pro")),
+      places: cached.slice(0, NEARBY_LIMIT).map((place) => toCard(place, origin, "pro")),
       provider: "google",
       limit: NEARBY_LIMIT,
       cached: true,
     };
   }
+  const pending = nearbyInflight.get(cacheKey);
+  if (pending) return pending;
+  const promise = loadNearby(coords, radius, cacheKey, origin);
+  nearbyInflight.set(cacheKey, promise);
+  try {
+    return await promise;
+  } finally {
+    nearbyInflight.delete(cacheKey);
+  }
+}
 
+async function loadNearby(
+  coords: { lat: number; lng: number },
+  radius: number,
+  cacheKey: string,
+  origin: string,
+): Promise<NearbySearchResult> {
+  const key = requireGooglePlacesKey();
   const data = await googlePost(
     "places:searchNearby",
     {
@@ -461,9 +479,9 @@ export async function searchNearby(input: {
   const places = readPlaces(data)
     .filter((place) => placeInsideNearbyRadius(place, coords.lat, coords.lng, radius))
     .slice(0, NEARBY_LIMIT);
-  writeNearbyCache(cacheKey, places);
+  await writeNearbyPlaces(cacheKey, places, clock());
   return {
-    places: places.map((place) => toCard(place, input.origin ?? "", "pro")),
+    places: places.map((place) => toCard(place, origin, "pro")),
     provider: "google",
     limit: NEARBY_LIMIT,
     cached: false,
@@ -582,9 +600,26 @@ export async function fetchPlacePhoto(input: {
   name: string;
   maxWidthPx?: number | null;
 }): Promise<{ bytes: Uint8Array; contentType: string }> {
-  const key = requireGooglePlacesKey();
   const name = assertPhotoResourceName(input.name);
-  const width = clampPhotoWidth(input.maxWidthPx);
+  const cached = await readCachedPhoto(name);
+  if (cached) return cached;
+  const pending = photoInflight.get(name);
+  if (pending) return pending;
+  const promise = loadPlacePhoto(name, input.maxWidthPx);
+  photoInflight.set(name, promise);
+  try {
+    return await promise;
+  } finally {
+    photoInflight.delete(name);
+  }
+}
+
+async function loadPlacePhoto(
+  name: string,
+  maxWidthPx: number | null | undefined,
+): Promise<{ bytes: Uint8Array; contentType: string }> {
+  const key = requireGooglePlacesKey();
+  const width = clampPhotoWidth(maxWidthPx);
   const endpoint = `${PLACES_BASE}/${name}/media?maxWidthPx=${width}&skipHttpRedirect=true`;
   const res = await fetch(endpoint, {
     headers: { "X-Goog-Api-Key": key },
@@ -597,7 +632,7 @@ export async function fetchPlacePhoto(input: {
     if (!location || location.includes(key)) {
       fail("places_upstream", "Google Places photo redirect was rejected.");
     }
-    return readImage(await fetch(location, { cache: "no-store" }));
+    return storePhoto(name, await readImage(await fetch(location, { cache: "no-store" })));
   }
   if (!res.ok) {
     fail("places_upstream", `Google Places photo request failed (${res.status}).`);
@@ -609,9 +644,17 @@ export async function fetchPlacePhoto(input: {
     if (!photoUri || photoUri.includes(key)) {
       fail("places_upstream", "Google Places photo response had no image.");
     }
-    return readImage(await fetch(photoUri, { cache: "no-store" }));
+    return storePhoto(name, await readImage(await fetch(photoUri, { cache: "no-store" })));
   }
-  return readImage(res);
+  return storePhoto(name, await readImage(res));
+}
+
+async function storePhoto(
+  name: string,
+  photo: { bytes: Uint8Array; contentType: string },
+): Promise<{ bytes: Uint8Array; contentType: string }> {
+  await writeCachedPhoto(name, photo);
+  return photo;
 }
 
 export function googlePlacesErrorResponse(err: unknown): Response {

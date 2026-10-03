@@ -9,13 +9,17 @@ import {
   bridgePlaceToGoogle,
   clearNearbyCache,
   fetchPlacePhoto,
+  forgetPlacesCacheProcessMemoryForTests,
   geohash,
+  NEARBY_CACHE_MAX_AGE_SECONDS,
   NEARBY_CACHE_TTL_MS,
   NEARBY_LIMIT,
+  PHOTO_CACHE_CONTROL,
   PHOTO_MAX_WIDTH_PX,
   searchNearby,
   setGooglePlacesClockForTests,
 } from "./google-places";
+import { useFilePlacesCacheForTests } from "./places-cache";
 import type { ReceiptVenue } from "./types";
 import { venueLocationKey } from "./venue-day";
 
@@ -61,15 +65,16 @@ function googlePlace(over: Record<string, unknown> = {}) {
   };
 }
 
-beforeEach(() => {
-  clearNearbyCache();
+beforeEach(async () => {
+  useFilePlacesCacheForTests();
+  await clearNearbyCache();
   setGooglePlacesClockForTests(null);
   delete process.env.GOOGLE_PLACES_API_KEY;
 });
 
-afterEach(() => {
+afterEach(async () => {
   globalThis.fetch = ORIGINAL_FETCH;
-  clearNearbyCache();
+  await clearNearbyCache();
   setGooglePlacesClockForTests(null);
   if (ORIGINAL_KEY === undefined) delete process.env.GOOGLE_PLACES_API_KEY;
   else process.env.GOOGLE_PLACES_API_KEY = ORIGINAL_KEY;
@@ -167,7 +172,17 @@ describe("google places nearby", () => {
     assert.equal(second.cached, true);
     assert.equal(calls.length, 1);
 
-    now += NEARBY_CACHE_TTL_MS + 1;
+    forgetPlacesCacheProcessMemoryForTests();
+    const afterRestart = await searchNearby({ lat: 40.7128, lng: -74.006, origin: "https://api.test" });
+    assert.equal(afterRestart.cached, true);
+    assert.equal(calls.length, 1);
+
+    now += 8 * 60 * 1000;
+    const withinMonth = await searchNearby({ lat: 40.7128, lng: -74.006, origin: "https://api.test" });
+    assert.equal(withinMonth.cached, true);
+    assert.equal(calls.length, 1);
+
+    now += NEARBY_CACHE_TTL_MS;
     const third = await searchNearby({ lat: 40.7128, lng: -74.006, origin: "https://api.test" });
     assert.equal(third.cached, false);
     assert.equal(calls.length, 2);
@@ -247,6 +262,7 @@ describe("google places nearby", () => {
       new Request("http://api.test/api/places/nearby?lat=38.9072&lng=-77.0369"),
     );
     assert.equal(res.status, 200);
+    assert.equal(res.headers.get("Cache-Control"), `private, max-age=${NEARBY_CACHE_MAX_AGE_SECONDS}`);
     const data = (await res.json()) as {
       places: Array<{ placeId: string; category: string | null; lat: number | null; lng: number | null }>;
     };
@@ -513,7 +529,21 @@ describe("google places photo", () => {
     const bytes = new Uint8Array(await res.arrayBuffer());
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("Content-Type"), "image/jpeg");
+    assert.equal(res.headers.get("Cache-Control"), PHOTO_CACHE_CONTROL);
     assert.deepEqual([...bytes], [9, 8, 7]);
+    assert.equal(calls.length, 2);
+
+    const photoUrl =
+      "http://api.test/api/places/photo?name=places%2FChIJgoogle123%2Fphotos%2FAbCd_12&maxWidthPx=200";
+    const again = await photoGET(new Request(photoUrl));
+    assert.equal(again.status, 200);
+    assert.deepEqual([...(new Uint8Array(await again.arrayBuffer()))], [9, 8, 7]);
+    assert.equal(calls.length, 2);
+
+    forgetPlacesCacheProcessMemoryForTests();
+    const afterRestart = await photoGET(new Request(photoUrl));
+    assert.equal(afterRestart.status, 200);
+    assert.deepEqual([...(new Uint8Array(await afterRestart.arrayBuffer()))], [9, 8, 7]);
     assert.equal(calls.length, 2);
     assert.match(calls[0]!.url, /\/places\/ChIJgoogle123\/photos\/AbCd_12\/media\?/);
     assert.match(calls[0]!.url, new RegExp(`maxWidthPx=${PHOTO_MAX_WIDTH_PX}`));

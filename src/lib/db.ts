@@ -98,6 +98,20 @@ export async function ensureSchema(): Promise<void> {
           storage_key text,
           updated_at timestamptz NOT NULL DEFAULT now()
         );
+
+        -- Nearby top 7, 30 days per neighborhood cell. Photo bytes, kept per ref.
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_nearby_cache (
+          cell_key text PRIMARY KEY,
+          places jsonb NOT NULL,
+          stored_at timestamptz NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_photo_cache (
+          photo_name text PRIMARY KEY,
+          content_type text NOT NULL,
+          bytes bytea NOT NULL,
+          stored_at timestamptz NOT NULL DEFAULT now()
+        );
       `);
     })();
   }
@@ -129,6 +143,19 @@ export async function ensureSchema(): Promise<void> {
       byte_size integer,
       storage_key text,
       updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_nearby_cache (
+      cell_key text PRIMARY KEY,
+      places jsonb NOT NULL,
+      stored_at timestamptz NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.place_photo_cache (
+      photo_name text PRIMARY KEY,
+      content_type text NOT NULL,
+      bytes bytea NOT NULL,
+      stored_at timestamptz NOT NULL DEFAULT now()
     );
   `);
   // Older installs: bytes was NOT NULL / missing blob columns.

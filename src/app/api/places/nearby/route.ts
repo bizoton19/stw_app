@@ -1,5 +1,6 @@
 import {
   googlePlacesErrorResponse,
+  NEARBY_CACHE_MAX_AGE_SECONDS,
   parseLatLng,
   searchNearby,
 } from "@/lib/google-places";
@@ -20,12 +21,15 @@ export const dynamic = "force-dynamic";
  * `GET /api/places/google` for the one place the user picks.
  *
  * 200: `{ places: GooglePlaceCard[], provider: "google", limit: 7, cached }`
- * `places[].photoUrl` is this API’s `/api/places/photo` URL (max width 400),
- * still proxied and cached.
+ * `places[].photoUrl` is this API’s `/api/places/photo` URL (max width 400).
+ * A stored photo ref is not fetched from Google again.
  * 400 invalid coordinates. 503 when `GOOGLE_PLACES_API_KEY` is missing or blank
- * (no Google call). 502 when Google fails.
+ * and this cell is not already cached. 502 when Google fails.
  *
- * Results are cached in-process for 8 minutes by geohash-6 + radius bucket.
+ * Each neighborhood cell (geohash-6 + radius rounded to 100 m) is stored for
+ * 30 days in Postgres, or on local disk when `DATABASE_URL` is unset. One
+ * Google Nearby call per cell per month. Stale openings and closures are
+ * accepted. The cache survives a process restart.
  */
 export async function GET(req: Request) {
   try {
@@ -36,7 +40,7 @@ export async function GET(req: Request) {
       radiusRaw != null && radiusRaw.trim() !== "" ? Number(radiusRaw) : undefined;
     const result = await searchNearby({ lat, lng, radius, origin: url.origin });
     return Response.json(result, {
-      headers: { "Cache-Control": "private, max-age=480" },
+      headers: { "Cache-Control": `private, max-age=${NEARBY_CACHE_MAX_AGE_SECONDS}` },
     });
   } catch (err) {
     return googlePlacesErrorResponse(err);
