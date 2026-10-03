@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { api } from "./api";
+import { nearbyQuery, placesFromNearbyResponse, type NearbyPlaceCard } from "./nearby-places";
 import type { ReceiptVenue } from "./types";
 
 export type PlacePrediction = {
@@ -138,6 +139,19 @@ async function bridgeToGooglePlace(venue: ReceiptVenue): Promise<ReceiptVenue> {
     };
   } catch {
     return venue;
+  }
+}
+
+/**
+ * Nearby food and drink. 503 (no server key) and 502 (Google upstream) are an
+ * empty list — the caller keeps the typeahead. Never throws.
+ */
+export async function fetchNearbyPlaces(coords: Coords): Promise<NearbyPlaceCard[]> {
+  try {
+    const data = await api<unknown>(nearbyQuery(coords.lat, coords.lng));
+    return placesFromNearbyResponse(200, data);
+  } catch {
+    return [];
   }
 }
 

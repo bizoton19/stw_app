@@ -9,7 +9,9 @@ import type { MotifName } from "@/components/motifs";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NearbyPlaceDetail } from "@/components/nearby-place-detail";
 import { VenueTypeahead } from "@/components/venue-typeahead";
+import { venueFromNearbyCard, type NearbyPlaceCard } from "@/lib/nearby-place-card";
 import { centsToLabel } from "@/lib/money";
 import {
   DEFAULT_GLASSES_PER_BOTTLE,
@@ -172,6 +174,7 @@ export function HostInterview() {
   const [pickMode, setPickMode] = useState<"camera" | "library" | null>(null);
   const [restaurant, setRestaurant] = useState("");
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
+  const [nearbyDetail, setNearbyDetail] = useState<NearbyPlaceCard | null>(null);
   const [receiptDate, setReceiptDate] = useState<string | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
@@ -395,10 +398,22 @@ export function HostInterview() {
     }
   }
 
+  function planNearby(card: NearbyPlaceCard) {
+    setRestaurant(card.name);
+    setVenue(venueFromNearbyCard(card, new Date().toISOString()));
+    setNearbyDetail(null);
+  }
+
   const back: Partial<Record<Step, () => void>> = {
     capture: () => go("ready"),
     parsing: () => go("capture"),
-    restaurant: () => go("capture"),
+    restaurant: () => {
+      if (nearbyDetail) {
+        setNearbyDetail(null);
+        return;
+      }
+      go("capture");
+    },
     items: () => go("restaurant"),
     pour: () => go("items"),
     fees: () => go(Object.keys(pourMode).length > 0 ? "pour" : "items"),
@@ -521,31 +536,44 @@ export function HostInterview() {
     footer = <ContinueButton disabled>Reading the receipt</ContinueButton>;
   } else if (step === "restaurant") {
     const placeLocked = isValidatedVenue(venue);
-    body = (
-      <>
-        {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
-        <VenueTypeahead
-          value={restaurant}
-          venue={venue}
-          receiptDate={receiptDate}
-          onChangeName={setRestaurant}
-          onChangeVenue={setVenue}
-          fieldClass={fieldClass}
-        />
-        {!placeLocked ? (
-          <p className="mt-3 text-[13px] text-muted-foreground">
-            {restaurant.trim()
-              ? "Pick a match from the list — we won’t continue until you tap one."
-              : "Start typing — nearby matches appear as you go."}
-          </p>
-        ) : null}
-      </>
-    );
-    footer = (
-      <ContinueButton disabled={!placeLocked} onClick={() => go("items")}>
-        Continue
-      </ContinueButton>
-    );
+    if (nearbyDetail) {
+      body = (
+        <>
+          {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
+          <NearbyPlaceDetail card={nearbyDetail} />
+        </>
+      );
+      footer = (
+        <ContinueButton onClick={() => planNearby(nearbyDetail)}>Plan here</ContinueButton>
+      );
+    } else {
+      body = (
+        <>
+          {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
+          <VenueTypeahead
+            value={restaurant}
+            venue={venue}
+            receiptDate={receiptDate}
+            onChangeName={setRestaurant}
+            onChangeVenue={setVenue}
+            onOpenNearby={setNearbyDetail}
+            fieldClass={fieldClass}
+          />
+          {!placeLocked ? (
+            <p className="mt-3 text-[13px] text-muted-foreground">
+              {restaurant.trim().length < 2
+                ? "Swipe nearby places, or type at least two letters to search."
+                : "Pick a match from the list — we won’t continue until you tap one."}
+            </p>
+          ) : null}
+        </>
+      );
+      footer = (
+        <ContinueButton disabled={!placeLocked} onClick={() => go("items")}>
+          Continue
+        </ContinueButton>
+      );
+    }
   } else if (step === "items") {
     body = (
       <>
@@ -1199,15 +1227,19 @@ export function HostInterview() {
       total={TOTAL_STEPS}
       hideProgress={step === "parsing"}
       kicker={
-        step === "pour" && candidates.some((row) => row.needsResolve)
-          ? "Quick check"
-          : COPY[step].kicker
+        step === "restaurant" && nearbyDetail
+          ? "Nearby"
+          : step === "pour" && candidates.some((row) => row.needsResolve)
+            ? "Quick check"
+            : COPY[step].kicker
       }
       motif={COPY[step].motif}
       title={
-        step === "pour" && candidates.some((row) => row.needsResolve)
-          ? "Could this be a shared bottle?"
-          : COPY[step].title
+        step === "restaurant" && nearbyDetail
+          ? nearbyDetail.name
+          : step === "pour" && candidates.some((row) => row.needsResolve)
+            ? "Could this be a shared bottle?"
+            : COPY[step].title
       }
       onBack={
         step === "ready"

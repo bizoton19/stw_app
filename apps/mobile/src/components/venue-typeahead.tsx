@@ -9,10 +9,20 @@ import {
   View,
 } from "react-native";
 import * as Location from "expo-location";
+import { router } from "expo-router";
 import { Field } from "@/components/field";
+import { NearbyPlaceCards } from "@/components/nearby-place-cards";
 import { VenueKindIcon } from "@/components/venue-kind-icon";
 import { getApiUrl } from "@/lib/config";
 import {
+  formatPlaceRating,
+  shouldShowNearbyCards,
+  venueFromNearbyCard,
+  type NearbyPlaceCard,
+} from "@/lib/nearby-places";
+import { rememberNearbyPlan } from "@/lib/nearby-plan";
+import {
+  fetchNearbyPlaces,
   newSession,
   resolvePlaceDetails,
   searchPlaces,
@@ -76,6 +86,7 @@ export function VenueTypeahead({
   const mapH = Math.min(420, Math.max(300, Math.round(height * 0.46)));
 
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+  const [nearby, setNearby] = useState<NearbyPlaceCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
@@ -128,6 +139,18 @@ export function VenueTypeahead({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!coords) return;
+    let cancelled = false;
+    void (async () => {
+      const cards = await fetchNearbyPlaces(coords);
+      if (!cancelled) setNearby(cards);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [coords]);
 
   const runSearch = useCallback(
     (q: string) => {
@@ -185,6 +208,14 @@ export function VenueTypeahead({
     onChangeName(text);
     onChangeVenue(null);
     runSearch(text);
+  };
+
+  const selectNearbyCard = (card: NearbyPlaceCard) => {
+    rememberNearbyPlan(card, (picked) => {
+      onChangeName(picked.name);
+      onChangeVenue(venueFromNearbyCard(picked, new Date().toISOString()));
+    });
+    router.push("/host/place");
   };
 
   const onSelect = async (row: PlacePrediction) => {
@@ -251,6 +282,11 @@ export function VenueTypeahead({
             <View style={styles.selectedBody}>
               <Text style={styles.selectedName}>{venue!.name}</Text>
               {address ? <Text style={styles.selectedSecondary}>{address}</Text> : null}
+              {formatPlaceRating(venue?.rating, venue?.userRatingCount) ? (
+                <Text style={styles.selectedSecondary}>
+                  {formatPlaceRating(venue?.rating, venue?.userRatingCount)}
+                </Text>
+              ) : null}
               {dateLabel ? (
                 <Text style={styles.selectedDate}>Receipt date · {dateLabel}</Text>
               ) : null}
@@ -292,6 +328,9 @@ export function VenueTypeahead({
           ) : null}
           {searchError ? (
             <Text style={styles.searchError}>{searchError}</Text>
+          ) : null}
+          {coords && shouldShowNearbyCards(value) ? (
+            <NearbyPlaceCards places={nearby} onSelect={selectNearbyCard} />
           ) : null}
           {value.trim().length >= 2 && !loading && !searchError && predictions.length === 0 ? (
             <Text style={styles.hint}>

@@ -2,9 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ShoppingBasket, UtensilsCrossed, Wine } from "lucide-react";
+import { NearbyPlaceCards } from "@/components/nearby-place-cards";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { classifyVenueKind } from "@/lib/line-kind";
+import {
+  formatPlaceRating,
+  nearbyQuery,
+  readNearbyPlaces,
+  shouldShowNearbyCards,
+  type NearbyPlaceCard,
+} from "@/lib/nearby-place-card";
 import type { ReceiptVenue } from "@/lib/types";
 
 type PlacePrediction = {
@@ -24,6 +32,8 @@ type Props = {
   receiptDate?: string | null;
   onChangeName: (name: string) => void;
   onChangeVenue: (venue: ReceiptVenue | null) => void;
+  /** Opens the place detail. The card is not selected until Plan here. */
+  onOpenNearby?: (card: NearbyPlaceCard) => void;
   fieldClass?: string;
 };
 
@@ -144,9 +154,11 @@ export function VenueTypeahead({
   receiptDate,
   onChangeName,
   onChangeVenue,
+  onOpenNearby,
   fieldClass,
 }: Props) {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+  const [nearby, setNearby] = useState<NearbyPlaceCard[]>([]);
   const [hint, setHint] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const sessionRef = useRef(newSession());
@@ -189,6 +201,23 @@ export function VenueTypeahead({
       { enableHighAccuracy: false, timeout: 8000 },
     );
   }, []);
+
+  useEffect(() => {
+    if (!coords) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(nearbyQuery(coords.lat, coords.lng));
+        const cards = await readNearbyPlaces(res);
+        if (!cancelled) setNearby(cards);
+      } catch {
+        if (!cancelled) setNearby([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [coords]);
 
   const runSearch = useCallback(
     (q: string) => {
@@ -248,6 +277,10 @@ export function VenueTypeahead({
     onChangeName(text);
     onChangeVenue(null);
     runSearch(text);
+  };
+
+  const selectNearbyCard = (card: NearbyPlaceCard) => {
+    onOpenNearby?.(card);
   };
 
   const onSelect = async (row: PlacePrediction) => {
@@ -324,6 +357,11 @@ export function VenueTypeahead({
             {address ? (
               <div className="mt-0.5 text-[12px] text-muted-foreground">{address}</div>
             ) : null}
+            {formatPlaceRating(venue?.rating, venue?.userRatingCount) ? (
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                {formatPlaceRating(venue?.rating, venue?.userRatingCount)}
+              </div>
+            ) : null}
             {dateLabel ? (
               <div className="mt-2 text-[12px] text-muted-foreground">
                 Receipt date · {dateLabel}
@@ -366,6 +404,9 @@ export function VenueTypeahead({
       {hint ? <p className="mt-2 text-[12px] text-muted-foreground">{hint}</p> : null}
       {dateLabel ? (
         <p className="mt-2 text-[12px] text-muted-foreground">Receipt date · {dateLabel}</p>
+      ) : null}
+      {coords && shouldShowNearbyCards(value) ? (
+        <NearbyPlaceCards places={nearby} onSelect={selectNearbyCard} />
       ) : null}
       {value.trim().length >= 2 && predictions.length === 0 ? (
         <p className="mt-2 text-[12px] text-muted-foreground">
