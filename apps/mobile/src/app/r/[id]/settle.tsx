@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, Share, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
@@ -23,6 +23,7 @@ import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
 import { openHostPay, PAY_METHOD_META, payMethodIsOpenable } from "@/lib/pay";
 import { getHostToken } from "@/lib/session";
+import { shareLink } from "@/lib/share-link";
 import { findMine, personRowKey, sameGuest } from "@/lib/guest-id";
 import { computeTotals } from "@/lib/totals";
 import type { HostPayment, PublicReceipt } from "@/lib/types";
@@ -85,10 +86,10 @@ export default function SettleScreen() {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  async function shareLink() {
+  async function shareInvite() {
     try {
-      await Share.share({
-        message: `Claim what you ordered on ${place}: ${claimUrl}`,
+      await shareLink({
+        message: `Claim what you ordered on ${place}:`,
         url: claimUrl,
       });
     } catch {
@@ -250,7 +251,7 @@ export default function SettleScreen() {
                 <IconActionButton
                   icon="share"
                   label="Share"
-                  onPress={() => void shareLink()}
+                  onPress={() => void shareInvite()}
                 />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>

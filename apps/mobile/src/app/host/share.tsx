@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Share, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
@@ -9,6 +9,7 @@ import { useHostDraft } from "@/context/host-draft";
 import { registerHostClaimPush } from "@/lib/host-push";
 import { centsToLabel } from "@/lib/money";
 import { goHostDesk } from "@/lib/navigation";
+import { shareLink } from "@/lib/share-link";
 import { colors } from "@/lib/theme";
 
 export default function HostShare() {
@@ -104,8 +105,8 @@ export default function HostShare() {
               label="Share"
               onPress={async () => {
                 try {
-                  await Share.share({
-                    message: `Claim what you ordered on ${place}: ${draft.claimUrl}`,
+                  await shareLink({
+                    message: `Claim what you ordered on ${place}:`,
                     url: draft.claimUrl,
                   });
                 } catch {

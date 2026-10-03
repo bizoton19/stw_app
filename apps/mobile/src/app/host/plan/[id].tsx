@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/chrome";
 import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
+import { shareLink as shareClaimLink } from "@/lib/share-link";
 import { clearHostedReceipt, patchHostedReceipt } from "@/lib/host-tabs";
 import { getHostToken, hydrateSession } from "@/lib/session";
 import type { Invitee, PublicReceipt } from "@/lib/types";
@@ -90,8 +91,8 @@ export default function HostPlanBoard() {
   const canUpload = Boolean(day && day <= localTodayKey());
 
   async function shareLink() {
-    await Share.share({
-      message: `Join my outing on Split the Wine — RSVP here:\n${claimUrl}`,
+    await shareClaimLink({
+      message: "Join my outing on Split the Wine — RSVP here:",
       url: claimUrl,
     });
   }
