@@ -9,7 +9,7 @@ Living log of how fast this product came together. Update after major milestones
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
 | **This snapshot** | 2026-10-03 ~09:45 −04:00 · nearby photos load on a phone, rating is labeled, detail has a map |
 | **Elapsed** | **~12.8 days** |
-| **Commits on this branch** | **263** (refresh with `git rev-list --count HEAD`) |
+| **Commits on this branch** | **265** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:

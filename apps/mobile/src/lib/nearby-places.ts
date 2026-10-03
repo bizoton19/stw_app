@@ -265,6 +265,31 @@ export function photoUrlForClient(
   return parsed.toString();
 }
 
+/** Server static map. No Mapbox token. w=600, h=220, z=15. */
+export function staticMapPath(lat: number, lng: number): string {
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lng: String(lng),
+    w: "600",
+    h: "220",
+    z: "15",
+  });
+  return `/api/places/static-map?${params}`;
+}
+
+/**
+ * Same API origin as nearby photos. A relative path stays relative when no
+ * origin is passed (the web page). Loopback hosts are rewritten.
+ */
+export function staticMapForClient(
+  lat: number,
+  lng: number,
+  apiOrigin: string | null | undefined,
+): string {
+  const path = staticMapPath(lat, lng);
+  return photoUrlForClient(path, apiOrigin) ?? path;
+}
+
 /** At most two photos already on the nearby card. Does not call Google. */
 export function placePhotos(
   card: {

@@ -6,13 +6,13 @@ import { goHostDesk } from "@/lib/navigation";
 import { currentNearbyPlan } from "@/lib/nearby-plan";
 import { getApiUrl } from "@/lib/config";
 import { fetchPlaceDetail } from "@/lib/places";
-import { staticMapUri } from "@/lib/place-pin";
 import {
   formatPlaceCategory,
   formatPlaceRating,
   httpHref,
   mergePlaceDetail,
   placePhotos,
+  staticMapForClient,
   type PlaceDetail,
 } from "@/lib/nearby-places";
 import { colors } from "@/lib/theme";
@@ -32,7 +32,7 @@ export default function NearbyPlaceScreen() {
   const mapLng = detail?.lng ?? card?.lng;
   const mapUri =
     typeof mapLat === "number" && typeof mapLng === "number"
-      ? staticMapUri({ lat: mapLat, lng: mapLng, w: 600, h: 220, z: 15 })
+      ? staticMapForClient(mapLat, mapLng, getApiUrl())
       : null;
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [mapFailed, setMapFailed] = useState(false);
@@ -104,6 +104,8 @@ export default function NearbyPlaceScreen() {
                 accessible={false}
                 onError={() => setMapFailed(true)}
               />
+            ) : mapUri ? (
+              <View style={styles.map} />
             ) : null}
             {address ? <Text style={styles.address}>{address}</Text> : null}
             {rating ? <Text style={styles.rating}>{rating}</Text> : null}

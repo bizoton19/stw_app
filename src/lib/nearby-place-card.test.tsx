@@ -15,6 +15,7 @@ import {
   photoUrlForClient,
   placeDetailsQuery,
   placePhotos,
+  staticMapForClient,
   placesFromNearbyResponse,
   readNearbyPlaces,
   shouldShowNearbyCards,
@@ -249,7 +250,8 @@ test("place detail shows the nearby photo and rating only from place details", (
   );
   assert.match(html, /1 Main St, New York, NY/);
   assert.match(html, /Google rating 4\.6 · 321 reviews/);
-  assert.match(html, /\/api\/places\/static-map\?lat=40\.7128/);
+  assert.match(html, /\/api\/places\/static-map\?lat=40\.7128&(?:amp;)?lng=-74\.006&(?:amp;)?w=600&(?:amp;)?h=220&(?:amp;)?z=15/);
+  assert.doesNotMatch(html, /access_token|api\.mapbox\.com/);
   assert.match(html, /Coffee shop/);
   assert.match(html, /href="https:\/\/example.com"/);
   assert.match(html, /href="https:\/\/maps.google.com\/\?cid=1"/);
@@ -267,7 +269,8 @@ test("place detail shows the nearby photo and rating only from place details", (
   assert.match(two, /photos%2Fref/);
   assert.match(two, /photos%2Ftwo/);
   assert.equal(two.match(/<img /g)?.length, 3);
-  assert.match(two, /\/api\/places\/static-map\?lat=40\.7128/);
+  assert.match(two, /w=600&(?:amp;)?h=220&(?:amp;)?z=15/);
+  assert.doesNotMatch(two, /access_token|api\.mapbox\.com/);
   assert.doesNotMatch(two, /4\.6/);
   assert.deepEqual(
     placePhotos({
@@ -345,6 +348,20 @@ test("place detail shows the nearby photo and rating only from place details", (
       "http://10.0.2.2:43147",
     ).map((url) => new URL(url).href),
     ["http://10.0.2.2:43147/api/places/photo?name=only"],
+  );
+  const map = staticMapForClient(40.7128, -74.006, "http://192.168.1.20:43147");
+  const mapUrl = new URL(map);
+  assert.equal(mapUrl.origin, "http://192.168.1.20:43147");
+  assert.equal(mapUrl.pathname, "/api/places/static-map");
+  assert.equal(mapUrl.searchParams.get("lat"), "40.7128");
+  assert.equal(mapUrl.searchParams.get("lng"), "-74.006");
+  assert.equal(mapUrl.searchParams.get("w"), "600");
+  assert.equal(mapUrl.searchParams.get("h"), "220");
+  assert.equal(mapUrl.searchParams.get("z"), "15");
+  assert.equal(mapUrl.searchParams.has("access_token"), false);
+  assert.equal(
+    staticMapForClient(40.7128, -74.006, ""),
+    "/api/places/static-map?lat=40.7128&lng=-74.006&w=600&h=220&z=15",
   );
 });
 

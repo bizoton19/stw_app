@@ -7,10 +7,27 @@ import {
   httpHref,
   placeDetailsQuery,
   placePhotos,
+  staticMapForClient,
   readPlaceDetail,
   type NearbyPlaceCard,
   type PlaceDetail,
 } from "@/lib/nearby-place-card";
+
+function QuietMap({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <div className="h-[180px] w-full rounded-2xl bg-[var(--stw-chrome)]" aria-hidden />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      className="h-[180px] w-full rounded-2xl bg-[var(--stw-chrome)] object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 function Hero({ url, className }: { url: string; className?: string }) {
   const [failed, setFailed] = useState(false);
@@ -67,7 +84,7 @@ export function NearbyPlaceDetail({
   const lng = detail?.lng ?? card.lng;
   const staticMap =
     typeof lat === "number" && typeof lng === "number"
-      ? `/api/places/static-map?lat=${lat}&lng=${lng}&w=600&h=220`
+      ? staticMapForClient(lat, lng, typeof window === "undefined" ? "" : window.location.origin)
       : null;
   const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
   const category = formatPlaceCategory(detail?.category ?? card.category);
@@ -89,7 +106,7 @@ export function NearbyPlaceDetail({
           ))}
         </div>
       ) : null}
-      {staticMap ? <Hero url={staticMap} className="h-[180px] w-full rounded-2xl bg-[var(--stw-chrome)] object-cover" /> : null}
+      {staticMap ? <QuietMap url={staticMap} /> : null}
       {address ? <p className="text-[14px] leading-5 text-muted-foreground">{address}</p> : null}
       {rating ? <p className="text-[14px] font-semibold">{rating}</p> : null}
       {category ? <p className="text-[13px] text-muted-foreground">{category}</p> : null}
