@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-02 ~04:40 −04:00 |
-| **Elapsed** | **~11.6 days** |
-| **Commits on `main`** | **242** (refresh with `git rev-list --count HEAD`) |
+| **This snapshot** | 2026-10-03 ~08:20 −04:00 · tag `candidate-release-2026-10-03` |
+| **Elapsed** | **~12.8 days** |
+| **Commits on this branch** | **250** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -83,6 +83,11 @@ git log --reverse -1 --format='%aI %s'
 - **Hand-drawn motif kit replaces generic icons** on both web and native: a stem marks a drink line, a torn check stub marks food and "the tab", a carafe marks a shared bottle, a label band marks the venue. All stroke-only and colour-inheriting, so one drawing serves every theme.
 - **Settle got card treatment** — a masked split watermark behind "You owe", and a tear line instead of a plain divider.
 - The day palette is unchanged on purpose: every theme token holds the exact value it shipped with, so dusk is one-line reversible and "too ugly" never costs a migration.
+
+### Day 13 — Sat 2026-10-03 · **candidate release**
+- Labeled **`candidate-release-2026-10-03`** on `plan-an-outing` (friend-test / store-prep freeze point before Places hybrid work).
+- Receipt read is snappier: skip host classify by default, sharp-downscale before Gemini, **15s** extract timeout, default model **gemini-3.5-flash-lite**.
+- Home paints hosted tabs from local storage first; close/reopen apply the POST receipt and GET no longer takes a Postgres row lock.
 
 ## How to extend this file
 
