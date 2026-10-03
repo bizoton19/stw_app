@@ -10,10 +10,13 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
+import { Globe, Map, MapPin, ShoppingBasket, Star, UtensilsCrossed, Wine } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { PlacePhotoSheet } from "@/components/place-photo-sheet";
 import { goHostDesk } from "@/lib/navigation";
 import { currentNearbyPlan } from "@/lib/nearby-plan";
 import { getApiUrl } from "@/lib/config";
+import { classifyVenueKind } from "@/lib/line-kind";
 import { fetchPlaceDetail } from "@/lib/places";
 import {
   formatPlaceCategory,
@@ -25,6 +28,12 @@ import {
   type PlaceDetail,
 } from "@/lib/nearby-places";
 import { colors } from "@/lib/theme";
+
+const CATEGORY_ICON = {
+  restaurant: UtensilsCrossed,
+  bar: Wine,
+  grocery: ShoppingBasket,
+} as const;
 
 function openHttp(url: string) {
   const href = httpHref(url);
@@ -47,8 +56,11 @@ export default function NearbyPlaceScreen() {
       : null;
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [mapFailed, setMapFailed] = useState(false);
+  const [openPhoto, setOpenPhoto] = useState<string | null>(null);
   const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
   const category = formatPlaceCategory(detail?.category ?? card?.category);
+  const kind = classifyVenueKind(detail?.category ?? card?.category, card?.name);
+  const CategoryIcon = kind ? CATEGORY_ICON[kind] : null;
   const address = detail?.formattedAddress ?? card?.formattedAddress;
   const website = httpHref(detail?.websiteUri);
   const maps = httpHref(detail?.googleMapsUri ?? card?.googleMapsUri);
@@ -105,15 +117,21 @@ export default function NearbyPlaceScreen() {
                       style={[styles.slide, { width: slideWidth }, index < photos.length - 1 && styles.slideGap]}
                     />
                   ) : (
-                    // eslint-disable-next-line jsx-a11y/alt-text
-                    <Image
+                    <Pressable
                       key={`${url}-${index}`}
-                      source={{ uri: url }}
-                      style={[styles.slide, { width: slideWidth }, index < photos.length - 1 && styles.slideGap]}
-                      resizeMode="cover"
-                      accessible={false}
-                      onError={() => setFailed((current) => ({ ...current, [`${url}-${index}`]: true }))}
-                    />
+                      accessibilityRole="button"
+                      accessibilityLabel={`Photo ${index + 1} of ${photos.length}`}
+                      onPress={() => setOpenPhoto(url)}
+                    >
+                      {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                      <Image
+                        source={{ uri: url }}
+                        style={[styles.slide, { width: slideWidth }, index < photos.length - 1 && styles.slideGap]}
+                        resizeMode="cover"
+                        accessible={false}
+                        onError={() => setFailed((current) => ({ ...current, [`${url}-${index}`]: true }))}
+                      />
+                    </Pressable>
                   ),
                 )}
               </ScrollView>
@@ -130,19 +148,54 @@ export default function NearbyPlaceScreen() {
             ) : mapUri ? (
               <View style={styles.map} />
             ) : null}
-            {address ? <Text style={styles.address}>{address}</Text> : null}
-            {rating ? <Text style={styles.rating}>{rating}</Text> : null}
-            {category ? <Text style={styles.category}>{category}</Text> : null}
+            <PlacePhotoSheet
+              visible={openPhoto != null}
+              uri={openPhoto}
+              title={card.name}
+              onClose={() => setOpenPhoto(null)}
+            />
+            {address ? (
+              <View style={styles.iconRow}>
+                <MapPin size={16} color={colors.inkSoft} strokeWidth={2.25} accessible={false} />
+                <Text style={[styles.address, styles.iconLabel]}>{address}</Text>
+              </View>
+            ) : null}
+            {rating ? (
+              <View style={styles.iconRow}>
+                <Star
+                  size={16}
+                  color={colors.ink}
+                  strokeWidth={2.25}
+                  fill="none"
+                  accessible={false}
+                />
+                <Text style={[styles.rating, styles.iconLabel]}>{rating}</Text>
+              </View>
+            ) : null}
+            {category ? (
+              <View style={styles.categoryRow}>
+                {CategoryIcon ? (
+                  <CategoryIcon size={16} color={colors.ink} strokeWidth={2.25} accessible={false} />
+                ) : null}
+                <Text style={[styles.category, styles.iconLabel]}>{category}</Text>
+              </View>
+            ) : null}
             {website || maps ? (
               <View style={styles.links}>
                 {website ? (
                   <Pressable onPress={() => openHttp(website)} hitSlop={8} style={styles.linkHit}>
-                    <Text style={styles.link}>Website</Text>
+                    <View style={styles.iconRow}>
+                      <Globe size={16} color={colors.merlot} strokeWidth={2.25} accessible={false} />
+                      <Text style={styles.link}>Website</Text>
+                    </View>
                   </Pressable>
                 ) : null}
                 {maps ? (
                   <Pressable onPress={() => openHttp(maps)} hitSlop={8} style={styles.linkHit}>
-                    <Text style={styles.link}>Maps</Text>
+                    <View style={styles.iconRow}>
+                      <Map size={16} color={colors.merlot} strokeWidth={2.25} accessible={false} />
+                      <Text style={styles.link}>Maps</Text>
+                    </View>
                   </Pressable>
                 ) : null}
               </View>
@@ -165,6 +218,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.chrome,
   },
   slideGap: { marginRight: 12 },
+  iconRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  categoryRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  iconLabel: { flexShrink: 1 },
   map: {
     width: "100%",
     height: 180,

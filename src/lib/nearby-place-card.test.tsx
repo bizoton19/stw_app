@@ -426,7 +426,25 @@ test("selecting a nearby card does not call the typeahead bridge", () => {
   assert.match(placeScreen, /mergePlaceDetail/);
   assert.match(placeScreen, /horizontal/);
   assert.match(placeScreen, /placePhotos\(card, getApiUrl\(\)\)/);
+  assert.match(placeScreen, /PlacePhotoSheet/);
+  assert.match(placeScreen, /setOpenPhoto\(url\)/);
+  assert.match(placeScreen, /classifyVenueKind/);
+  assert.match(placeScreen, /MapPin/);
+  assert.match(placeScreen, /fill="none"/);
+  assert.match(placeScreen, /Globe/);
+  assert.doesNotMatch(placeScreen, /VenueKindIcon|VenueKindThumb/);
   assert.doesNotMatch(placeScreen, /detail\.photoUrl|detail\?\.photoUrls/);
+  const photoSheet = readFileSync(
+    new URL("../../apps/mobile/src/components/place-photo-sheet.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(photoSheet, /Swipe down to close\./);
+  assert.match(photoSheet, /colors\.paper/);
+  assert.match(photoSheet, /colors\.chrome/);
+  assert.match(photoSheet, /resizeMode="contain"/);
+  assert.match(photoSheet, /size=\{22\}/);
+  assert.match(photoSheet, /strokeWidth=\{2\.25\}/);
+  assert.doesNotMatch(photoSheet, /Gesture\.Pinch|Gesture\.LongPress|holdToSave/);
   assert.doesNotMatch(placeScreen, /\/api\/places\/bridge/);
   assert.doesNotMatch(placeScreen, /card\.rating|card\?\.websiteUri|card\.websiteUri/);
   const cardsWeb = readFileSync(

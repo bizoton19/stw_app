@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-03 ~09:55 −04:00 · nearby list shows one full photo; detail scrolls up to three |
-| **Elapsed** | **~12.8 days** |
-| **Commits on this branch** | **266** (refresh with `git rev-list --count HEAD`) |
+| **This snapshot** | 2026-10-03 ~10:20 −04:00 · place detail leads lines with icons; a tapped photo opens in a paper sheet |
+| **Elapsed** | **~12.9 days** |
+| **Commits on this branch** | **269** (refresh with `git rev-list --count HEAD`) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -92,6 +92,7 @@ git log --reverse -1 --format='%aI %s'
 - Nearby food and drink (top 7) comes from Google Places through the server. Picking a Mapbox or MapKit suggestion asks Google for that place’s id by name and location; the receipt keeps Google when that works, and the Mapbox or Apple pin when it does not. There is no Places key in the app — without one, the proxy says so and does not call Google.
 - Nearby photos on a phone use the same API address as the rest of the app, so a `0.0.0.0` photo link from the dev server still loads. Each list card is one full photo. Opening a place scrolls up to three nearby photos, labels the Google rating, and shows a Mapbox map of the pin.
 - On “Where are you going?” and the web restaurant step, nearby places swipe sideways as photo cards (the first nearby photo, plus name, address, and category) until you type two letters. A tap opens that one place, scrolls up to three nearby photos, and loads its rating and website from Place Details; Plan here saves them with the first nearby photo, and back returns to the place step. Typing still uses Mapbox or MapKit and the place-id bridge. If nearby or that details call cannot load, the row stays empty or the place still saves without a rating, and search still works.
+- On the phone, the place screen leads the address, Google rating, category, website, and maps lines with small line icons. Tapping a gallery photo opens that same image in a paper sheet; swipe down or tap the scrim to close.
 
 ## How to extend this file
 
