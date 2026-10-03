@@ -25,6 +25,7 @@ import {
   clearHostedReceipt,
   getActiveHostReceiptId,
   hostedStatusLabel,
+  listHostedReceipts,
   refreshHostedReceiptStatuses,
   type HostedReceiptSummary,
 } from "@/lib/host-tabs";
@@ -64,10 +65,13 @@ export default function HomeScreen() {
 
   const refresh = useCallback(() => {
     void (async () => {
+      // Paint AsyncStorage first so a just-published tab shows immediately;
+      // status GETs can take a beat and used to leave Home empty until they finished.
       setActiveId(await getActiveHostReceiptId());
-      setHosted(await refreshHostedReceiptStatuses());
+      setHosted(await listHostedReceipts());
       const saved = await loadHostDraft();
       setDraft(saved && draftHasProgress(saved) ? saved : null);
+      setHosted(await refreshHostedReceiptStatuses());
     })();
   }, []);
 
