@@ -407,6 +407,9 @@ test("selecting a nearby card does not call the typeahead bridge", () => {
   }
   assert.match(web, /nearbyQuery\(/);
   assert.match(mobile, /fetchNearbyPlaces\(/);
+  assert.match(mobile, /nearbyLoading/);
+  assert.match(mobile, /nearbyRef\.current\.length === 0/);
+  assert.match(mobile, /requestAnimationFrame/);
   const interview = readFileSync(new URL("../components/host-interview.tsx", import.meta.url), "utf8");
   const planNearby = between(interview, "function planNearby", "const back");
   assert.match(planNearby, /mergePlaceDetail/);
@@ -440,6 +443,8 @@ test("selecting a nearby card does not call the typeahead bridge", () => {
   );
   assert.doesNotMatch(cardsWeb, /placeDetailsQuery|\/api\/places\/google/);
   assert.doesNotMatch(cardsMobile, /placeDetailsQuery|\/api\/places\/google/);
+  assert.match(cardsMobile, /Loading nearby/);
+  assert.match(cardsMobile, /if \(!loading\) return null/);
   assert.match(cardsMobile, /width: cardWidth/);
   assert.match(cardsMobile, /height: CARD_HEIGHT/);
   assert.doesNotMatch(cardsMobile, /flex:\s*1/);

@@ -33,17 +33,63 @@ function CardPhoto({ url, width, height }: { url: string; width: number; height:
   );
 }
 
+function NearbyLoading({ cardWidth }: { cardWidth: number }) {
+  return (
+    <View
+      style={styles.wrap}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Loading nearby"
+    >
+      <Text style={styles.heading}>Loading nearby…</Text>
+      <ScrollView
+        horizontal
+        scrollEnabled={false}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+      >
+        {[0, 1].map((slot) => (
+          <View key={slot} style={[styles.card, styles.skeleton, { width: cardWidth }]}>
+            <View
+              style={{
+                width: Math.round(cardWidth * 0.72),
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: colors.border,
+              }}
+            />
+            <View
+              style={{
+                width: Math.round(cardWidth * 0.46),
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: colors.border,
+                marginTop: 8,
+              }}
+            />
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 /** Short horizontal swipe. A tap opens the place screen; it does not select. */
 export function NearbyPlaceCards({
   places,
   onSelect,
+  loading = false,
 }: {
   places: NearbyPlaceCard[];
   onSelect: (card: NearbyPlaceCard) => void;
+  /** True only while the first nearby request is in flight and `places` is still empty. */
+  loading?: boolean;
 }) {
   const { width } = useWindowDimensions();
   const cardWidth = Math.min(280, Math.round(width * 0.78));
-  if (places.length === 0) return null;
+  if (places.length === 0) {
+    if (!loading) return null;
+    return <NearbyLoading cardWidth={cardWidth} />;
+  }
 
   return (
     <View style={styles.wrap}>
@@ -116,6 +162,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     backgroundColor: colors.chrome,
+  },
+  skeleton: {
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.chromeBorder,
   },
   caption: {
     position: "absolute",

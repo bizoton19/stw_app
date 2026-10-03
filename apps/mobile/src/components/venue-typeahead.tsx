@@ -87,6 +87,7 @@ export function VenueTypeahead({
 
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [nearby, setNearby] = useState<NearbyPlaceCard[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
@@ -95,6 +96,7 @@ export function VenueTypeahead({
   const [locationReady, setLocationReady] = useState(false);
   const sessionRef = useRef(newSession());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nearbyRef = useRef<NearbyPlaceCard[]>([]);
   const lockedRef = useRef(isPinned(venue));
   /** Seed search once for a parsed name — never auto-lock a place. */
   const seededSearchRef = useRef(false);
@@ -143,12 +145,27 @@ export function VenueTypeahead({
   useEffect(() => {
     if (!coords) return;
     let cancelled = false;
+    // A response that settles before the next frame never paints a loader.
+    // A later fetch that already has cards stays on those cards.
+    let stillPending = true;
+    const frame =
+      nearbyRef.current.length === 0
+        ? requestAnimationFrame(() => {
+            if (!cancelled && stillPending) setNearbyLoading(true);
+          })
+        : 0;
     void (async () => {
       const cards = await fetchNearbyPlaces(coords);
-      if (!cancelled) setNearby(cards);
+      stillPending = false;
+      if (cancelled) return;
+      nearbyRef.current = cards;
+      setNearby(cards);
+      setNearbyLoading(false);
     })();
     return () => {
       cancelled = true;
+      stillPending = false;
+      if (frame) cancelAnimationFrame(frame);
     };
   }, [coords]);
 
@@ -330,7 +347,11 @@ export function VenueTypeahead({
             <Text style={styles.searchError}>{searchError}</Text>
           ) : null}
           {coords && shouldShowNearbyCards(value) ? (
-            <NearbyPlaceCards places={nearby} onSelect={selectNearbyCard} />
+            <NearbyPlaceCards
+              places={nearby}
+              loading={nearbyLoading}
+              onSelect={selectNearbyCard}
+            />
           ) : null}
           {value.trim().length >= 2 && !loading && !searchError && predictions.length === 0 ? (
             <Text style={styles.hint}>
