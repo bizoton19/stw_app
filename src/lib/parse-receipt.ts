@@ -20,8 +20,8 @@ export type ReceiptImage = {
 };
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-/** Hard ceiling around the whole vision extract attempt (client often dies ~60–300s otherwise). */
-export const VISION_TIMEOUT_MS = 40_000;
+/** Hard ceiling around the whole vision extract — fail fast if Gemini stalls. */
+export const VISION_TIMEOUT_MS = 15_000;
 /** Short gate before extract — fail-open on timeout so real receipts still parse. */
 export const CLASSIFY_TIMEOUT_MS = 12_000;
 const EMPTY_PARSE: ParseResult = { restaurant: "", receiptDate: null, items: [], fees: [] };

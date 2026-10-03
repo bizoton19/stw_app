@@ -53,7 +53,7 @@ export async function parseReceiptVision(image: VisionImage): Promise<ParseResul
     schemaName: "receipt_parse",
     schema: RECEIPT_SCHEMA,
     maxTokens: 2048,
-    abortMs: 38_000,
+    abortMs: 14_000,
   });
   try {
     return validateParse(JSON.parse(text));
