@@ -17,6 +17,7 @@ import {
   NEARBY_PHOTO_LIMIT,
   PHOTO_CACHE_CONTROL,
   PHOTO_MAX_WIDTH_PX,
+  publicOriginFromRequest,
   searchNearby,
   setGooglePlacesClockForTests,
 } from "./google-places";
@@ -340,6 +341,73 @@ describe("google places nearby", () => {
     assert.equal("rating" in (place ?? {}), false);
     assert.equal("userRatingCount" in (place ?? {}), false);
     assert.equal("websiteUri" in (place ?? {}), false);
+  });
+
+  it("builds photo URLs from the client host and never emits 0.0.0.0", async () => {
+    process.env.GOOGLE_PLACES_API_KEY = KEY;
+    const { calls } = installFetch(
+      () =>
+        new Response(JSON.stringify({ places: [googlePlace()] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const query = "lat=40.7128&lng=-74.006";
+    const bindUrl = `http://0.0.0.0:43147/api/places/nearby?${query}`;
+
+    const blocked = await nearbyGET(
+      new Request(bindUrl, { headers: { Host: "0.0.0.0:43147" } }),
+    );
+    const blockedBody = (await blocked.json()) as {
+      places: Array<{ photoUrl: string | null; photoUrls?: string[] }>;
+    };
+    assert.equal(blocked.status, 200);
+    assert.match(blockedBody.places[0]?.photoUrl ?? "", /^\/api\/places\/photo\?/);
+    assert.equal(JSON.stringify(blockedBody).includes("0.0.0.0"), false);
+    assert.equal(JSON.stringify(blockedBody).includes(KEY), false);
+
+    const phone = await nearbyGET(
+      new Request(bindUrl, { headers: { Host: "192.168.0.104:43147" } }),
+    );
+    const phoneBody = (await phone.json()) as {
+      cached?: boolean;
+      places: Array<{ photoUrl: string | null; photoUrls?: string[] }>;
+    };
+    assert.equal(phoneBody.cached, true);
+    assert.equal(calls.length, 1);
+    assert.equal(
+      phoneBody.places[0]?.photoUrl?.startsWith("http://192.168.0.104:43147/api/places/photo?"),
+      true,
+    );
+    assert.equal(phoneBody.places[0]?.photoUrl, phoneBody.places[0]?.photoUrls?.[0]);
+    assert.equal(JSON.stringify(phoneBody).includes("0.0.0.0"), false);
+    assert.equal(JSON.stringify(phoneBody).includes(KEY), false);
+
+    const forwarded = await nearbyGET(
+      new Request(bindUrl, {
+        headers: {
+          Host: "0.0.0.0:43147",
+          "x-forwarded-host": "api.example.com",
+          "x-forwarded-proto": "https",
+        },
+      }),
+    );
+    const forwardedBody = (await forwarded.json()) as {
+      places: Array<{ photoUrl: string | null }>;
+    };
+    assert.equal(calls.length, 1);
+    assert.equal(
+      forwardedBody.places[0]?.photoUrl?.startsWith("https://api.example.com/api/places/photo?"),
+      true,
+    );
+    assert.equal(JSON.stringify(forwardedBody).includes("0.0.0.0"), false);
+
+    const direct = publicOriginFromRequest(
+      new Request("http://127.0.0.1:43147/api/places/nearby?lat=1&lng=2", {
+        headers: { Host: "192.168.0.104:43147" },
+      }),
+    );
+    assert.equal(direct, "http://192.168.0.104:43147");
   });
 
   it("rejects bad coordinates without calling Google", async () => {

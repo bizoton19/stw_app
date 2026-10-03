@@ -352,6 +352,61 @@ function readPlaces(data: unknown): NormalizedPlace[] {
   return out;
 }
 
+const UNTRUSTED_PHOTO_HOSTS = new Set(["0.0.0.0", "::"]);
+
+function headerFirst(value: string | null): string {
+  if (!value) return "";
+  return value.split(",")[0]?.trim() ?? "";
+}
+
+function trustworthyOrigin(host: string, proto: string): string | null {
+  if (!host || /[\s/@\\]/.test(host)) return null;
+  if (proto !== "http" && proto !== "https") return null;
+  try {
+    const url = new URL(`${proto}://${host}`);
+    const hostname = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    if (!hostname || UNTRUSTED_PHOTO_HOSTS.has(hostname)) return null;
+    if (url.username || url.password || url.pathname !== "/" || url.search || url.hash) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Origin for photo URLs a phone can open.
+ * `next dev -H 0.0.0.0` puts 0.0.0.0 on `req.url` even when the client sent
+ * a real Host. Prefer `x-forwarded-host` / `Host`, and skip 0.0.0.0.
+ * Returns "" when no trustworthy host exists so callers emit a relative path.
+ */
+export function publicOriginFromRequest(req: Request): string {
+  const forwardedProto = headerFirst(req.headers.get("x-forwarded-proto")).replace(/:$/, "");
+  let proto = forwardedProto === "http" || forwardedProto === "https" ? forwardedProto : "";
+  if (!proto) {
+    try {
+      const urlProto = new URL(req.url).protocol.replace(":", "");
+      proto = urlProto === "https" ? "https" : "http";
+    } catch {
+      proto = "http";
+    }
+  }
+  for (const host of [
+    headerFirst(req.headers.get("x-forwarded-host")),
+    headerFirst(req.headers.get("host")),
+  ]) {
+    const origin = trustworthyOrigin(host, proto);
+    if (origin) return origin;
+  }
+  try {
+    const url = new URL(req.url);
+    const origin = trustworthyOrigin(url.host, url.protocol === "https:" ? "https" : "http");
+    if (origin) return origin;
+  } catch {
+    /* relative photo paths */
+  }
+  return "";
+}
+
 function toCard(
   place: NormalizedPlace,
   origin: string,
