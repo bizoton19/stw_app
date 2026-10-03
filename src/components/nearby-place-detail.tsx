@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   formatPlaceCategory,
   formatPlaceRating,
   httpHref,
+  placeDetailsQuery,
   placePhotos,
+  readPlaceDetail,
   type NearbyPlaceCard,
+  type PlaceDetail,
 } from "@/lib/nearby-place-card";
 
 function Hero({ url }: { url: string }) {
@@ -23,14 +26,49 @@ function Hero({ url }: { url: string }) {
   );
 }
 
-/** Place detail. Photos are only the proxied URLs already on the card. */
-export function NearbyPlaceDetail({ card }: { card: NearbyPlaceCard }) {
-  const photos = placePhotos(card);
+/**
+ * Place detail. The photo is the nearby card’s `photoUrl`. Rating, review
+ * count, and website come from `GET /api/places/google` for this one place.
+ */
+export function NearbyPlaceDetail({
+  card,
+  detail: detailProp,
+  onDetail,
+}: {
+  card: NearbyPlaceCard;
+  /** Pass to skip the fetch (tests). Omit to load Place Details for this place. */
+  detail?: PlaceDetail | null;
+  onDetail?: (detail: PlaceDetail | null) => void;
+}) {
+  const [fetched, setFetched] = useState<PlaceDetail | null>(null);
+  const detail = detailProp !== undefined ? detailProp : fetched;
+
+  useEffect(() => {
+    if (detailProp !== undefined) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(placeDetailsQuery(card.placeId));
+        const next = await readPlaceDetail(res);
+        if (cancelled) return;
+        setFetched(next);
+        onDetail?.(next);
+      } catch {
+        if (!cancelled) onDetail?.(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [card.placeId, detailProp, onDetail]);
+
+  const photos = placePhotos({ photoUrl: card.photoUrl });
   const [hero, ...rest] = photos;
-  const rating = formatPlaceRating(card.rating, card.userRatingCount);
-  const category = formatPlaceCategory(card.category);
-  const website = httpHref(card.websiteUri);
-  const maps = httpHref(card.googleMapsUri);
+  const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
+  const category = formatPlaceCategory(detail?.category ?? card.category);
+  const address = detail?.formattedAddress ?? card.formattedAddress;
+  const website = httpHref(detail?.websiteUri);
+  const maps = httpHref(detail?.googleMapsUri ?? card.googleMapsUri);
 
   return (
     <div className="space-y-3">
@@ -45,9 +83,7 @@ export function NearbyPlaceDetail({ card }: { card: NearbyPlaceCard }) {
           ))}
         </ul>
       ) : null}
-      {card.formattedAddress ? (
-        <p className="text-[14px] leading-5 text-muted-foreground">{card.formattedAddress}</p>
-      ) : null}
+      {address ? <p className="text-[14px] leading-5 text-muted-foreground">{address}</p> : null}
       {rating ? <p className="text-[14px] font-semibold">{rating}</p> : null}
       {category ? <p className="text-[13px] text-muted-foreground">{category}</p> : null}
       {website || maps ? (

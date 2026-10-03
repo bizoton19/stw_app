@@ -1,6 +1,13 @@
 import { Platform } from "react-native";
 import { api } from "./api";
-import { nearbyQuery, placesFromNearbyResponse, type NearbyPlaceCard } from "./nearby-places";
+import {
+  nearbyQuery,
+  parsePlaceDetail,
+  placeDetailsQuery,
+  placesFromNearbyResponse,
+  type NearbyPlaceCard,
+  type PlaceDetail,
+} from "./nearby-places";
 import type { ReceiptVenue } from "./types";
 
 export type PlacePrediction = {
@@ -242,6 +249,19 @@ export async function resolveVenueFromName(
   const resolved = await resolvePlaceDetails(best, session);
   if (resolved.lat == null || resolved.lng == null) return null;
   return resolved;
+}
+
+/**
+ * Place Details for the one place the user opened. 400 (including a Mapbox
+ * id), 502, and 503 are null — Plan here still keeps the nearby card.
+ */
+export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail | null> {
+  try {
+    const data = await api<unknown>(placeDetailsQuery(placeId));
+    return parsePlaceDetail(200, data);
+  } catch {
+    return null;
+  }
 }
 
 export function typedVenue(name: string): ReceiptVenue {

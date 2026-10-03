@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { placePhotos, type NearbyPlaceCard } from "@/lib/nearby-place-card";
+import { formatPlaceCategory, placePhotos, type NearbyPlaceCard } from "@/lib/nearby-place-card";
 
 function CardPhoto({ url }: { url: string | null }) {
   const [failed, setFailed] = useState(false);
@@ -33,7 +33,9 @@ export function NearbyPlaceCards({
       <p className="mb-2 text-[12px] font-semibold text-muted-foreground">Nearby</p>
       <ul className="flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {places.map((card) => {
-          const photo = placePhotos(card)[0] ?? null;
+          const photo = placePhotos({ photoUrl: card.photoUrl })[0] ?? null;
+          const category = formatPlaceCategory(card.category);
+          const ink = photo ? "text-[var(--stw-paper)]" : "text-foreground";
           return (
             <li key={card.placeId} className="w-[min(17.5rem,78%)] shrink-0 snap-start">
               <button
@@ -45,19 +47,23 @@ export function NearbyPlaceCards({
                 <span
                   className={
                     photo
-                      ? "absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(36,28,20,0.82)] via-[rgba(36,28,20,0.28)] to-transparent px-3 pb-3 pt-10"
-                      : "absolute inset-x-0 bottom-0 px-3 pb-3 pt-10"
+                      ? "absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(36,28,20,0.82)] via-[rgba(36,28,20,0.28)] to-transparent px-3 pb-2.5 pt-8"
+                      : "absolute inset-x-0 bottom-0 px-3 pb-2.5 pt-8"
                   }
                 >
-                  <span
-                    className={
-                      photo
-                        ? "line-clamp-2 text-[16px] font-semibold leading-5 text-[var(--stw-paper)]"
-                        : "line-clamp-2 text-[16px] font-semibold leading-5 text-foreground"
-                    }
-                  >
+                  <span className={`line-clamp-1 text-[16px] font-semibold leading-5 ${ink}`}>
                     {card.name}
                   </span>
+                  {card.formattedAddress ? (
+                    <span className={`mt-0.5 line-clamp-1 text-[12px] leading-4 ${ink} opacity-90`}>
+                      {card.formattedAddress}
+                    </span>
+                  ) : null}
+                  {category ? (
+                    <span className={`mt-0.5 line-clamp-1 text-[11px] leading-4 ${ink} opacity-80`}>
+                      {category}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             </li>

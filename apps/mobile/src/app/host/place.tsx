@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { goHostDesk } from "@/lib/navigation";
 import { currentNearbyPlan } from "@/lib/nearby-plan";
+import { fetchPlaceDetail } from "@/lib/places";
 import {
   formatPlaceCategory,
   formatPlaceRating,
   httpHref,
+  mergePlaceDetail,
   placePhotos,
+  type PlaceDetail,
 } from "@/lib/nearby-places";
 import { colors } from "@/lib/theme";
 
@@ -21,17 +24,30 @@ function openHttp(url: string) {
 export default function NearbyPlaceScreen() {
   const [plan] = useState(() => currentNearbyPlan());
   const card = plan?.card ?? null;
-  const photos = card ? placePhotos(card) : [];
+  const [detail, setDetail] = useState<PlaceDetail | null>(null);
+  const photos = card ? placePhotos({ photoUrl: card.photoUrl }) : [];
   const [hero, ...rest] = photos;
   const [heroFailed, setHeroFailed] = useState(false);
-  const rating = card ? formatPlaceRating(card.rating, card.userRatingCount) : null;
-  const category = card ? formatPlaceCategory(card.category) : null;
-  const website = httpHref(card?.websiteUri);
-  const maps = httpHref(card?.googleMapsUri);
+  const rating = formatPlaceRating(detail?.rating, detail?.userRatingCount);
+  const category = formatPlaceCategory(detail?.category ?? card?.category);
+  const address = detail?.formattedAddress ?? card?.formattedAddress;
+  const website = httpHref(detail?.websiteUri);
+  const maps = httpHref(detail?.googleMapsUri ?? card?.googleMapsUri);
+
+  useEffect(() => {
+    if (!card) return;
+    let cancelled = false;
+    void fetchPlaceDetail(card.placeId).then((next) => {
+      if (!cancelled) setDetail(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [card]);
 
   function planHere() {
     const current = currentNearbyPlan();
-    if (current) current.onPlan(current.card);
+    if (current) current.onPlan(mergePlaceDetail(current.card, detail));
     router.back();
   }
 
@@ -78,9 +94,7 @@ export default function NearbyPlaceScreen() {
                 ))}
               </View>
             ) : null}
-            {card.formattedAddress ? (
-              <Text style={styles.address}>{card.formattedAddress}</Text>
-            ) : null}
+            {address ? <Text style={styles.address}>{address}</Text> : null}
             {rating ? <Text style={styles.rating}>{rating}</Text> : null}
             {category ? <Text style={styles.category}>{category}</Text> : null}
             {website || maps ? (

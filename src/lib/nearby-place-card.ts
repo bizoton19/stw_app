@@ -15,10 +15,28 @@ export type NearbyPlaceCard = {
   lng: number | null;
   category: string | null;
   provider: "google";
+  /**
+   * Not part of nearby. Stay null until Place Details for this one place.
+   * Plan here copies them only after that call.
+   */
   rating: number | null;
   userRatingCount: number | null;
-  /** Proxied `/api/places/photo` URL. Never a Google URL that carries an API key. */
+  /** Proxied `/api/places/photo` URL from nearby. Never a Google URL that carries an API key. */
   photoUrl: string | null;
+  websiteUri: string | null;
+  googleMapsUri: string | null;
+};
+
+/** Place Details for one picked Google place. Photos stay on the nearby card. */
+export type PlaceDetail = {
+  placeId: string;
+  name: string;
+  formattedAddress: string | null;
+  lat: number | null;
+  lng: number | null;
+  category: string | null;
+  rating: number | null;
+  userRatingCount: number | null;
   websiteUri: string | null;
   googleMapsUri: string | null;
 };
@@ -35,6 +53,11 @@ export function nearbyQuery(lat: number, lng: number): string {
     lng: String(lng),
   });
   return `/api/places/nearby?${params}`;
+}
+
+/** One Google place id. The server rejects a Mapbox id. No API key. */
+export function placeDetailsQuery(placeId: string): string {
+  return `/api/places/google?placeId=${encodeURIComponent(placeId)}`;
 }
 
 function finite(value: unknown): number | null {
@@ -74,11 +97,70 @@ export function parseNearbyPlaceCard(row: unknown): NearbyPlaceCard | null {
     lng,
     category: text(place.category),
     provider: "google",
+    rating: null,
+    userRatingCount: null,
+    photoUrl: safePhotoUrl(place.photoUrl),
+    websiteUri: null,
+    googleMapsUri: text(place.googleMapsUri),
+  };
+}
+
+export function parsePlaceDetail(status: number, body: unknown): PlaceDetail | null {
+  if (status !== 200 || !body || typeof body !== "object") return null;
+  const row = (body as { place?: unknown }).place;
+  if (!row || typeof row !== "object") return null;
+  const place = row as Record<string, unknown>;
+  const placeId = text(place.placeId);
+  const name = text(place.name);
+  if (!placeId || !name) return null;
+  return {
+    placeId,
+    name,
+    formattedAddress: text(place.formattedAddress),
+    lat: finite(place.lat),
+    lng: finite(place.lng),
+    category: text(place.category),
     rating: finite(place.rating),
     userRatingCount: finite(place.userRatingCount),
-    photoUrl: safePhotoUrl(place.photoUrl),
     websiteUri: text(place.websiteUri),
     googleMapsUri: text(place.googleMapsUri),
+  };
+}
+
+export async function readPlaceDetail(res: {
+  status: number;
+  json: () => Promise<unknown>;
+}): Promise<PlaceDetail | null> {
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  return parsePlaceDetail(res.status, body);
+}
+
+/** Rating, review count, and website come only from Place Details. */
+export function mergePlaceDetail(card: NearbyPlaceCard, detail: PlaceDetail | null): NearbyPlaceCard {
+  const base: NearbyPlaceCard = {
+    ...card,
+    rating: null,
+    userRatingCount: null,
+    websiteUri: null,
+  };
+  if (!detail || detail.placeId !== card.placeId) return base;
+  return {
+    ...base,
+    name: detail.name || card.name,
+    formattedAddress: detail.formattedAddress ?? card.formattedAddress,
+    lat: detail.lat ?? card.lat,
+    lng: detail.lng ?? card.lng,
+    category: detail.category ?? card.category,
+    rating: detail.rating,
+    userRatingCount: detail.userRatingCount,
+    websiteUri: detail.websiteUri,
+    googleMapsUri: detail.googleMapsUri ?? card.googleMapsUri,
+    photoUrl: card.photoUrl,
   };
 }
 

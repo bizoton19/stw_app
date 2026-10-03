@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { placePhotos, type NearbyPlaceCard } from "@/lib/nearby-places";
+import { formatPlaceCategory, placePhotos, type NearbyPlaceCard } from "@/lib/nearby-places";
 import { colors } from "@/lib/theme";
 
 const CARD_HEIGHT = 148;
@@ -58,7 +58,8 @@ export function NearbyPlaceCards({
         contentContainerStyle={styles.row}
       >
         {places.map((card) => {
-          const photo = placePhotos(card)[0] ?? null;
+          const photo = placePhotos({ photoUrl: card.photoUrl })[0] ?? null;
+          const category = formatPlaceCategory(card.category);
           return (
             <Pressable
               key={card.placeId}
@@ -73,12 +74,19 @@ export function NearbyPlaceCards({
             >
               <CardPhoto url={photo} />
               <View style={[styles.caption, !photo && styles.captionPlain]}>
-                <Text
-                  numberOfLines={2}
-                  style={[styles.name, !photo && styles.namePlain]}
-                >
+                <Text numberOfLines={1} style={[styles.name, !photo && styles.namePlain]}>
                   {card.name}
                 </Text>
+                {card.formattedAddress ? (
+                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
+                    {card.formattedAddress}
+                  </Text>
+                ) : null}
+                {category ? (
+                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
+                    {category}
+                  </Text>
+                ) : null}
               </View>
             </Pressable>
           );
@@ -122,5 +130,13 @@ const styles = StyleSheet.create({
     color: colors.paper,
   },
   namePlain: { color: colors.ink },
+  meta: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.paper,
+    opacity: 0.9,
+  },
+  metaPlain: { color: colors.inkSoft },
   attribution: { fontSize: 11, color: colors.muted, marginTop: 8 },
 });

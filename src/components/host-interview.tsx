@@ -11,7 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NearbyPlaceDetail } from "@/components/nearby-place-detail";
 import { VenueTypeahead } from "@/components/venue-typeahead";
-import { venueFromNearbyCard, type NearbyPlaceCard } from "@/lib/nearby-place-card";
+import {
+  mergePlaceDetail,
+  venueFromNearbyCard,
+  type NearbyPlaceCard,
+  type PlaceDetail,
+} from "@/lib/nearby-place-card";
 import { centsToLabel } from "@/lib/money";
 import {
   DEFAULT_GLASSES_PER_BOTTLE,
@@ -175,6 +180,7 @@ export function HostInterview() {
   const [restaurant, setRestaurant] = useState("");
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
   const [nearbyDetail, setNearbyDetail] = useState<NearbyPlaceCard | null>(null);
+  const [placeDetail, setPlaceDetail] = useState<PlaceDetail | null>(null);
   const [receiptDate, setReceiptDate] = useState<string | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [fees, setFees] = useState<DraftFee[]>([]);
@@ -398,10 +404,17 @@ export function HostInterview() {
     }
   }
 
+  function openNearby(card: NearbyPlaceCard) {
+    setPlaceDetail(null);
+    setNearbyDetail(card);
+  }
+
   function planNearby(card: NearbyPlaceCard) {
-    setRestaurant(card.name);
-    setVenue(venueFromNearbyCard(card, new Date().toISOString()));
+    const picked = mergePlaceDetail(card, placeDetail);
+    setRestaurant(picked.name);
+    setVenue(venueFromNearbyCard(picked, new Date().toISOString()));
     setNearbyDetail(null);
+    setPlaceDetail(null);
   }
 
   const back: Partial<Record<Step, () => void>> = {
@@ -410,6 +423,7 @@ export function HostInterview() {
     restaurant: () => {
       if (nearbyDetail) {
         setNearbyDetail(null);
+        setPlaceDetail(null);
         return;
       }
       go("capture");
@@ -540,7 +554,11 @@ export function HostInterview() {
       body = (
         <>
           {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
-          <NearbyPlaceDetail card={nearbyDetail} />
+          <NearbyPlaceDetail
+            key={nearbyDetail.placeId}
+            card={nearbyDetail}
+            onDetail={setPlaceDetail}
+          />
         </>
       );
       footer = (
@@ -556,7 +574,7 @@ export function HostInterview() {
             receiptDate={receiptDate}
             onChangeName={setRestaurant}
             onChangeVenue={setVenue}
-            onOpenNearby={setNearbyDetail}
+            onOpenNearby={openNearby}
             fieldClass={fieldClass}
           />
           {!placeLocked ? (
