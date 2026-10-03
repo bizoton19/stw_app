@@ -1,6 +1,7 @@
 import { Motif, type MotifName } from "@/components/motifs";
 import { classifyLineKind, type LineKind } from "@/lib/line-kind";
-import type { ItemKind } from "@/lib/types";
+import { usesCarafeMotif } from "@/lib/pour";
+import type { ItemKind, ItemPour } from "@/lib/types";
 
 /** Distinct from CTA merlot + bottle-green select — food vs drink must read at a glance. */
 const TINT: Record<LineKind, { bg: string; fg: string; motif: MotifName }> = {
@@ -11,12 +12,15 @@ const TINT: Record<LineKind, { bg: string; fg: string; motif: MotifName }> = {
 export function LineKindIcon({
   name,
   kind,
+  pour,
   size = 14,
   className,
 }: {
   name: string;
   /** Prefer vision/storage kind; fall back to name heuristic. */
   kind?: ItemKind | null;
+  /** When a drink is split into glasses / carafe, show the shared-pour motif. */
+  pour?: ItemPour | null;
   size?: number;
   className?: string;
 }) {
@@ -24,6 +28,8 @@ export function LineKindIcon({
     kind === "food" || kind === "drink" ? kind : classifyLineKind(name);
   if (!resolved) return null;
   const tint = TINT[resolved];
+  const motif: MotifName =
+    resolved === "drink" && usesCarafeMotif({ name, pour }) ? "carafe" : tint.motif;
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-[7px] ${className ?? ""}`}
@@ -33,9 +39,11 @@ export function LineKindIcon({
         backgroundColor: tint.bg,
         color: tint.fg,
       }}
-      aria-label={resolved === "drink" ? "Drink" : "Food"}
+      aria-label={
+        resolved === "food" ? "Food" : motif === "carafe" ? "Shared drink" : "Drink"
+      }
     >
-      <Motif name={tint.motif} size={size + 2} />
+      <Motif name={motif} size={size + 2} />
     </span>
   );
 }

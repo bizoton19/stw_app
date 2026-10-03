@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, Share, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import { Banknote, ChevronDown, ChevronUp } from "lucide-react-native";
+import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { Field } from "@/components/field";
@@ -13,6 +13,7 @@ import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { LineKindIcon } from "@/components/line-kind-icon";
+import { Motif } from "@/components/motifs";
 import { useClaimFlow } from "@/context/claim-flow";
 import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
@@ -208,9 +209,9 @@ export default function SettleScreen() {
         step={3}
         total={3}
         hideProgress={flow.isHost}
-        kicker={receipt.restaurant || "The check"}
-        motif="label-band"
-        title={flow.isHost ? "Live board" : "Settle Payment"}
+        kicker={flow.isHost ? receipt.restaurant || "The check" : "Your share"}
+        motif={flow.isHost ? "label-band" : "check-stub"}
+        title={flow.isHost ? "Live board" : "What you owe"}
         onBack={
           flow.isHost
             ? goHostDesk
@@ -224,11 +225,12 @@ export default function SettleScreen() {
         supportTip={flow.isHost}
         keyboard={editingPay}
       >
-        <Text style={styles.lead}>
-          {flow.isHost
-            ? "Guests claim on their phones. Watch balances fill in here — tax and tip follow what people ordered."
-            : "Drinks plus a share of tax and tip. Tapping a payment method opens the host's app when possible — nothing is charged from Split the Wine."}
-        </Text>
+        {flow.isHost ? (
+          <Text style={styles.lead}>
+            Guests claim on their phones. Watch balances fill in here — tax and tip follow what
+            people ordered.
+          </Text>
+        ) : null}
         <ReceiptImageButton receiptId={receiptId} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
 
@@ -302,7 +304,7 @@ export default function SettleScreen() {
 
         <View style={styles.totals}>
           <View style={styles.totalsHead}>
-            <Banknote size={14} color={colors.muted} strokeWidth={2} />
+            <Motif name="check-stub" size={14} color={colors.merlot} opacity={0.8} />
             <Text style={styles.totalsLabel}>The tab</Text>
           </View>
           <Row label="Items" value={centsToLabel(totals.itemSubtotalCents)} />
@@ -312,15 +314,17 @@ export default function SettleScreen() {
 
         {!flow.isHost && mine && mine.totalCents > 0 ? (
           <View style={styles.youCard}>
+            <View style={styles.youPourMark} pointerEvents="none">
+              <Motif name="pour" size={30} color={colors.merlot} opacity={0.26} />
+            </View>
             <Text style={styles.youLabel}>You owe</Text>
             <Text style={styles.youAmount}>{centsToLabel(mine.totalCents)}</Text>
+            <Text style={styles.youMeta}>
+              {mine.lines.length} {mine.lines.length === 1 ? "item" : "items"}
+              {" · "}plus your share of tax and tip
+            </Text>
             {payments.length > 0 ? (
               <>
-                <Text style={styles.payIntro}>
-                  You can pay your share of {centsToLabel(mine.totalCents)} to the host
-                  {hostName !== "the host" ? `, ${hostName},` : ""} via the following payment
-                  method{payments.length === 1 ? "" : "s"}:
-                </Text>
                 <View style={styles.payList}>
                   {payments.map((payment) => {
                     const openable = payMethodIsOpenable(payment.method);
@@ -356,6 +360,9 @@ export default function SettleScreen() {
                     );
                   })}
                 </View>
+                <Text style={styles.payFoot}>
+                  Tapping a method opens {hostName}'s app — nothing is charged here.
+                </Text>
               </>
             ) : (
               <Text style={styles.muted}>The host hasn't added a payment method yet.</Text>
@@ -385,7 +392,12 @@ export default function SettleScreen() {
               return (
                 <View key={item.id} style={styles.remainRow}>
                   <View style={styles.remainNameRow}>
-                    <LineKindIcon name={item.name} kind={item.kind} size={12} />
+                    <LineKindIcon
+                      name={item.name}
+                      kind={item.kind}
+                      pour={item.pour}
+                      size={12}
+                    />
                     <Text style={styles.remainName} numberOfLines={1}>
                       {item.name}
                     </Text>
@@ -404,7 +416,7 @@ export default function SettleScreen() {
         ) : null}
 
         <View style={styles.peopleHead}>
-          <Banknote size={14} color={colors.muted} strokeWidth={2} />
+          <Motif name="coupe-pair" size={15} color={colors.merlot} opacity={0.8} />
           <Text style={styles.peopleTitle}>
             {flow.isHost ? "Who owes what" : "Everyone’s share"}
           </Text>
@@ -636,13 +648,23 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#FBFAF8",
     gap: 6,
+    overflow: "hidden",
+    position: "relative",
   },
-  youLabel: { fontSize: 13, fontWeight: "600", color: colors.inkSoft },
-  youAmount: { marginTop: 2, fontSize: 28, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  payIntro: {
+  youPourMark: { position: "absolute", right: 14, top: 12 },
+  youLabel: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: colors.muted,
+  },
+  youAmount: { marginTop: 2, fontSize: 32, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  youMeta: { fontSize: 13, color: colors.inkSoft },
+  payFoot: {
     marginTop: 8,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 11.5,
+    textAlign: "center",
     color: colors.muted,
   },
   payList: { marginTop: 8, gap: 8 },

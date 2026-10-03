@@ -105,7 +105,7 @@ export default function QtyScreen() {
           return (
             <View key={item.id} style={styles.row}>
               <View style={styles.head}>
-                <LineKindIcon name={item.name} kind={item.kind} />
+                <LineKindIcon name={item.name} kind={item.kind} pour={item.pour} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.meta}>

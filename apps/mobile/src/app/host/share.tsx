@@ -76,6 +76,10 @@ export default function HostShare() {
           <Text style={styles.total}>{centsToLabel(total)}</Text>
         </View>
 
+        <View style={styles.perf} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <View style={styles.perfDash} />
+        </View>
+
         <View style={styles.urlBox}>
           <Text style={styles.urlLabel}>Claim link</Text>
           <Text selectable style={styles.url}>
@@ -173,8 +177,16 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.5,
   },
+  /** Tear line between total and claim link — CSS `.stw-perf` on web. */
+  perf: { height: 12, marginTop: 4, marginBottom: 4, justifyContent: "center" },
+  perfDash: {
+    marginHorizontal: 6,
+    borderTopWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.border,
+  },
   urlBox: {
-    marginTop: 16,
+    marginTop: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     borderRadius: 14,

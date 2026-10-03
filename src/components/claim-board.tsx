@@ -371,7 +371,12 @@ export function ClaimBoard({
               <li key={item.id} className="py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-2.5">
-                    <LineKindIcon name={item.name} kind={item.kind} className="mt-0.5" />
+                    <LineKindIcon
+                    name={item.name}
+                    kind={item.kind}
+                    pour={item.pour}
+                    className="mt-0.5"
+                  />
                     <div className="min-w-0">
                       <p id={labelId} className="text-[15px] font-medium">
                         {item.name}
@@ -461,7 +466,7 @@ export function ClaimBoard({
                       : "border-transparent bg-transparent"
                   }`}
                 >
-                  <LineKindIcon name={item.name} kind={item.kind} />
+                  <LineKindIcon name={item.name} kind={item.kind} pour={item.pour} />
                   <span className="min-w-0 flex-1">
                     <span
                       className={`block text-[16px] font-semibold tracking-tight ${

@@ -226,7 +226,7 @@ function JoinScreen() {
         title={
           flow.isHost
             ? "You're hosting — claim under what name?"
-            : `Here is the tab for ${restaurant}`
+            : "Add your name to claim"
         }
         keyboard
         footer={
@@ -239,11 +239,11 @@ function JoinScreen() {
         }
       >
         <HostMessage note={hostNoteText(flow.receipt?.hostInfo)} />
-        <Text style={styles.lead}>
-          {flow.isHost
-            ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
-            : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
-        </Text>
+        {flow.isHost ? (
+          <Text style={styles.lead}>
+            Pick what you ordered too. Leftovers can still land on you when you close claiming.
+          </Text>
+        ) : null}
         <ReceiptImageButton receiptId={flow.receipt!.id} hasImage={flow.receipt?.hasImage} />
         <Field label="Name" value={name} onChangeText={setName} placeholder="Alex" autoComplete="name" />
         <Field

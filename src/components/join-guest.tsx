@@ -34,7 +34,7 @@ export function JoinGuest({
       hideProgress
       kicker={place}
       motif="label-band"
-      title={isHost ? "You're hosting — claim under what name?" : `Here is the tab for ${place}`}
+      title={isHost ? "You're hosting — claim under what name?" : "Add your name to claim"}
       stepKey="join"
       footer={
         <ContinueButton
@@ -50,11 +50,11 @@ export function JoinGuest({
       }
     >
       <HostMessage note={hostNote} />
-      <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
-        {isHost
-          ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
-          : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
-      </p>
+      {isHost ? (
+        <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
+          Pick what you ordered too. Leftovers can still land on you when you close claiming.
+        </p>
+      ) : null}
       {hasImage ? <ReceiptImageButton receiptId={receiptId} hasImage /> : null}
       <Label htmlFor="guest-name" className="mb-2 text-[13px] font-medium">
         Name

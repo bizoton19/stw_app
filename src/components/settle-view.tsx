@@ -308,16 +308,17 @@ export function SettleView({
             <ChevronLeft className="size-6" />
           </Link>
         </div>
-        <p className="text-[13px] font-medium text-ink-soft">
-          {receipt.restaurant || "The check"}
+        <p className="flex items-center gap-1.5 text-[13px] font-medium text-ink-soft">
+          <Motif
+            name={isHost ? "label-band" : "check-stub"}
+            size={15}
+            className="text-primary opacity-80"
+          />
+          {isHost ? receipt.restaurant || "The check" : "Your share"}
         </p>
         <h1 className="text-[1.65rem] font-semibold tracking-tight">
-          {isHost ? "Live board" : "Settle Payment"}
+          {isHost ? "Live board" : "What you owe"}
         </h1>
-        <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-          Drinks plus a share of tax and tip. Tapping a payment method opens the host&apos;s app
-          when possible — nothing is charged from Split the Wine.
-        </p>
         {message ? <p className="mt-3 text-[14px] text-destructive">{message}</p> : null}
 
         {leftover ? (
@@ -355,7 +356,12 @@ export function SettleView({
                   className="flex items-center justify-between gap-3 text-[14px] tabular-nums"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <LineKindIcon name={item.name} kind={item.kind} size={12} />
+                    <LineKindIcon
+                      name={item.name}
+                      kind={item.kind}
+                      pour={item.pour}
+                      size={12}
+                    />
                     <span className="truncate font-medium">{item.name}</span>
                   </span>
                   <span className="shrink-0 text-muted-foreground">
@@ -395,23 +401,25 @@ export function SettleView({
         {mine && mine.totalCents > 0 ? (
           <div className="relative mt-5 overflow-hidden rounded-[14px] border border-border bg-[var(--stw-sheet)] p-3.5">
             <CardWash />
-            {/* The wash is absolutely positioned, so content has to be positioned
-                too or it paints underneath. */}
+            {/* Corner pour — matches the review board's settle moment mark. */}
+            <Motif
+              name="pour"
+              size={30}
+              className="pointer-events-none absolute right-3.5 top-3.5 text-primary opacity-[0.26]"
+            />
             <div className="relative">
-            <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-soft">
-              <Motif name="pour" size={14} className="text-primary opacity-80" />
+            <p className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
               You owe
             </p>
-            <p className="mt-0.5 text-[1.75rem] font-bold tabular-nums">
+            <p className="mt-1 text-[2rem] font-extrabold tabular-nums tracking-tight">
               {centsToLabel(mine.totalCents)}
+            </p>
+            <p className="mt-0.5 text-[13px] text-ink-soft">
+              {mine.lines.length} {mine.lines.length === 1 ? "item" : "items"}
+              {" · "}plus your share of tax and tip
             </p>
             {payments.length > 0 ? (
               <>
-                <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
-                  You can pay your share of {centsToLabel(mine.totalCents)} to the host
-                  {hostName !== "the host" ? `, ${hostName},` : ""} via the following payment
-                  method{payments.length === 1 ? "" : "s"}:
-                </p>
                 <ul className="mt-3 space-y-2">
                   {payments.map((payment) => {
                     const openable = payMethodIsOpenable(payment.method);
@@ -456,7 +464,11 @@ export function SettleView({
                 </ul>
                 {payHint ? (
                   <p className="mt-2 text-[12px] text-muted-foreground">{payHint}</p>
-                ) : null}
+                ) : (
+                  <p className="mt-2 text-center text-[11.5px] text-muted-foreground">
+                    Tapping a method opens {hostName}&apos;s app — nothing is charged here.
+                  </p>
+                )}
               </>
             ) : (
               <p className="mt-3 text-[13px] text-muted-foreground">

@@ -15,7 +15,6 @@ import { Motif, type MotifName } from "@/components/motifs";
 import { colors, type } from "@/lib/theme";
 import { HostSupportTip } from "./host-support-tip";
 import { PressScale } from "./press-scale";
-import { WineMark } from "./wine-mark";
 
 /** Product name stays English — brands aren't translated. */
 const BRAND = "Split the Wine";
@@ -31,7 +30,7 @@ export function AppShell({
     <View style={styles.root}>
       <SafeAreaView edges={["top"]} style={styles.headerSafe}>
         <View style={styles.header}>
-          <WineMark size={26} />
+          <Motif name="split-bottle" size={22} color={colors.merlot} />
           <Text style={styles.brand} allowFontScaling>
             {BRAND}
           </Text>

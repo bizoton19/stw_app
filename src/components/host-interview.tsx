@@ -81,7 +81,7 @@ const COPY: Record<Step, { kicker: string; title: string; motif?: MotifName }> =
   pay: { kicker: "Getting paid", title: "How should people pay you?" },
   share: {
     kicker: "Share",
-    title: "Send this. They claim what they drank.",
+    title: "Send this. They claim what they consumed.",
     motif: "coupe-pair",
   },
 };
@@ -1129,9 +1129,19 @@ export function HostInterview() {
   } else {
     body = (
       <>
-        <p className="break-all rounded-xl border border-border px-3 py-3 font-mono text-[13px]">
-          {claimUrl}
-        </p>
+        <div className="flex items-baseline justify-between gap-3 rounded-[14px] border border-border bg-[var(--stw-sheet)] px-4 py-3.5">
+          <span className="text-[14px] font-semibold text-ink-soft">Check total</span>
+          <span className="text-[1.35rem] font-bold tabular-nums tracking-tight">
+            {centsToLabel(itemSubtotal + feeTotal)}
+          </span>
+        </div>
+        <div className="stw-perf my-3" aria-hidden />
+        <div className="rounded-[14px] border border-border bg-[var(--stw-sheet)] px-3.5 py-3">
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.05em] text-ink-soft">
+            Claim link
+          </p>
+          <p className="break-all font-mono text-[13px]">{claimUrl}</p>
+        </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
           <QuietButton
             onClick={async () => {
@@ -1171,10 +1181,6 @@ export function HostInterview() {
           place={venue?.name || restaurant}
           onClose={() => setQrOpen(false)}
         />
-        <div className="mt-8 flex items-center justify-between text-[14px]">
-          <span className="text-muted-foreground">Check total</span>
-          <span className="tabular-nums font-medium">{centsToLabel(itemSubtotal + feeTotal)}</span>
-        </div>
       </>
     );
     footer = (

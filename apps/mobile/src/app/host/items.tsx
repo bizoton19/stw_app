@@ -72,7 +72,12 @@ function ItemRow({
 
   const body = editing && !removed ? (
     <View style={[styles.row, styles.rowEditing]}>
-      <LineKindIcon name={item.name} kind={item.kind} style={{ marginBottom: 2 }} />
+      <LineKindIcon
+        name={item.name}
+        kind={item.kind}
+        pour={item.pour}
+        style={{ marginBottom: 2 }}
+      />
       <View style={styles.nameCol}>
         <Text style={styles.colLabel}>{t("items.nameLabel")}</Text>
         <TextInput
@@ -153,7 +158,12 @@ function ItemRow({
       }
       accessibilityHint={removed ? undefined : "Tap to edit name, quantity, or amount"}
     >
-      <LineKindIcon name={item.name} kind={item.kind} style={{ marginBottom: 2 }} />
+      <LineKindIcon
+        name={item.name}
+        kind={item.kind}
+        pour={item.pour}
+        style={{ marginBottom: 2 }}
+      />
       <View style={styles.nameCol}>
         <View style={styles.readTop}>
           <Text style={[styles.readName, removed && styles.struck]} numberOfLines={2}>

@@ -2,10 +2,11 @@ import { View, type StyleProp, type ViewStyle } from "react-native";
 import { Motif, type MotifName } from "@/components/motifs";
 import { useCardTheme } from "@/lib/card-theme/dusk";
 import { classifyLineKind, type LineKind } from "@/lib/line-kind";
+import { usesCarafeMotif } from "@/lib/pour";
 import type { CardTheme } from "@/lib/card-theme/themes";
-import type { ItemKind } from "@/lib/types";
+import type { ItemKind, ItemPour } from "@/lib/types";
 
-/** Matches web: the stem reads as a drink, the torn stub as the tab. */
+/** Matches web: stem = drink, carafe = shared pour, torn stub = food/tab. */
 const MOTIF: Record<LineKind, MotifName> = { drink: "stem", food: "check-stub" };
 
 function tint(theme: CardTheme, kind: LineKind) {
@@ -17,21 +18,24 @@ function tint(theme: CardTheme, kind: LineKind) {
 export function LineKindIcon({
   name,
   kind,
+  pour,
   size = 14,
   style,
 }: {
   name: string;
   /** Prefer vision/storage kind; fall back to name heuristic. */
   kind?: ItemKind | null;
+  pour?: ItemPour | null;
   size?: number;
   style?: StyleProp<ViewStyle>;
 }) {
-  // Inline styles, so this chip is one of the few surfaces that can follow dusk.
   const theme = useCardTheme();
   const resolved: LineKind | null =
     kind === "food" || kind === "drink" ? kind : classifyLineKind(name);
   if (!resolved) return null;
   const { bg, fg } = tint(theme, resolved);
+  const motif: MotifName =
+    resolved === "drink" && usesCarafeMotif({ name, pour }) ? "carafe" : MOTIF[resolved];
   return (
     <View
       style={[
@@ -45,9 +49,11 @@ export function LineKindIcon({
         },
         style,
       ]}
-      accessibilityLabel={resolved === "drink" ? "Drink" : "Food"}
+      accessibilityLabel={
+        resolved === "food" ? "Food" : motif === "carafe" ? "Shared drink" : "Drink"
+      }
     >
-      <Motif name={MOTIF[resolved]} size={size + 2} color={fg} />
+      <Motif name={motif} size={size + 2} color={fg} />
     </View>
   );
 }

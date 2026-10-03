@@ -188,7 +188,7 @@ The load-bearing decision is keeping `linen` byte-identical to the shipped palet
 | **1** | `themes.ts` + `<Motif>` on web; wire Share and Settle in `linen` only | ✅ Done. `--stw-*` custom properties; linen holds the shipped values, so day is unchanged. |
 | **2** | `dusk.ts` + the pre-paint inline script; candlelight goes live | ✅ Done. Verified by computed style, not by eye: candlelight resolves `#efe7dc` paper / `#7a2630` CTA, linen stays byte-identical at `#ede8e1` chrome. |
 | **3** | Native motif parity (`react-native-svg`) + `AppState` dusk re-check | ✅ Done, with a caveat — see §7.1. |
-| **4** | Claim rows get motif markers + tear lines (still 2D) | ✅ Done. `LineKindIcon` is now `stem` / `check-stub`; the tear line is `.stw-perf`. |
+| **4** | Claim rows get motif markers + tear lines (still 2D) | ✅ Done. `LineKindIcon` is `stem` / `carafe` / `check-stub`; Share gets `.stw-perf`; phone chrome uses `split-bottle` + wash + grain. |
 | **5 — optional** | Marketing hero scene; settle pour if it still seems worth it | Not started. Still optional. |
 
 Phase 5 of the old plan (persist `themeId`) is **gone** — automatic dusk needs no storage, no schema change, and no change to the claim link.

@@ -60,7 +60,7 @@ export function ClaimLineRow({
       style={styles.hit}
     >
       <Animated.View style={[styles.row, shell]}>
-        <LineKindIcon name={item.name} kind={item.kind} />
+        <LineKindIcon name={item.name} kind={item.kind} pour={item.pour} />
         <View style={styles.copy}>
           <Text style={[styles.name, selected && styles.nameOn]} numberOfLines={2}>
             {item.name}
