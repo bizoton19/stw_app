@@ -96,49 +96,83 @@ export async function parseReceiptImage(
 
   const { classifyReceiptVision, parseReceiptVision, visionModel, visionProviderId } =
     await import("./vision");
+  const { shrinkReceiptForVision } = await import("./vision-image");
   const model = visionModel();
   const provider = visionProviderId();
 
-  const classifyStarted = Date.now();
-  try {
-    const classify = await Promise.race([
-      classifyReceiptVision(image),
-      new Promise<never>((_, reject) => {
-        setTimeout(
-          () => reject(Object.assign(new Error("classify_timeout"), { code: "timeout" })),
-          CLASSIFY_TIMEOUT_MS,
-        );
-      }),
-    ]);
-    logVisionClassify({
+  // Shrink only for the model — the original `image` is what the store persists.
+  const shrunk = await shrinkReceiptForVision(image);
+  const visionImage = shrunk.image;
+  console.log(
+    JSON.stringify({
+      event: "vision.shrink",
+      ts: new Date().toISOString(),
       receiptId,
-      provider,
-      model,
-      isReceipt: classify.isReceipt,
-      ms: Date.now() - classifyStarted,
+      ms: shrunk.ms,
       imageBytes: image.bytes.length,
-    });
-    if (!classify.isReceipt) {
-      return { result: EMPTY_PARSE, parse: { source: "vision", reason: "not_receipt" } };
+      visionBytes: visionImage.bytes.length,
+      skipped: shrunk.skipped ?? null,
+    }),
+  );
+
+  /**
+   * Classify-before-parse was adding a full second round-trip (often 3–12s) on every
+   * host upload. Hosts already chose “snap the check,” so skip the gate by default.
+   * Set VISION_CLASSIFY=1 to restore the not-a-receipt screen.
+   */
+  const classifyEnabled = process.env.VISION_CLASSIFY?.trim() === "1";
+  if (classifyEnabled) {
+    const classifyStarted = Date.now();
+    try {
+      const classify = await Promise.race([
+        classifyReceiptVision(visionImage),
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(Object.assign(new Error("classify_timeout"), { code: "timeout" })),
+            CLASSIFY_TIMEOUT_MS,
+          );
+        }),
+      ]);
+      logVisionClassify({
+        receiptId,
+        provider,
+        model,
+        isReceipt: classify.isReceipt,
+        ms: Date.now() - classifyStarted,
+        imageBytes: visionImage.bytes.length,
+      });
+      if (!classify.isReceipt) {
+        return { result: EMPTY_PARSE, parse: { source: "vision", reason: "not_receipt" } };
+      }
+    } catch (err) {
+      // Fail-open: a flaky classifier should not block a real tab from extracting.
+      const message = err instanceof Error ? err.message : String(err);
+      logVisionClassify({
+        receiptId,
+        provider,
+        model,
+        reason: "classify_failed",
+        ms: Date.now() - classifyStarted,
+        imageBytes: visionImage.bytes.length,
+        detail: message.slice(0, 200),
+      });
     }
-  } catch (err) {
-    // Fail-open: a flaky classifier should not block a real tab from extracting.
-    const message = err instanceof Error ? err.message : String(err);
+  } else {
     logVisionClassify({
       receiptId,
       provider,
       model,
-      reason: "classify_failed",
-      ms: Date.now() - classifyStarted,
-      imageBytes: image.bytes.length,
-      detail: message.slice(0, 200),
+      reason: "skipped",
+      ms: 0,
+      imageBytes: visionImage.bytes.length,
+      detail: "VISION_CLASSIFY off — host upload path",
     });
   }
 
   const started = Date.now();
   try {
     const result = await Promise.race([
-      parseReceiptVision(image),
+      parseReceiptVision(visionImage),
       new Promise<never>((_, reject) => {
         setTimeout(() => reject(Object.assign(new Error("vision_timeout"), { code: "timeout" })), VISION_TIMEOUT_MS);
       }),
@@ -152,7 +186,7 @@ export async function parseReceiptImage(
         source: "vision",
         reason: "empty",
         ms,
-        imageBytes: image.bytes.length,
+        imageBytes: visionImage.bytes.length,
         itemCount: 0,
         feeCount: result.fees.length,
       });
@@ -165,7 +199,7 @@ export async function parseReceiptImage(
       source: "vision",
       reason: "ok",
       ms,
-      imageBytes: image.bytes.length,
+      imageBytes: visionImage.bytes.length,
       itemCount: result.items.length,
       feeCount: result.fees.length,
     });
@@ -186,7 +220,7 @@ export async function parseReceiptImage(
       source: "stub",
       reason,
       ms,
-      imageBytes: image.bytes.length,
+      imageBytes: visionImage.bytes.length,
       detail: message.slice(0, 200),
     });
     return { result: EMPTY_PARSE, parse: { source: "stub", reason } };

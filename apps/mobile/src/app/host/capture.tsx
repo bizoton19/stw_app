@@ -67,7 +67,8 @@ export default function HostCapture() {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
-      quality: 0.7,
+      // Keep uploads lean — server also downscales before Gemini.
+      quality: 0.45,
       exif: false,
       cameraType: ImagePicker.CameraType.back,
     });
@@ -96,7 +97,7 @@ export default function HostCapture() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 0.7,
+      quality: 0.45,
       exif: false,
     });
     if (result.canceled || !result.assets[0]) {
