@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
-import type { ReactNode, RefObject } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
 import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
@@ -108,6 +108,10 @@ export function InterviewChrome({
   // Other steps drop the home-indicator pad and the bar shadow while typing.
   // RSVP does not: the bar is the same chrome, lifted onto the keyboard.
   const tightenFooter = keyboardOpen && !skipFooterKeyboard;
+  // Screen Y of this chrome. RSVP uses it as the KeyboardAvoidingView offset
+  // so the bar meets the keyboard — nothing added on top of that.
+  const anchorRef = useRef<View>(null);
+  const [anchorTop, setAnchorTop] = useState(0);
   const progress = (step / total) * 100;
   const kickerStyle = [
     styles.kicker,
@@ -249,19 +253,38 @@ export function InterviewChrome({
     return <View style={styles.chrome}>{inner}</View>;
   }
 
-  return (
+  // iOS pads. Android resizes the window (app.json softwareKeyboardLayoutMode)
+  // and must not also use behavior="height".
+  // Other steps keep a 56pt header allowance. RSVP uses only this view's
+  // distance from the top of the screen — no extra header offset — so the
+  // one bar sits on the keyboard.
+  const keyboardOffset = Platform.OS === "ios" ? (skipFooterKeyboard ? anchorTop : 56) : 0;
+  const avoiding = (
     <KeyboardAvoidingView
       style={styles.chrome}
-      // iOS: pad so sticky CTAs sit above the keyboard.
-      // Android: app.json uses softwareKeyboardLayoutMode "resize" — never
-      // behavior="height", or the window and this view both shrink.
-      // RSVP passes skipFooterKeyboard: padding, but no header offset, so the
-      // one bar sits flush instead of floating a header-height above the keys.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" && !skipFooterKeyboard ? 56 : 0}
+      keyboardVerticalOffset={keyboardOffset}
     >
       {inner}
     </KeyboardAvoidingView>
+  );
+
+  if (!skipFooterKeyboard) return avoiding;
+
+  return (
+    <View
+      ref={anchorRef}
+      style={styles.chrome}
+      collapsable={false}
+      onLayout={() => {
+        anchorRef.current?.measureInWindow((_x, y) => {
+          if (y <= 0) return;
+          setAnchorTop((prev) => (Math.abs(prev - y) < 0.5 ? prev : y));
+        });
+      }}
+    >
+      {avoiding}
+    </View>
   );
 }
 
