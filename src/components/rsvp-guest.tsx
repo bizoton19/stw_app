@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import { HostMessage } from "@/components/host-message";
 import { Input } from "@/components/ui/input";
@@ -100,25 +100,72 @@ export function RsvpGuest({
           ? "Noted. You can change this anytime below."
           : null;
 
+  const pinRef = useRef<HTMLDivElement>(null);
+  usePinAboveKeyboard(pinRef);
+
   return (
-    <InterviewChrome
-      step={1}
-      total={2}
-      hideProgress
-      kicker={whenLabel || "Upcoming"}
-      motif="coupe-pair"
-      title={place}
-      stepKey="rsvp"
-      footer={
-        <div className="flex flex-col gap-1">
-          {thanks ? (
-            <p className="px-1 py-2 text-center text-[15px] leading-[22px] text-ink-soft">
-              {thanks}
-            </p>
-          ) : null}
+    <div ref={pinRef} className="flex min-h-0 flex-1 flex-col">
+      <InterviewChrome
+        step={1}
+        total={2}
+        hideProgress
+        kicker={whenLabel || "Upcoming"}
+        motif="coupe-pair"
+        title={place}
+        stepKey="rsvp"
+        footer={
           <ContinueButton disabled={busy} onClick={() => void submit("going")}>
             {done === "going" ? "Still going" : "Going"}
           </ContinueButton>
+        }
+      >
+        <HostMessage note={receipt.hostInfo?.note} />
+        <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
+          RSVP for this outing. Same link for everyone — you can change your answer later.
+        </p>
+        {thanks ? (
+          <p className="px-1 py-2 text-center text-[15px] leading-[22px] text-ink-soft">
+            {thanks}
+          </p>
+        ) : null}
+        {goingCount > 0 ? (
+          <p className="mb-3 text-[13px] text-muted-foreground">{goingCount} going so far</p>
+        ) : null}
+        {err ? <p className="mb-3 text-[14px] text-destructive">{err}</p> : null}
+        <Label htmlFor="rsvp-name" className="mb-2 text-[13px] font-medium">
+          Name
+        </Label>
+        <Input
+          id="rsvp-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="h-12 rounded-xl border-border bg-transparent text-base"
+          placeholder="Alex"
+          autoComplete="name"
+        />
+        <Label htmlFor="rsvp-contact" className="mt-4 mb-2 text-[13px] font-medium">
+          Contact <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <Input
+          id="rsvp-contact"
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          className="h-12 rounded-xl border-border bg-transparent text-base"
+          placeholder="phone, Venmo, or email"
+          autoComplete="tel"
+        />
+        <Label htmlFor="rsvp-note" className="mt-4 mb-2 text-[13px] font-medium">
+          Note <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <Textarea
+          id="rsvp-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="min-h-[72px] rounded-xl border-border bg-transparent text-base"
+          placeholder="Bringing a +1, running late…"
+          maxLength={280}
+        />
+        <div className="mt-1 flex flex-col gap-1">
           <QuietButton disabled={busy} onClick={() => void submit("maybe")}>
             {done === "maybe" ? "Still maybe" : "Maybe"}
           </QuietButton>
@@ -126,49 +173,45 @@ export function RsvpGuest({
             {done === "cant" ? "Still can’t" : "Can’t"}
           </QuietButton>
         </div>
-      }
-    >
-      <HostMessage note={receipt.hostInfo?.note} />
-      <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
-        RSVP for this outing. Same link for everyone — you can change your answer later.
-      </p>
-      {goingCount > 0 ? (
-        <p className="mb-3 text-[13px] text-muted-foreground">{goingCount} going so far</p>
-      ) : null}
-      {err ? <p className="mb-3 text-[14px] text-destructive">{err}</p> : null}
-      <Label htmlFor="rsvp-name" className="mb-2 text-[13px] font-medium">
-        Name
-      </Label>
-      <Input
-        id="rsvp-name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="h-12 rounded-xl border-border bg-transparent text-base"
-        placeholder="Alex"
-        autoComplete="name"
-      />
-      <Label htmlFor="rsvp-contact" className="mt-4 mb-2 text-[13px] font-medium">
-        Contact <span className="font-normal text-muted-foreground">(optional)</span>
-      </Label>
-      <Input
-        id="rsvp-contact"
-        value={contact}
-        onChange={(e) => setContact(e.target.value)}
-        className="h-12 rounded-xl border-border bg-transparent text-base"
-        placeholder="phone, Venmo, or email"
-        autoComplete="tel"
-      />
-      <Label htmlFor="rsvp-note" className="mt-4 mb-2 text-[13px] font-medium">
-        Note <span className="font-normal text-muted-foreground">(optional)</span>
-      </Label>
-      <Textarea
-        id="rsvp-note"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        className="min-h-[72px] rounded-xl border-border bg-transparent text-base"
-        placeholder="Bringing a +1, running late…"
-        maxLength={280}
-      />
-    </InterviewChrome>
+      </InterviewChrome>
+    </div>
   );
+}
+
+/**
+ * RSVP only. Lift this column so the chrome bar sits on the keyboard.
+ * Measures the shell slot (stable — we never resize it) against
+ * `visualViewport`, so other pages and PhoneShell stay as they are.
+ * A closed keyboard leaves the column on normal flex; no footer restyle.
+ */
+function usePinAboveKeyboard(ref: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const el = ref.current;
+    if (!vv || !el) return;
+
+    const sync = () => {
+      const parent = el.parentElement;
+      if (!parent) return;
+      // Parent rect is in visual-viewport coordinates, so offsetTop is already
+      // included. Keyboard closed → overflow ~0 and the column stays on flex.
+      const overflow = parent.getBoundingClientRect().bottom - vv.height;
+      el.style.marginBottom = overflow > 1 ? `${overflow}px` : "";
+    };
+
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+    const parent = el.parentElement;
+    const observer = parent ? new ResizeObserver(sync) : null;
+    if (parent && observer) observer.observe(parent);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      observer?.disconnect();
+      el.style.marginBottom = "";
+    };
+  }, [ref]);
 }

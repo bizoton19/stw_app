@@ -157,25 +157,18 @@ function RsvpScreen() {
         motif="coupe-pair"
         title={place}
         keyboard
+        skipFooterKeyboard
         footer={
-          <View style={styles.rsvpActions}>
-            {thanks ? <Text style={styles.rsvpThanks}>{thanks}</Text> : null}
-            <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
-              {done === "going" ? "Still going" : "Going"}
-            </PrimaryButton>
-            <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
-              {done === "maybe" ? "Still maybe" : "Maybe"}
-            </QuietButton>
-            <QuietButton disabled={busy} onPress={() => void submit("cant")}>
-              {done === "cant" ? "Still can’t" : "Can’t"}
-            </QuietButton>
-          </View>
+          <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
+            {done === "going" ? "Still going" : "Going"}
+          </PrimaryButton>
         }
       >
         <HostMessage note={hostNoteText(receipt.hostInfo)} />
         <Text style={styles.lead}>
           RSVP for this outing. Same link for everyone — you can change your answer later.
         </Text>
+        {thanks ? <Text style={styles.rsvpThanks}>{thanks}</Text> : null}
         {goingCount > 0 ? (
           <Text style={styles.rsvpMeta}>{goingCount} going so far</Text>
         ) : null}
@@ -205,6 +198,14 @@ function RsvpScreen() {
           multiline
           style={{ minHeight: 72, height: undefined, paddingVertical: 12, textAlignVertical: "top" }}
         />
+        <View style={styles.rsvpAlt}>
+          <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
+            {done === "maybe" ? "Still maybe" : "Maybe"}
+          </QuietButton>
+          <QuietButton disabled={busy} onPress={() => void submit("cant")}>
+            {done === "cant" ? "Still can’t" : "Can’t"}
+          </QuietButton>
+        </View>
       </InterviewChrome>
     </AppShell>
   );
@@ -665,7 +666,7 @@ const styles = StyleSheet.create({
   },
   unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
   unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
-  rsvpActions: { gap: 4 },
+  rsvpAlt: { gap: 4 },
   rsvpThanks: {
     fontSize: 15,
     lineHeight: 22,

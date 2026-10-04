@@ -74,6 +74,13 @@ export function InterviewChrome({
   hideProgress = false,
   /** Optional ref to the body ScrollView (scroll-to-error, etc.). */
   scrollRef,
+  /**
+   * Guest RSVP only. Keep the chrome bar’s color, hairline, and shadow when
+   * the keyboard opens — skip the footerKeyboard restyle — and sit that one
+   * bar flush on the keys. iOS stays KeyboardAvoidingView padding with no
+   * header offset. Android stays resize-only (never behavior="height").
+   */
+  skipFooterKeyboard = false,
 }: {
   step: number;
   total: number;
@@ -95,8 +102,12 @@ export function InterviewChrome({
   supportTip?: boolean;
   hideProgress?: boolean;
   scrollRef?: RefObject<ScrollView | null>;
+  skipFooterKeyboard?: boolean;
 }) {
   const keyboardOpen = useKeyboardVisible();
+  // Other steps drop the home-indicator pad and the bar shadow while typing.
+  // RSVP does not: the bar is the same chrome, lifted onto the keyboard.
+  const tightenFooter = keyboardOpen && !skipFooterKeyboard;
   const progress = (step / total) * 100;
   const kickerStyle = [
     styles.kicker,
@@ -223,8 +234,8 @@ export function InterviewChrome({
       {body}
       {footer != null || supportTip ? (
         <SafeAreaView
-          edges={keyboardOpen ? [] : ["bottom"]}
-          style={[styles.footer, keyboardOpen && styles.footerKeyboard]}
+          edges={tightenFooter ? [] : ["bottom"]}
+          style={[styles.footer, tightenFooter && styles.footerKeyboard]}
         >
           {footer}
           {supportTip && !keyboardOpen ? <HostSupportTip /> : null}
@@ -242,10 +253,12 @@ export function InterviewChrome({
     <KeyboardAvoidingView
       style={styles.chrome}
       // iOS: pad so sticky CTAs sit above the keyboard.
-      // Android: app.json uses softwareKeyboardLayoutMode "resize" — skip
-      // behavior="height" so we don't double-shrink and fight the bottom nav.
+      // Android: app.json uses softwareKeyboardLayoutMode "resize" — never
+      // behavior="height", or the window and this view both shrink.
+      // RSVP passes skipFooterKeyboard: padding, but no header offset, so the
+      // one bar sits flush instead of floating a header-height above the keys.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 56 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" && !skipFooterKeyboard ? 56 : 0}
     >
       {inner}
     </KeyboardAvoidingView>
