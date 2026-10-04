@@ -896,6 +896,7 @@ export async function rsvp(
     personContact?: string | null;
     inviteToken?: string | null;
     note?: string | null;
+    phone?: string | null;
   },
 ): Promise<PublicReceipt> {
   await ensureSchema();

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readRsvpPhone } from "./phone-e164";
 import { isValidatedVenue, findVenueDayConflict, receiptDayKey } from "./venue-day";
 import type {
   HostInfo,
@@ -123,6 +124,7 @@ export function promotePlanningToDraftIfDue(
 export function newInvitee(input: {
   personName: string;
   personContact?: string | null;
+  phone?: string | null;
   response?: InviteeResponse;
   note?: string | null;
 }): Invitee {
@@ -135,6 +137,7 @@ export function newInvitee(input: {
     id: `inv_${shortId()}`,
     personName,
     personContact: input.personContact?.trim() || null,
+    phone: input.phone?.trim() || null,
     inviteToken: randomUUID().replace(/-/g, ""),
     response: input.response ?? "going",
     note: input.note?.trim() || null,
@@ -186,49 +189,37 @@ export function applyRsvp(
     response: Exclude<InviteeResponse, "invited">;
     personName?: string;
     personContact?: string | null;
+    /** Accepted and ignored. Phone is the only RSVP key. */
     inviteToken?: string | null;
     note?: string | null;
+    /** Canonical E.164. Same string updates; a different string inserts. */
+    phone?: string | null;
   },
 ): Invitee[] {
   const response = input.response;
   if (response !== "going" && response !== "maybe" && response !== "cant") {
     throw Object.assign(new Error("invalid_response"), { code: "invalid" });
   }
-  const list = invitees ? [...invitees] : [];
-  const now = new Date().toISOString();
-  const token = input.inviteToken?.trim();
-  const note = normalizeNote(input.note);
-  const noteProvided = input.note !== undefined;
-
-  if (token) {
-    const idx = list.findIndex((row) => row.inviteToken === token);
-    if (idx < 0) {
-      throw Object.assign(new Error("invite_not_found"), { code: "not_found" });
-    }
-    const prev = list[idx];
-    list[idx] = {
-      ...prev,
-      personName: input.personName?.trim() || prev.personName,
-      personContact: input.personContact?.trim() || prev.personContact || null,
-      response,
-      note: noteProvided ? note : prev.note ?? null,
-      updatedAt: now,
-    };
-    return list;
-  }
-
+  const phone = readRsvpPhone(input.phone);
   const name = input.personName?.trim();
   if (!name) {
-    throw Object.assign(new Error("name_required"), { code: "invalid" });
+    throw Object.assign(new Error("name_required"), {
+      code: "invalid",
+      message: "Add your name so the host knows who’s in.",
+    });
   }
-  const existing = list.findIndex(
-    (row) => row.personName.toLowerCase() === name.toLowerCase(),
-  );
+  const list = invitees ? [...invitees] : [];
+  const now = new Date().toISOString();
+  const note = normalizeNote(input.note);
+  const noteProvided = input.note !== undefined;
+  const existing = list.findIndex((row) => row.phone === phone);
   if (existing >= 0) {
     const prev = list[existing];
     list[existing] = {
       ...prev,
+      personName: name,
       personContact: input.personContact?.trim() || prev.personContact || null,
+      phone,
       response,
       note: noteProvided ? note : prev.note ?? null,
       updatedAt: now,
@@ -239,6 +230,7 @@ export function applyRsvp(
     newInvitee({
       personName: name,
       personContact: input.personContact,
+      phone,
       response,
       note,
     }),

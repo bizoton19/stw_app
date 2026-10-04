@@ -6,6 +6,16 @@ import { HostMessage } from "@/components/host-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  CALLING_COUNTRIES,
+  DEFAULT_COUNTRY_ID,
+  composeE164,
+  countryById,
+  fieldsFromStoredPhone,
+  nationalPlaceholder,
+  rsvpPhoneSaveError,
+} from "@/lib/phone-e164";
+import { readRsvpDraft, writeRsvpDraft } from "@/lib/rsvp-draft";
 import { api, getGuest, saveGuest } from "@/lib/session";
 import type { PublicReceipt } from "@/lib/types";
 
@@ -18,35 +28,47 @@ export function RsvpGuest({
   inviteToken: string;
   onDone: (next: PublicReceipt) => void;
 }) {
-  const saved = getGuest(receipt.id);
-  const already =
-    receipt.invitees?.find(
-      (row) =>
-        (row.response === "going" ||
-          row.response === "maybe" ||
-          row.response === "cant") &&
-        saved?.name &&
-        row.personName.toLowerCase() === saved.name.toLowerCase(),
-    ) ?? null;
-
-  const seeded =
-    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
-      ? already.response
-      : null;
-  const [name, setName] = useState(already?.personName || saved?.name || "");
-  const [contact, setContact] = useState(
-    already?.personContact || saved?.contact || "",
-  );
-  const [note, setNote] = useState(already?.note ?? "");
-  const [choice, setChoice] = useState<"going" | "maybe" | "cant" | null>(seeded);
+  const guest = getGuest(receipt.id);
+  const [name, setName] = useState(guest?.name || "");
+  const [countryId, setCountryId] = useState(DEFAULT_COUNTRY_ID);
+  const [nationalNumber, setNationalNumber] = useState("");
+  const [contact, setContact] = useState(guest?.contact || "");
+  const [note, setNote] = useState("");
+  const [choice, setChoice] = useState<"going" | "maybe" | "cant" | null>(null);
   const [busy, setBusy] = useState(false);
-  const [committed, setCommitted] = useState(() => ({
-    response: seeded,
-    name: seeded ? (already?.personName || "").trim() : "",
-    contact: seeded ? (already?.personContact || "").trim() : "",
-    note: seeded ? (already?.note || "").trim() : "",
-  }));
+  const [committed, setCommitted] = useState<{
+    response: "going" | "maybe" | "cant" | null;
+    name: string;
+    phone: string;
+    contact: string;
+    note: string;
+  }>({
+    response: null,
+    name: "",
+    phone: "",
+    contact: "",
+    note: "",
+  });
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const draft = readRsvpDraft(receipt.id);
+    if (!draft) return;
+    const stored = fieldsFromStoredPhone(draft.phone);
+    setName(draft.name);
+    setCountryId(stored.countryId);
+    setNationalNumber(stored.nationalNumber);
+    setContact(draft.contact);
+    setNote(draft.note);
+    setChoice(draft.response);
+    setCommitted({
+      response: draft.response,
+      name: draft.name.trim(),
+      phone: draft.phone,
+      contact: draft.contact.trim(),
+      note: draft.note.trim(),
+    });
+  }, [receipt.id]);
 
   const whenLabel = useMemo(() => {
     if (!receipt.nightAt) return null;
@@ -63,9 +85,11 @@ export function RsvpGuest({
   const goingCount =
     receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
 
+  const phone = composeE164(countryId, nationalNumber) ?? "";
   const draftMatchesSave =
     choice === committed.response &&
     name.trim() === committed.name &&
+    phone === committed.phone &&
     contact.trim() === committed.contact &&
     note.trim() === committed.note;
   const saveDisabled = busy || choice == null || draftMatchesSave;
@@ -74,6 +98,11 @@ export function RsvpGuest({
     if (!choice || busy || draftMatchesSave) return;
     if (!name.trim()) {
       setErr("Add your name so the host knows who’s in.");
+      return;
+    }
+    const phoneError = rsvpPhoneSaveError(countryId, nationalNumber);
+    if (phoneError || !phone) {
+      setErr(phoneError ?? "That phone number doesn’t look complete.");
       return;
     }
     const response = choice;
@@ -90,6 +119,7 @@ export function RsvpGuest({
           body: JSON.stringify({
             response,
             personName,
+            phone,
             personContact: personContact || null,
             inviteToken: inviteToken || null,
             note: personNote || null,
@@ -100,9 +130,19 @@ export function RsvpGuest({
         name: personName,
         contact: personContact,
       });
+      writeRsvpDraft(receipt.id, {
+        response,
+        name: personName,
+        countryId,
+        nationalNumber,
+        contact: personContact,
+        note: personNote,
+        phone,
+      });
       setCommitted({
         response,
         name: personName,
+        phone,
         contact: personContact,
         note: personNote,
       });
@@ -161,6 +201,41 @@ export function RsvpGuest({
           placeholder="Alex"
           autoComplete="name"
         />
+        <Label htmlFor="rsvp-phone" className="mt-4 mb-2 text-[13px] font-medium">
+          Phone
+        </Label>
+        <div className="flex gap-2">
+          <div className="relative h-12 w-[7.5rem] shrink-0">
+            <div
+              aria-hidden
+              className="flex h-12 items-center rounded-xl border border-border bg-transparent px-3 text-base text-foreground"
+            >
+              {countryById(countryId).abbr} {countryById(countryId).callingCode}
+            </div>
+            <select
+              aria-label="Country"
+              value={countryId}
+              onChange={(e) => setCountryId(e.target.value)}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            >
+              {CALLING_COUNTRIES.map((country) => (
+                <option key={country.id} value={country.id}>
+                  {country.name} {country.callingCode}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Input
+            id="rsvp-phone"
+            type="tel"
+            value={nationalNumber}
+            onChange={(e) => setNationalNumber(e.target.value)}
+            className="h-12 min-w-0 flex-1 rounded-xl border-border bg-transparent text-base"
+            placeholder={nationalPlaceholder(countryId)}
+            inputMode="tel"
+            autoComplete="tel"
+          />
+        </div>
         <Label htmlFor="rsvp-contact" className="mt-4 mb-2 text-[13px] font-medium">
           Contact <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
@@ -169,8 +244,7 @@ export function RsvpGuest({
           value={contact}
           onChange={(e) => setContact(e.target.value)}
           className="h-12 rounded-xl border-border bg-transparent text-base"
-          placeholder="phone, Venmo, or email"
-          autoComplete="tel"
+          placeholder="Venmo, Cash App, Zelle, or PayPal"
         />
         <Label htmlFor="rsvp-note" className="mt-4 mb-2 text-[13px] font-medium">
           Note <span className="font-normal text-muted-foreground">(optional)</span>

@@ -7,6 +7,11 @@ export type Invitee = {
   id: string;
   personName: string;
   personContact?: string | null;
+  /**
+   * Canonical E.164 (`+12025550100`). Unique RSVP key for this outing.
+   * Omitted from the public board.
+   */
+  phone?: string | null;
   /** Legacy personalized-invite token; new flow uses one group link only. */
   inviteToken: string;
   response: InviteeResponse;

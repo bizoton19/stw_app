@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-04 ~10:30 −04:00 · guest RSVP saves once |
+| **This snapshot** | 2026-10-04 ~11:30 −04:00 · RSVP phone is the person |
 | **Elapsed** | **~13.9 days** |
-| **Commits on this branch** | refresh with `git rev-list --count HEAD` |
+| **Commits on this branch** | **288** |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -101,6 +101,7 @@ git log --reverse -1 --format='%aI %s'
 
 ### Day 14 — Sun 2026-10-04
 - Guest RSVP is one form. Going, Maybe, and Can’t stay on the page as a draft; Save is the only post, and the host is notified once per Save.
+- The RSVP phone is a country dropdown plus the national number. Save sends one E.164 number, and that same number updates the guest from any device.
 
 ## How to extend this file
 

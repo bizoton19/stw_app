@@ -89,6 +89,8 @@ export async function postRsvp(
   input: {
     response: "going" | "maybe" | "cant";
     personName?: string;
+    /** Canonical E.164. The RSVP key for this outing. */
+    phone: string;
     personContact?: string | null;
     inviteToken?: string | null;
     note?: string | null;
