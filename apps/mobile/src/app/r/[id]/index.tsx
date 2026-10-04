@@ -232,7 +232,7 @@ function RsvpScreen() {
           label="Name"
           value={name}
           onChangeText={setName}
-          placeholder="Alex"
+          placeholder="Robert Baratheon"
           autoComplete="name"
         />
         <RsvpPhoneField
@@ -246,7 +246,7 @@ function RsvpScreen() {
           hint="(optional)"
           value={contact}
           onChangeText={setContact}
-          placeholder="Venmo, Cash App, Zelle, or PayPal"
+          placeholder=""
           keyboardType="default"
         />
         <Field

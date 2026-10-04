@@ -198,7 +198,7 @@ export function RsvpGuest({
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="h-12 rounded-xl border-border bg-transparent text-base"
-          placeholder="Alex"
+          placeholder="Robert Baratheon"
           autoComplete="name"
         />
         <Label htmlFor="rsvp-phone" className="mt-4 mb-2 text-[13px] font-medium">
@@ -244,7 +244,7 @@ export function RsvpGuest({
           value={contact}
           onChange={(e) => setContact(e.target.value)}
           className="h-12 rounded-xl border-border bg-transparent text-base"
-          placeholder="Venmo, Cash App, Zelle, or PayPal"
+          placeholder=""
         />
         <Label htmlFor="rsvp-note" className="mt-4 mb-2 text-[13px] font-medium">
           Note <span className="font-normal text-muted-foreground">(optional)</span>
