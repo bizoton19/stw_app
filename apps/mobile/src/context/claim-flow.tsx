@@ -243,7 +243,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
         } else if (e.code === "forbidden") {
           setMessage("Only the person who claimed that (or the host) can drop it.");
         } else {
-          setMessage("Couldn't drop that claim. Check the server and try again.");
+          setMessage("Couldn’t drop that. Try again.");
         }
       } finally {
         setBusy(false);

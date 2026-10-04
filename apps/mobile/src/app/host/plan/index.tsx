@@ -80,12 +80,8 @@ export default function HostPlanOuting() {
         venueCategory: venue.category,
       });
       router.replace(`/host/plan/${created.receiptId}`);
-    } catch (err) {
-      const message =
-        err instanceof Error && err.message.trim()
-          ? err.message
-          : "Couldn't create the outing. Check your connection and try again.";
-      setError(message);
+    } catch {
+      setError("Couldn’t create the outing. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -110,7 +106,6 @@ export default function HostPlanOuting() {
         <VenueTypeahead
           value={restaurant}
           venue={venue}
-          receiptDate={receiptDate}
           onChangeName={setRestaurant}
           onChangeVenue={setVenue}
         />
@@ -131,7 +126,7 @@ export default function HostPlanOuting() {
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder="I’m putting the card down"
+              placeholder="I’ll cover the check"
               placeholderTextColor={colors.muted}
               style={[styles.input, styles.note]}
               multiline

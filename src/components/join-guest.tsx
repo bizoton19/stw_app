@@ -51,7 +51,7 @@ export function JoinGuest({
       <HostMessage note={hostNote} />
       <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
         {isHost
-          ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
+          ? "Pick what you ordered too. What’s left can stay with you when you close claiming."
           : "Just a name — no app, no account."}
       </p>
       {hasImage ? <ReceiptImageButton receiptId={receiptId} hasImage /> : null}

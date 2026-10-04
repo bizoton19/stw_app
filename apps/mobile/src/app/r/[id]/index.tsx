@@ -40,10 +40,8 @@ export default function ClaimScreen() {
     return (
       <AppShell meta="Missing">
         <View style={{ padding: 20, paddingTop: 40 }}>
-          <Text style={styles.title}>That tab is gone</Text>
-          <Text style={styles.muted}>
-            Links live in this server's memory. Ask the host for a fresh claim link.
-          </Text>
+          <Text style={styles.title}>This link doesn’t work</Text>
+          <Text style={styles.muted}>Ask the host for a new one.</Text>
         </View>
       </AppShell>
     );
@@ -53,7 +51,7 @@ export default function ClaimScreen() {
     return (
       <AppShell meta="Loading">
         <Text style={[styles.muted, { textAlign: "center", marginTop: 80 }]}>
-          Opening the check…
+          Opening…
         </Text>
       </AppShell>
     );
@@ -201,7 +199,7 @@ function RsvpScreen() {
   const place = receipt.restaurant?.trim() || "the outing";
   const thanks =
     saved.response === "going"
-      ? "You’re going — claim opens when the host uploads the check."
+      ? "You’re going. You’ll pick what you ordered when the host adds the check."
       : saved.response === "maybe"
         ? "Got it — maybe. Change anytime below."
         : saved.response === "cant"
@@ -309,7 +307,7 @@ function JoinScreen() {
         <HostMessage note={hostNoteText(flow.receipt?.hostInfo)} />
         <Text style={styles.lead}>
           {flow.isHost
-            ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
+            ? "Pick what you ordered too. What’s left can stay with you when you close claiming."
             : "Just a name — no app, no account."}
         </Text>
         <ReceiptImageButton receiptId={flow.receipt!.id} hasImage={flow.receipt?.hasImage} />

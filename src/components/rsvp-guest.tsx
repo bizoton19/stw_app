@@ -156,7 +156,7 @@ export function RsvpGuest({
 
   const thanks =
     committed.response === "going"
-      ? "You’re going — claim opens when the host uploads the check."
+      ? "You’re going. You’ll pick what you ordered when the host adds the check."
       : committed.response === "maybe"
         ? "Got it — maybe. Change anytime below."
         : committed.response === "cant"
