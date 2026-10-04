@@ -12,6 +12,7 @@
       },
       "env": {
         "APP_VARIANT": "dev",
+        "EXPO_PUBLIC_SHOW_API_STATUS": "1",
         "EXPO_PUBLIC_API_URL": "https://api-dev-production-c2d1.up.railway.app",
         "EXPO_PUBLIC_SHARE_URL": "https://api-dev-production-c2d1.up.railway.app"
       }
@@ -22,6 +23,7 @@
       "channel": "dev",
       "env": {
         "APP_VARIANT": "dev",
+        "EXPO_PUBLIC_SHOW_API_STATUS": "1",
         "EXPO_PUBLIC_API_URL": "https://api-dev-production-c2d1.up.railway.app",
         "EXPO_PUBLIC_SHARE_URL": "https://api-dev-production-c2d1.up.railway.app"
       }

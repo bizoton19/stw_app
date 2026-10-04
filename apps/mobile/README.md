@@ -57,7 +57,7 @@ npx expo start --lan
 
 If Metro already started before you edited `.env.local`, stop it (ctrl+c) and start again.
 
-The home screen shows the API URL and whether the server is reachable. If it says it can't reach the server, tap that line and type `http://YOUR_LAN_IP:43147`, then Save. That override is stored on the phone so you don't need to rebuild.
+On local Metro and EAS `dev` / `development` builds, the home screen shows the API URL and whether the server is reachable (`EXPO_PUBLIC_SHOW_API_STATUS` / `APP_VARIANT=dev`). Production and TestFlight hide that bar. If it says it can't reach the server, tap that line and type `http://YOUR_LAN_IP:43147`, then Save. That override is stored on the phone so you don't need to rebuild.
 
 Do **not** use `expo start --tunnel` unless the API is also on a public URL. The tunnel host is not the parse server.
 
