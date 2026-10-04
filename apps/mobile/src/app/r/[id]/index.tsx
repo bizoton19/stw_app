@@ -85,17 +85,23 @@ function RsvpScreen() {
         row.personName.toLowerCase() === flow.guest.name.toLowerCase(),
     ) ?? null;
 
+  const seeded =
+    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
+      ? already.response
+      : null;
   const [name, setName] = useState(() => already?.personName || flow.guest?.name || "");
   const [contact, setContact] = useState(
     () => already?.personContact || flow.guest?.contact || "",
   );
   const [note, setNote] = useState(() => already?.note || "");
+  const [choice, setChoice] = useState<"going" | "maybe" | "cant" | null>(seeded);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(
-    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
-      ? already.response
-      : null,
-  );
+  const [saved, setSaved] = useState(() => ({
+    response: seeded,
+    name: seeded ? (already?.personName || "").trim() : "",
+    contact: seeded ? (already?.personContact || "").trim() : "",
+    note: seeded ? (already?.note || "").trim() : "",
+  }));
   const [err, setErr] = useState<string | null>(null);
 
   const whenLabel = receipt.nightAt
@@ -111,23 +117,35 @@ function RsvpScreen() {
   const goingCount =
     receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
 
-  async function submit(response: "going" | "maybe" | "cant") {
+  const draftMatchesSave =
+    choice === saved.response &&
+    name.trim() === saved.name &&
+    contact.trim() === saved.contact &&
+    note.trim() === saved.note;
+  const saveDisabled = busy || choice == null || draftMatchesSave;
+
+  async function save() {
+    if (!choice || busy || draftMatchesSave) return;
     if (!name.trim()) {
       setErr("Add your name so the host knows who’s in.");
       return;
     }
+    const response = choice;
+    const personName = name.trim();
+    const personContact = contact.trim();
+    const personNote = note.trim();
     setBusy(true);
     setErr(null);
     try {
       await postRsvp(receipt.id, {
         response,
-        personName: name.trim(),
-        personContact: contact.trim() || null,
-        note: note.trim() || null,
+        personName,
+        personContact: personContact || null,
+        note: personNote || null,
       });
-      await flow.join({ name: name.trim(), contact: contact.trim() });
+      await flow.join({ name: personName, contact: personContact });
       await flow.refresh();
-      setDone(response);
+      setSaved({ response, name: personName, contact: personContact, note: personNote });
       void hapticNotify("success");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
@@ -139,11 +157,11 @@ function RsvpScreen() {
 
   const place = receipt.restaurant?.trim() || "the outing";
   const thanks =
-    done === "going"
+    saved.response === "going"
       ? "You’re going — claim opens when the host uploads the check."
-      : done === "maybe"
+      : saved.response === "maybe"
         ? "Got it — maybe. Change anytime below."
-        : done === "cant"
+        : saved.response === "cant"
           ? "Noted. You can change this anytime below."
           : null;
 
@@ -157,12 +175,6 @@ function RsvpScreen() {
         motif="coupe-pair"
         title={place}
         keyboard
-        skipFooterKeyboard
-        footer={
-          <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
-            {done === "going" ? "Still going" : "Going"}
-          </PrimaryButton>
-        }
       >
         <HostMessage note={hostNoteText(receipt.hostInfo)} />
         <Text style={styles.lead}>
@@ -198,13 +210,19 @@ function RsvpScreen() {
           multiline
           style={{ minHeight: 72, height: undefined, paddingVertical: 12, textAlignVertical: "top" }}
         />
-        <View style={styles.rsvpAlt}>
-          <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
-            {done === "maybe" ? "Still maybe" : "Maybe"}
+        <View style={styles.rsvpChoices}>
+          <QuietButton selected={choice === "going"} onPress={() => setChoice("going")}>
+            Going
           </QuietButton>
-          <QuietButton disabled={busy} onPress={() => void submit("cant")}>
-            {done === "cant" ? "Still can’t" : "Can’t"}
+          <QuietButton selected={choice === "maybe"} onPress={() => setChoice("maybe")}>
+            Maybe
           </QuietButton>
+          <QuietButton selected={choice === "cant"} onPress={() => setChoice("cant")}>
+            Can’t
+          </QuietButton>
+          <PrimaryButton busy={busy} disabled={saveDisabled} onPress={() => void save()}>
+            Save
+          </PrimaryButton>
         </View>
       </InterviewChrome>
     </AppShell>
@@ -666,7 +684,7 @@ const styles = StyleSheet.create({
   },
   unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
   unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
-  rsvpAlt: { gap: 4 },
+  rsvpChoices: { gap: 4, marginTop: 4 },
   rsvpThanks: {
     fontSize: 15,
     lineHeight: 22,

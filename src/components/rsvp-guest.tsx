@@ -29,17 +29,23 @@ export function RsvpGuest({
         row.personName.toLowerCase() === saved.name.toLowerCase(),
     ) ?? null;
 
+  const seeded =
+    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
+      ? already.response
+      : null;
   const [name, setName] = useState(already?.personName || saved?.name || "");
   const [contact, setContact] = useState(
     already?.personContact || saved?.contact || "",
   );
   const [note, setNote] = useState(already?.note ?? "");
+  const [choice, setChoice] = useState<"going" | "maybe" | "cant" | null>(seeded);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(
-    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
-      ? already.response
-      : null,
-  );
+  const [committed, setCommitted] = useState(() => ({
+    response: seeded,
+    name: seeded ? (already?.personName || "").trim() : "",
+    contact: seeded ? (already?.personContact || "").trim() : "",
+    note: seeded ? (already?.note || "").trim() : "",
+  }));
   const [err, setErr] = useState<string | null>(null);
 
   const whenLabel = useMemo(() => {
@@ -57,11 +63,23 @@ export function RsvpGuest({
   const goingCount =
     receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
 
-  async function submit(response: "going" | "maybe" | "cant") {
+  const draftMatchesSave =
+    choice === committed.response &&
+    name.trim() === committed.name &&
+    contact.trim() === committed.contact &&
+    note.trim() === committed.note;
+  const saveDisabled = busy || choice == null || draftMatchesSave;
+
+  async function save() {
+    if (!choice || busy || draftMatchesSave) return;
     if (!name.trim()) {
       setErr("Add your name so the host knows who’s in.");
       return;
     }
+    const response = choice;
+    const personName = name.trim();
+    const personContact = contact.trim();
+    const personNote = note.trim();
     setBusy(true);
     setErr(null);
     try {
@@ -71,18 +89,23 @@ export function RsvpGuest({
           method: "POST",
           body: JSON.stringify({
             response,
-            personName: name.trim(),
-            personContact: contact.trim() || null,
+            personName,
+            personContact: personContact || null,
             inviteToken: inviteToken || null,
-            note: note.trim() || null,
+            note: personNote || null,
           }),
         },
       );
       saveGuest(receipt.id, {
-        name: name.trim(),
-        contact: contact.trim(),
+        name: personName,
+        contact: personContact,
       });
-      setDone(response);
+      setCommitted({
+        response,
+        name: personName,
+        contact: personContact,
+        note: personNote,
+      });
       onDone(next);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
@@ -92,11 +115,11 @@ export function RsvpGuest({
   }
 
   const thanks =
-    done === "going"
+    committed.response === "going"
       ? "You’re going — claim opens when the host uploads the check."
-      : done === "maybe"
+      : committed.response === "maybe"
         ? "Got it — maybe. Change anytime below."
-        : done === "cant"
+        : committed.response === "cant"
           ? "Noted. You can change this anytime below."
           : null;
 
@@ -113,11 +136,6 @@ export function RsvpGuest({
         motif="coupe-pair"
         title={place}
         stepKey="rsvp"
-        footer={
-          <ContinueButton disabled={busy} onClick={() => void submit("going")}>
-            {done === "going" ? "Still going" : "Going"}
-          </ContinueButton>
-        }
       >
         <HostMessage note={receipt.hostInfo?.note} />
         <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
@@ -166,12 +184,30 @@ export function RsvpGuest({
           maxLength={280}
         />
         <div className="mt-1 flex flex-col gap-1">
-          <QuietButton disabled={busy} onClick={() => void submit("maybe")}>
-            {done === "maybe" ? "Still maybe" : "Maybe"}
+          <QuietButton
+            aria-pressed={choice === "going"}
+            className={choice === "going" ? "border-[1.5px] border-primary" : undefined}
+            onClick={() => setChoice("going")}
+          >
+            Going
           </QuietButton>
-          <QuietButton disabled={busy} onClick={() => void submit("cant")}>
-            {done === "cant" ? "Still can’t" : "Can’t"}
+          <QuietButton
+            aria-pressed={choice === "maybe"}
+            className={choice === "maybe" ? "border-[1.5px] border-primary" : undefined}
+            onClick={() => setChoice("maybe")}
+          >
+            Maybe
           </QuietButton>
+          <QuietButton
+            aria-pressed={choice === "cant"}
+            className={choice === "cant" ? "border-[1.5px] border-primary" : undefined}
+            onClick={() => setChoice("cant")}
+          >
+            Can’t
+          </QuietButton>
+          <ContinueButton disabled={saveDisabled} onClick={() => void save()}>
+            Save
+          </ContinueButton>
         </div>
       </InterviewChrome>
     </div>
@@ -179,10 +215,9 @@ export function RsvpGuest({
 }
 
 /**
- * RSVP only. Lift this column so the chrome bar sits on the keyboard.
- * Measures the shell slot (stable — we never resize it) against
- * `visualViewport`, so other pages and PhoneShell stay as they are.
- * A closed keyboard leaves the column on normal flex; no footer restyle.
+ * RSVP only. Shrink this column with `visualViewport` so a focused field
+ * can scroll above the keyboard. Save stays in the scroll — it is not pinned.
+ * Other pages and PhoneShell are unchanged.
  */
 function usePinAboveKeyboard(ref: RefObject<HTMLDivElement | null>) {
   useEffect(() => {

@@ -7,8 +7,8 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-03 ~11:20 −04:00 · consolidating bot branches into `plan-an-outing` |
-| **Elapsed** | **~12.9 days** |
+| **This snapshot** | 2026-10-04 ~10:30 −04:00 · guest RSVP saves once |
+| **Elapsed** | **~13.9 days** |
 | **Commits on this branch** | refresh with `git rev-list --count HEAD` |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
@@ -98,6 +98,9 @@ git log --reverse -1 --format='%aI %s'
 - On “Where are you going?” and the web restaurant step, nearby places swipe sideways as photo cards (the first nearby photo, plus name, address, and category) until you type two letters. A tap opens that one place, scrolls up to three nearby photos, and loads its rating and website from Place Details; Plan here saves them with the first nearby photo, and back returns to the place step. Typing still uses Mapbox or MapKit and the place-id bridge. If nearby or that details call cannot load, the row stays empty or the place still saves without a rating, and search still works.
 - On the phone, the place screen leads the address, Google rating, category, website, and maps lines with small line icons. Tapping a gallery photo opens that same image in the full-page tab-photo sheet, centered, with the close control on screen. Swipe down or tap the scrim to close. The tab photo uses that same sheet.
 - Guest claim-link copy matches the ad message (“Claim what you ordered” / pay-the-host settle).
+
+### Day 14 — Sun 2026-10-04
+- Guest RSVP is one form. Going, Maybe, and Can’t stay on the page as a draft; Save is the only post, and the host is notified once per Save.
 
 ## How to extend this file
 

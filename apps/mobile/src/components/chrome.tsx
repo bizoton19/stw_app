@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useRef, useState, type ReactNode, type RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
 import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
@@ -74,13 +74,6 @@ export function InterviewChrome({
   hideProgress = false,
   /** Optional ref to the body ScrollView (scroll-to-error, etc.). */
   scrollRef,
-  /**
-   * Guest RSVP only. Keep the chrome bar’s color, hairline, and shadow when
-   * the keyboard opens — skip the footerKeyboard restyle — and sit that one
-   * bar flush on the keys. iOS stays KeyboardAvoidingView padding with no
-   * header offset. Android stays resize-only (never behavior="height").
-   */
-  skipFooterKeyboard = false,
 }: {
   step: number;
   total: number;
@@ -102,16 +95,8 @@ export function InterviewChrome({
   supportTip?: boolean;
   hideProgress?: boolean;
   scrollRef?: RefObject<ScrollView | null>;
-  skipFooterKeyboard?: boolean;
 }) {
   const keyboardOpen = useKeyboardVisible();
-  // Other steps drop the home-indicator pad and the bar shadow while typing.
-  // RSVP does not: the bar is the same chrome, lifted onto the keyboard.
-  const tightenFooter = keyboardOpen && !skipFooterKeyboard;
-  // Screen Y of this chrome. RSVP uses it as the KeyboardAvoidingView offset
-  // so the bar meets the keyboard — nothing added on top of that.
-  const anchorRef = useRef<View>(null);
-  const [anchorTop, setAnchorTop] = useState(0);
   const progress = (step / total) * 100;
   const kickerStyle = [
     styles.kicker,
@@ -238,8 +223,8 @@ export function InterviewChrome({
       {body}
       {footer != null || supportTip ? (
         <SafeAreaView
-          edges={tightenFooter ? [] : ["bottom"]}
-          style={[styles.footer, tightenFooter && styles.footerKeyboard]}
+          edges={keyboardOpen ? [] : ["bottom"]}
+          style={[styles.footer, keyboardOpen && styles.footerKeyboard]}
         >
           {footer}
           {supportTip && !keyboardOpen ? <HostSupportTip /> : null}
@@ -253,38 +238,17 @@ export function InterviewChrome({
     return <View style={styles.chrome}>{inner}</View>;
   }
 
-  // iOS pads. Android resizes the window (app.json softwareKeyboardLayoutMode)
-  // and must not also use behavior="height".
-  // Other steps keep a 56pt header allowance. RSVP uses only this view's
-  // distance from the top of the screen — no extra header offset — so the
-  // one bar sits on the keyboard.
-  const keyboardOffset = Platform.OS === "ios" ? (skipFooterKeyboard ? anchorTop : 56) : 0;
-  const avoiding = (
+  return (
     <KeyboardAvoidingView
       style={styles.chrome}
+      // iOS: pad so sticky CTAs sit above the keyboard.
+      // Android: app.json uses softwareKeyboardLayoutMode "resize" — skip
+      // behavior="height" so we don't double-shrink and fight the bottom nav.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={keyboardOffset}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 56 : 0}
     >
       {inner}
     </KeyboardAvoidingView>
-  );
-
-  if (!skipFooterKeyboard) return avoiding;
-
-  return (
-    <View
-      ref={anchorRef}
-      style={styles.chrome}
-      collapsable={false}
-      onLayout={() => {
-        anchorRef.current?.measureInWindow((_x, y) => {
-          if (y <= 0) return;
-          setAnchorTop((prev) => (Math.abs(prev - y) < 0.5 ? prev : y));
-        });
-      }}
-    >
-      {avoiding}
-    </View>
   );
 }
 
@@ -330,13 +294,22 @@ export function QuietButton({
   children,
   onPress,
   disabled,
+  selected = false,
 }: {
   children: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** RSVP choice: merlot border, no fill. */
+  selected?: boolean;
 }) {
   return (
-    <PressScale onPress={onPress} disabled={disabled} haptic={false} style={styles.quiet}>
+    <PressScale
+      onPress={onPress}
+      disabled={disabled}
+      haptic={false}
+      accessibilityState={{ selected }}
+      style={[styles.quiet, selected && styles.quietSelected]}
+    >
       <Text allowFontScaling style={styles.quietText}>
         {children}
       </Text>
@@ -448,6 +421,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+  },
+  quietSelected: {
+    borderWidth: 1.5,
+    borderColor: colors.merlot,
   },
   quietText: { color: colors.ink, fontSize: 15, fontWeight: "600" },
 });

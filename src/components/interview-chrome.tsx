@@ -32,7 +32,8 @@ export function InterviewChrome({
   direction?: 1 | -1;
   stepKey: string;
   children: React.ReactNode;
-  footer: React.ReactNode;
+  /** Omit on RSVP — the form owns Save, and this bar is not painted. */
+  footer?: React.ReactNode;
   supportTip?: boolean;
   /** Hide “N of M” + progress bar (loading screens, host live board). */
   hideProgress?: boolean;
@@ -111,10 +112,12 @@ export function InterviewChrome({
         </AnimatePresence>
       </div>
 
-      <div className="shrink-0 border-t border-[var(--stw-chrome-border)] bg-[var(--stw-chrome)] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
-        {footer}
-        {supportTip ? <HostSupportTip /> : null}
-      </div>
+      {footer != null || supportTip ? (
+        <div className="shrink-0 border-t border-[var(--stw-chrome-border)] bg-[var(--stw-chrome)] px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-2px_6px_rgba(42,36,28,0.06)]">
+          {footer}
+          {supportTip ? <HostSupportTip /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }
