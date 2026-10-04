@@ -100,6 +100,8 @@ export type Receipt = {
   /** Date printed on the check, if found — ISO `YYYY-MM-DD`. */
   receiptDate?: string | null;
   nightAt?: string | null;
+  /** Host's display name on the public RSVP. Not the host note. */
+  hostName?: string | null;
   expectedPartySize?: number | null;
   invitees?: Invitee[];
   items: Item[];

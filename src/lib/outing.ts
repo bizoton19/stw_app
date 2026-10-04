@@ -21,6 +21,8 @@ export type PlanCreateInput = {
   expectedPartySize?: number | null;
   hostInfo?: HostInfo | null;
   note?: string | null;
+  /** Host's name for the RSVP lead. Kept off the host note. */
+  hostName?: string | null;
 };
 
 /** Validate + normalize host plan payload. Throws { code }. */
@@ -31,6 +33,7 @@ export function normalizePlanInput(input: PlanCreateInput): {
   receiptDate: string;
   expectedPartySize: number | null;
   hostInfo: HostInfo | undefined;
+  hostName: string | null;
 } {
   if (!isValidatedVenue(input.venue)) {
     throw Object.assign(new Error("venue_required"), {
@@ -71,6 +74,7 @@ export function normalizePlanInput(input: PlanCreateInput): {
   } else if (input.note?.trim()) {
     hostInfo = { payments: [], note: input.note.trim() };
   }
+  const hostName = input.hostName?.trim() || null;
   return {
     venue: input.venue,
     restaurant,
@@ -78,6 +82,7 @@ export function normalizePlanInput(input: PlanCreateInput): {
     receiptDate,
     expectedPartySize,
     hostInfo,
+    hostName,
   };
 }
 

@@ -117,6 +117,8 @@ export type Receipt = {
    * receiptDate’s calendar day after the check is attached.
    */
   nightAt?: string | null;
+  /** Host's display name on the public RSVP. Not the host note. */
+  hostName?: string | null;
   /** Optional expected claimant headcount (soft signal). */
   expectedPartySize?: number | null;
   /** Planning roster — Invited → Going / Maybe / Can’t. */

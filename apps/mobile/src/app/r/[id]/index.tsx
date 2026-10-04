@@ -221,7 +221,9 @@ function RsvpScreen() {
       >
         <HostMessage note={hostNoteText(receipt.hostInfo)} />
         <Text style={styles.lead}>
-          RSVP for this outing. Same link for everyone — you can change your answer later.
+          {receipt.hostName?.trim()
+            ? `${receipt.hostName.trim()} has invited you to RSVP.`
+            : "You’ve been invited to RSVP."}
         </Text>
         {thanks ? <Text style={styles.rsvpThanks}>{thanks}</Text> : null}
         {goingCount > 0 ? (

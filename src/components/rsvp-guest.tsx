@@ -179,7 +179,9 @@ export function RsvpGuest({
       >
         <HostMessage note={receipt.hostInfo?.note} />
         <p className="mb-4 text-[15px] leading-[22px] text-muted-foreground">
-          RSVP for this outing. Same link for everyone — you can change your answer later.
+          {receipt.hostName?.trim()
+            ? `${receipt.hostName.trim()} has invited you to RSVP.`
+            : "You’ve been invited to RSVP."}
         </p>
         {thanks ? (
           <p className="px-1 py-2 text-center text-[15px] leading-[22px] text-ink-soft">
