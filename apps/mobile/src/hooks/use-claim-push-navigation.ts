@@ -8,7 +8,7 @@ import {
   parseClaimPushData,
 } from "@/lib/host-push";
 
-/** Opens the host live board when a claim push is tapped; Close tab finalizes. */
+/** Opens plan board (RSVP) or settle (claim); Close tab finalizes. */
 export function useClaimPushNavigation() {
   const router = useRouter();
   const handled = useRef<string | null>(null);
@@ -16,14 +16,18 @@ export function useClaimPushNavigation() {
   useEffect(() => {
     void ensureHostPushCategories();
 
-    function openSettle(receiptId: string) {
-      const key = `open:${receiptId}`;
+    function openFromPush(receiptId: string, screen?: string) {
+      const key = `open:${receiptId}:${screen ?? "settle"}`;
       if (!receiptId || handled.current === key) return;
       handled.current = key;
-      router.push({
-        pathname: "/r/[id]/settle",
-        params: { id: receiptId, host: "1" },
-      });
+      if (screen === "plan") {
+        router.push(`/host/plan/${receiptId}`);
+      } else {
+        router.push({
+          pathname: "/r/[id]/settle",
+          params: { id: receiptId, host: "1" },
+        });
+      }
       setTimeout(() => {
         handled.current = null;
       }, 2000);
@@ -53,7 +57,7 @@ export function useClaimPushNavigation() {
         response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER ||
         !response.actionIdentifier
       ) {
-        openSettle(data.receiptId);
+        openFromPush(data.receiptId, data.screen ?? (data.kind === "rsvp" ? "plan" : "settle"));
       }
     }
 

@@ -1,4 +1,5 @@
 import { jsonError } from "@/lib/http";
+import { notifyHostRsvpEvent } from "@/lib/notify-host";
 import { rsvp } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,20 @@ export async function POST(
       personContact: body.personContact,
       inviteToken: body.inviteToken,
       note: body.note,
+    });
+    const personName =
+      body.personName?.trim() ||
+      [...(receipt.invitees ?? [])]
+        .filter((row) => row.response === body.response)
+        .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0]
+        ?.personName ||
+      "Someone";
+    void notifyHostRsvpEvent({
+      receiptId: id,
+      personName,
+      response: body.response,
+    }).catch(() => {
+      /* best-effort */
     });
     return Response.json({ receipt });
   } catch (err) {

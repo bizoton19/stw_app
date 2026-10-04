@@ -11,6 +11,7 @@ import {
 } from "@/components/chrome";
 import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
+import { registerHostClaimPush } from "@/lib/host-push";
 import { shareLink as shareClaimLink } from "@/lib/share-link";
 import { clearHostedReceipt, patchHostedReceipt } from "@/lib/host-tabs";
 import { getHostToken, hydrateSession } from "@/lib/session";
@@ -39,6 +40,7 @@ export default function HostPlanBoard() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hostToken, setHostToken] = useState<string | null>(null);
+  const [pushHint, setPushHint] = useState<string | null>(null);
 
   const claimUrl = id ? publicClaimUrl(id) : "";
 
@@ -48,6 +50,13 @@ export default function HostPlanBoard() {
       await hydrateSession();
       if (cancelled || !id) return;
       setHostToken(getHostToken(id));
+      const result = await registerHostClaimPush(id);
+      if (cancelled) return;
+      if (result === "ok") {
+        setPushHint("You’ll get a ping when someone RSVPs.");
+      } else if (result === "denied") {
+        setPushHint("Notifications are off — you can still watch the roster here.");
+      }
     })();
     return () => {
       cancelled = true;
@@ -190,6 +199,7 @@ export default function HostPlanBoard() {
         {receipt?.hostInfo?.note ? (
           <Text style={styles.note}>{receipt.hostInfo.note}</Text>
         ) : null}
+        {pushHint ? <Text style={styles.pushHint}>{pushHint}</Text> : null}
 
         <Text style={styles.hint}>
           One link for everyone. People show up here when they RSVP Going, Maybe, or Can’t.
@@ -227,6 +237,13 @@ const styles = StyleSheet.create({
   err: { color: colors.danger, marginBottom: 10, fontSize: 14 },
   when: { fontSize: 15, fontWeight: "600", color: colors.inkSoft, marginBottom: 6 },
   note: { fontSize: 14, color: colors.ink, marginBottom: 14, lineHeight: 20 },
+  pushHint: {
+    marginBottom: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.merlot,
+    fontWeight: "600",
+  },
   hint: { fontSize: 13, color: colors.muted, marginBottom: 12, marginTop: 4, lineHeight: 18 },
   empty: { fontSize: 14, color: colors.inkSoft, marginBottom: 16 },
   roster: { marginBottom: 14 },
