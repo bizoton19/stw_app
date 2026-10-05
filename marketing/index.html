@@ -204,6 +204,39 @@
             .phone-frame.scan-active::after { animation: none; opacity: 0; }
             .workflow-stage:hover .phone-frame { transform: none; }
         }
+
+        .pay-methods {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .pay-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.35rem 0.7rem 0.35rem 0.35rem;
+            border-radius: 999px;
+            border: 1px solid #E6E0D8;
+            background: #FFFcf8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #2A241C;
+        }
+        .pay-chip img {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: block;
+        }
+        .pay-chip .pay-zelle {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #6D1ED4;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col selection:bg-merlot selection:text-white">
@@ -336,22 +369,22 @@
                 </div>
             </article>
 
-            <!-- 3. QR + claim link -->
+            <!-- 3. Copy / share claim link -->
             <article class="workflow-stage border-t border-[#E6E0D8]">
                 <div class="workflow-copy">
                     <div class="workflow-kicker"><span class="num">3</span> <span data-i18n="steps.3.kicker">Share</span></div>
-                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.3.title">QR with a claim link</h3>
+                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.3.title">Copy the claim link — or share / QR</h3>
                     <p class="text-inkSoft text-base leading-relaxed max-w-md" data-i18n="steps.3.desc">
-                        A bright QR and a short URL for tonight’s tab. Guests open it in the browser — no app install.
+                        One short URL for tonight’s tab. Copy it into the group chat, tap Share, or open the bright QR to pass the phone. Guests claim in the browser — no app install.
                     </p>
                 </div>
                 <div class="workflow-visual">
                     <figure class="phone-frame">
                         <img
-                            src="/screenshots/how-it-works/03-qr-link.jpg"
+                            src="/screenshots/how-it-works/03-share-copy.jpg"
                             width="780"
-                            height="1200"
-                            alt="Share QR sheet with claim link for the table"
+                            height="1688"
+                            alt="Host share screen: claim link with Copy, Share, and QR actions"
                             loading="lazy"
                             decoding="async"
                         >
@@ -359,28 +392,28 @@
                 </div>
             </article>
 
-            <!-- 4. Pass or send -->
+            <!-- 4. Settle — friends pay the host -->
             <article class="workflow-stage reverse border-t border-[#E6E0D8]">
                 <div class="workflow-copy">
-                    <div class="workflow-kicker"><span class="num">4</span> <span data-i18n="steps.4.kicker">Pass</span></div>
-                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.4.title">Pass the phone — or send the link</h3>
+                    <div class="workflow-kicker"><span class="num">4</span> <span data-i18n="steps.4.kicker">Settle</span></div>
+                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.4.title">Friends pay the host</h3>
                     <p class="text-inkSoft text-base leading-relaxed max-w-md mb-5" data-i18n="steps.4.desc">
-                        Hand the QR around the table, or drop the link in the group chat. Friends claim what they ordered; tax and tip follow.
+                        After they claim, they tap Venmo, Cash App, PayPal, or Zelle — we open their app pre-filled. We never hold the money.
                     </p>
-                    <div class="flex flex-wrap gap-2">
-                        <span class="inline-flex items-center gap-1.5 bg-[#008CFF]/10 text-[#008CFF] px-2 py-1 rounded text-xs font-semibold">Venmo</span>
-                        <span class="inline-flex items-center gap-1.5 bg-[#00D632]/10 text-[#00D632] px-2 py-1 rounded text-xs font-semibold">Cash App</span>
-                        <span class="inline-flex items-center gap-1.5 bg-[#6D1ED4]/10 text-[#6D1ED4] px-2 py-1 rounded text-xs font-semibold">Zelle</span>
-                        <span class="inline-flex items-center gap-1.5 bg-[#003087]/10 text-[#003087] px-2 py-1 rounded text-xs font-semibold">PayPal</span>
+                    <div class="pay-methods" aria-label="Payment apps">
+                        <span class="pay-chip"><img src="/pay/venmo.png" width="28" height="28" alt="" decoding="async"> Venmo</span>
+                        <span class="pay-chip"><img src="/pay/cashapp.png" width="28" height="28" alt="" decoding="async"> Cash App</span>
+                        <span class="pay-chip"><span class="pay-zelle" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="#fff" d="M5 5h14v3.2L9.8 16.4H19V19H5v-3.2L14.2 7.6H5V5z"/></svg></span> Zelle</span>
+                        <span class="pay-chip"><img src="/pay/paypal.png" width="28" height="28" alt="" decoding="async"> PayPal</span>
                     </div>
                 </div>
                 <div class="workflow-visual">
                     <figure class="phone-frame">
                         <img
-                            src="/screenshots/how-it-works/04-pass.jpg"
+                            src="/screenshots/how-it-works/04-settle-pay.jpg"
                             width="780"
                             height="1688"
-                            alt="Ready to split: snap, confirm, share the claim link"
+                            alt="Settle screen: pay the host with Venmo, Cash App, Zelle, or PayPal"
                             loading="lazy"
                             decoding="async"
                         >
@@ -456,11 +489,11 @@
                 "steps.2.title": "Line items appear",
                 "steps.2.desc": "Vision reads the check into claimable lines. You skim a short list — not a spreadsheet dump — and confirm.",
                 "steps.3.kicker": "Share",
-                "steps.3.title": "QR with a claim link",
-                "steps.3.desc": "A bright QR and a short URL for tonight’s tab. Guests open it in the browser — no app install.",
-                "steps.4.kicker": "Pass",
-                "steps.4.title": "Pass the phone — or send the link",
-                "steps.4.desc": "Hand the QR around the table, or drop the link in the group chat. Friends claim what they ordered; tax and tip follow.",
+                "steps.3.title": "Copy the claim link — or share / QR",
+                "steps.3.desc": "One short URL for tonight’s tab. Copy it into the group chat, tap Share, or open the bright QR to pass the phone. Guests claim in the browser — no app install.",
+                "steps.4.kicker": "Settle",
+                "steps.4.title": "Friends pay the host",
+                "steps.4.desc": "After they claim, they tap Venmo, Cash App, PayPal, or Zelle — we open their app pre-filled. We never hold the money.",
                 "privacy.title": "Your data isn't the product.",
                 "privacy.subtitle": "You already have a group chat. We don't need your contacts or your social graph. Split the Wine uses ephemeral links designed for tonight's dinner. Once the tab is settled, the link vanishes.",
                 "privacy.1.title": "No Guest Accounts",
@@ -492,11 +525,11 @@
                 "steps.2.title": "Aparecen las líneas",
                 "steps.2.desc": "La visión lee la cuenta en líneas reclamables. Revisas una lista corta — no un volcado — y confirmas.",
                 "steps.3.kicker": "Compartir",
-                "steps.3.title": "QR con enlace para reclamar",
-                "steps.3.desc": "Un QR claro y un enlace corto para la cuenta de esta noche. Los invitados abren el navegador — sin instalar la app.",
-                "steps.4.kicker": "Pasar",
-                "steps.4.title": "Pasa el teléfono — o envía el enlace",
-                "steps.4.desc": "Pasa el QR en la mesa o mándalo al grupo. Cada quien reclama lo suyo; impuestos y propina siguen.",
+                "steps.3.title": "Copia el enlace — o comparte / QR",
+                "steps.3.desc": "Un enlace corto para la cuenta de esta noche. Cópialo al grupo, toca Compartir, o abre el QR para pasar el teléfono. Reclaman en el navegador — sin instalar la app.",
+                "steps.4.kicker": "Liquidar",
+                "steps.4.title": "Los amigos pagan al anfitrión",
+                "steps.4.desc": "Después de reclamar, abren Venmo, Cash App, PayPal o Zelle — prellenado. Nunca tocamos el dinero.",
                 "privacy.title": "Tus datos no son el producto.",
                 "privacy.subtitle": "Ya tienes un chat de grupo. No necesitamos tus contactos ni tu red social. Split the Wine usa enlaces efímeros. Una vez liquidada la cuenta, el enlace desaparece.",
                 "privacy.1.title": "Sin Cuentas",
@@ -528,11 +561,11 @@
                 "steps.2.title": "Les lignes apparaissent",
                 "steps.2.desc": "La vision transforme l’addition en lignes à revendiquer. Vous parcourez une courte liste — pas un dump — et confirmez.",
                 "steps.3.kicker": "Partage",
-                "steps.3.title": "QR avec lien de revendication",
-                "steps.3.desc": "Un QR lumineux et une URL courte pour ce soir. Les invités ouvrent le navigateur — sans installer l’app.",
-                "steps.4.kicker": "Passer",
-                "steps.4.title": "Passez le téléphone — ou envoyez le lien",
-                "steps.4.desc": "Faites circuler le QR à table, ou déposez le lien dans le groupe. Chacun revendique sa commande ; taxes et pourboire suivent.",
+                "steps.3.title": "Copiez le lien — ou partagez / QR",
+                "steps.3.desc": "Une URL courte pour ce soir. Copiez-la dans le groupe, partagez, ou ouvrez le QR pour passer le téléphone. Les invités revendiquent dans le navigateur — sans installer l’app.",
+                "steps.4.kicker": "Régler",
+                "steps.4.title": "Les amis paient l’hôte",
+                "steps.4.desc": "Après avoir revendiqué, ils ouvrent Venmo, Cash App, PayPal ou Zelle — prérempli. Nous ne touchons jamais l’argent.",
                 "privacy.title": "Vos données ne sont pas le produit.",
                 "privacy.subtitle": "Vous avez déjà un groupe de discussion. Split the Wine utilise des liens éphémères. Une fois l'addition réglée, le lien disparaît.",
                 "privacy.1.title": "Pas de compte invité",
@@ -564,11 +597,11 @@
                 "steps.2.title": "Liy yo parèt",
                 "steps.2.desc": "Vizyon an li adisyon an an liy ou ka reklame. Ou gade yon ti lis — pa yon dump — epi konfime.",
                 "steps.3.kicker": "Pataje",
-                "steps.3.title": "QR ak lyen pou reklame",
-                "steps.3.desc": "Yon QR klè ak yon lyen kout pou aswè a. Envite yo ouvri navigatè a — pa bezwen telechaje app la.",
-                "steps.4.kicker": "Pase",
-                "steps.4.title": "Pase telefòn nan — oswa voye lyen an",
-                "steps.4.desc": "Pase QR a sou tab la, oswa voye lyen an nan gwoup la. Chak moun reklame sa yo te pran; taks ak fiyè yo swiv.",
+                "steps.3.title": "Kopye lyen an — oswa pataje / QR",
+                "steps.3.desc": "Yon lyen kout pou aswè a. Kopye li nan gwoup la, peze Share, oswa ouvri QR a pou pase telefòn nan. Yo reklame nan navigatè a — pa bezwen app.",
+                "steps.4.kicker": "Regle",
+                "steps.4.title": "Zanmi yo peye host la",
+                "steps.4.desc": "Apre yo reklame, yo peze Venmo, Cash App, PayPal oswa Zelle — app yo ouvri deja ranpli. Nou pa janm kenbe lajan an.",
                 "privacy.title": "Done ou se pa pwodwi nou.",
                 "privacy.subtitle": "Ou gen yon gwoup deja. Split the Wine itilize lyen ki la pou yon ti tan. Lè tout moun fin peye, lyen an efase.",
                 "privacy.1.title": "Pa Gen Kont Pou Envite",
