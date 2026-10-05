@@ -15,6 +15,7 @@ export async function POST(req: Request) {
       expectedPartySize?: number | null;
       hostInfo?: unknown;
       note?: string | null;
+      hostName?: string | null;
     };
     if (!body.venue || !body.nightAt) {
       return Response.json({ error: "invalid", message: "venue and nightAt required" }, { status: 400 });
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
       expectedPartySize: body.expectedPartySize,
       hostInfo: (hostInfo as HostInfo | undefined) ?? null,
       note: body.note,
+      hostName: body.hostName,
     });
     return Response.json({
       receiptId: created.receiptId,

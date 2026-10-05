@@ -125,7 +125,7 @@ export function VenueTypeahead({
           setLocationReady(true);
           return;
         }
-        setLocationHint("Using nearby places to rank results.");
+          setLocationHint("Using your location to show nearby places.");
         const pos = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
@@ -198,7 +198,7 @@ export function VenueTypeahead({
             const code = (err as { code?: string }).code;
             setSearchError(
               code === "places_unauthorized" || code === "places_upstream" || code === "forbidden"
-                ? "Place search isn’t available right now (Mapbox). Try again later, or type the name and we’ll keep going once search is fixed."
+                ? "Place search isn’t available right now. Try again in a moment."
                 : "Couldn’t load place suggestions. Check your connection and try again.",
             );
           } finally {
@@ -332,7 +332,7 @@ export function VenueTypeahead({
       ) : (
         <>
           <Field
-            label="Pick a different restaurant or bar"
+            label="Restaurant or bar"
             value={value}
             onChangeText={onChangeText}
             placeholder="Start typing the place"
@@ -355,8 +355,7 @@ export function VenueTypeahead({
           ) : null}
           {value.trim().length >= 2 && !loading && !searchError && predictions.length === 0 ? (
             <Text style={styles.hint}>
-              Keep typing or pick a match below when they appear. We won’t lock a place until you
-              tap one.
+              Keep typing, or tap a place when it shows up. Nothing is chosen until you tap it.
             </Text>
           ) : null}
           {loading ? (

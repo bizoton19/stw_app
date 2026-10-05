@@ -102,6 +102,7 @@ function toPublic(
     venue: receipt.venue ?? null,
     receiptDate: receipt.receiptDate ?? null,
     nightAt: receipt.nightAt ?? null,
+    hostName: receipt.hostName?.trim() || null,
     expectedPartySize: receipt.expectedPartySize ?? null,
     invitees: opts?.host
       ? hostInvitees(receipt.invitees)
@@ -296,10 +297,11 @@ export async function createPlanReceipt(input: PlanCreateInput): Promise<{
       items: [],
       fees: [],
       claims: [],
-      hostInfo: normalized.hostInfo,
-      createdAt: now(),
-      hostToken,
-    };
+    hostInfo: normalized.hostInfo,
+    hostName: normalized.hostName,
+    createdAt: now(),
+    hostToken,
+  };
     await upsertReceipt(client, receipt);
     return { receiptId: id, hostToken, receipt: toPublic(receipt, { host: true }) };
   });
@@ -896,6 +898,7 @@ export async function rsvp(
     personContact?: string | null;
     inviteToken?: string | null;
     note?: string | null;
+    phone?: string | null;
   },
 ): Promise<PublicReceipt> {
   await ensureSchema();

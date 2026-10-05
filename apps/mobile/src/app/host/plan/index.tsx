@@ -38,6 +38,7 @@ export default function HostPlanOuting() {
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
   const [night, setNight] = useState(defaultNight);
   const [note, setNote] = useState("");
+  const [hostName, setHostName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +53,8 @@ export default function HostPlanOuting() {
   const receiptDate = useMemo(() => localDayKey(night), [night]);
 
   async function create() {
-    if (!placeLocked || !venue) return;
+    const name = hostName.trim();
+    if (!placeLocked || !venue || !name) return;
     setBusy(true);
     setError(null);
     try {
@@ -61,6 +63,7 @@ export default function HostPlanOuting() {
         nightAt,
         receiptDate,
         note: note.trim() || null,
+        hostName: name,
       });
       await saveHostToken(created.receiptId, created.hostToken);
       const claimUrl = publicClaimUrl(created.receiptId);
@@ -77,12 +80,8 @@ export default function HostPlanOuting() {
         venueCategory: venue.category,
       });
       router.replace(`/host/plan/${created.receiptId}`);
-    } catch (err) {
-      const message =
-        err instanceof Error && err.message.trim()
-          ? err.message
-          : "Couldn't create the outing. Check your connection and try again.";
-      setError(message);
+    } catch {
+      setError("Couldn’t create the outing. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -107,25 +106,34 @@ export default function HostPlanOuting() {
         <VenueTypeahead
           value={restaurant}
           venue={venue}
-          receiptDate={receiptDate}
           onChangeName={setRestaurant}
           onChangeVenue={setVenue}
         />
         {placeLocked ? (
           <>
             <OutingWhenPicker value={night} onChange={setNight} />
+            <Text style={styles.label}>Your name</Text>
+            <TextInput
+              value={hostName}
+              onChangeText={setHostName}
+              placeholder=""
+              placeholderTextColor={colors.muted}
+              style={styles.input}
+              autoComplete="name"
+              autoCorrect={false}
+            />
             <Text style={styles.label}>Note for the group (optional)</Text>
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder="I’m putting the card down"
+              placeholder="I’ll cover the check"
               placeholderTextColor={colors.muted}
               style={[styles.input, styles.note]}
               multiline
             />
             <View style={[styles.create, { paddingBottom: Math.max(insets.bottom, 12) }]}>
               <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>
-              <PrimaryButton busy={busy} onPress={() => void create()}>
+              <PrimaryButton busy={busy} disabled={!hostName.trim()} onPress={() => void create()}>
                 Create outing link
               </PrimaryButton>
               <HostSupportTip />

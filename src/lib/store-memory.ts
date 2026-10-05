@@ -152,6 +152,7 @@ function toPublic(
     venue: receipt.venue ?? null,
     receiptDate: receipt.receiptDate ?? null,
     nightAt: receipt.nightAt ?? null,
+    hostName: receipt.hostName?.trim() || null,
     expectedPartySize: receipt.expectedPartySize ?? null,
     invitees: opts?.host
       ? hostInvitees(receipt.invitees)
@@ -247,6 +248,7 @@ export function createPlanReceipt(input: PlanCreateInput): {
     fees: [],
     claims: [],
     hostInfo: normalized.hostInfo,
+    hostName: normalized.hostName,
     createdAt: now(),
     hostToken,
   };
@@ -764,6 +766,7 @@ export async function rsvp(
     personContact?: string | null;
     inviteToken?: string | null;
     note?: string | null;
+    phone?: string | null;
   },
 ): Promise<PublicReceipt> {
   return withLock(id, () => {

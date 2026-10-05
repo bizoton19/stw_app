@@ -294,13 +294,22 @@ export function QuietButton({
   children,
   onPress,
   disabled,
+  selected = false,
 }: {
   children: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** RSVP choice: merlot border, no fill. */
+  selected?: boolean;
 }) {
   return (
-    <PressScale onPress={onPress} disabled={disabled} haptic={false} style={styles.quiet}>
+    <PressScale
+      onPress={onPress}
+      disabled={disabled}
+      haptic={false}
+      accessibilityState={{ selected }}
+      style={[styles.quiet, selected && styles.quietSelected]}
+    >
       <Text allowFontScaling style={styles.quietText}>
         {children}
       </Text>
@@ -412,6 +421,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
+  },
+  quietSelected: {
+    borderWidth: 1.5,
+    borderColor: colors.merlot,
   },
   quietText: { color: colors.ink, fontSize: 15, fontWeight: "600" },
 });

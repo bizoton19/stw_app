@@ -41,6 +41,7 @@ export async function rsvp(
     personContact?: string | null;
     inviteToken?: string | null;
     note?: string | null;
+    phone?: string | null;
   },
 ) {
   return usingDatabase() ? pg.rsvp(id, input) : memory.rsvp(id, input);

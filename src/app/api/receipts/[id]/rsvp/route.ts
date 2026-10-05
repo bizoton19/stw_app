@@ -16,6 +16,8 @@ export async function POST(
       personContact?: string | null;
       inviteToken?: string | null;
       note?: string | null;
+      /** Canonical E.164. The RSVP key. Country code and national number are not accepted. */
+      phone?: string;
     };
     if (!body.response) {
       return Response.json({ error: "invalid", message: "response required" }, { status: 400 });
@@ -26,6 +28,7 @@ export async function POST(
       personContact: body.personContact,
       inviteToken: body.inviteToken,
       note: body.note,
+      phone: body.phone,
     });
     const personName =
       body.personName?.trim() ||

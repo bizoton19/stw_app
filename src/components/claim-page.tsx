@@ -51,9 +51,9 @@ export function ClaimPage({
     return (
       <PhoneShell meta="Missing">
         <div className="px-5 py-10">
-          <h1 className="text-2xl font-semibold tracking-tight">That tab is gone</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">This link doesn’t work</h1>
           <p className="mt-2 text-[14px] text-muted-foreground">
-            Links live in this server&apos;s memory. Start a new receipt or open /r/demo.
+            Ask the host for a new one.
           </p>
         </div>
       </PhoneShell>
@@ -64,7 +64,7 @@ export function ClaimPage({
     return (
       <PhoneShell meta="Loading">
         <div className="px-5 py-16 text-center text-[14px] text-muted-foreground">
-          Opening the check…
+          Opening…
         </div>
       </PhoneShell>
     );

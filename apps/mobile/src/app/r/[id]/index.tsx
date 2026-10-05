@@ -5,6 +5,7 @@ import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/compone
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
+import { RsvpPhoneField } from "@/components/rsvp-phone-field";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { HostMessage } from "@/components/host-message";
 import { PressScale } from "@/components/press-scale";
@@ -14,12 +15,19 @@ import { hapticNotify } from "@/lib/haptics";
 import { hostNoteText } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { postRsvp } from "@/lib/api";
+import {
+  DEFAULT_COUNTRY_ID,
+  composeE164,
+  fieldsFromStoredPhone,
+  rsvpPhoneSaveError,
+} from "@/lib/phone-e164";
+import { readRsvpDraft, writeRsvpDraft } from "@/lib/rsvp-draft";
 import { personRowKey, sameGuest } from "@/lib/guest-id";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
 import { goHostDesk } from "@/lib/navigation";
 import { colors } from "@/lib/theme";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Claim, Item } from "@/lib/types";
 
 export default function ClaimScreen() {
@@ -32,10 +40,8 @@ export default function ClaimScreen() {
     return (
       <AppShell meta="Missing">
         <View style={{ padding: 20, paddingTop: 40 }}>
-          <Text style={styles.title}>That tab is gone</Text>
-          <Text style={styles.muted}>
-            Links live in this server's memory. Ask the host for a fresh claim link.
-          </Text>
+          <Text style={styles.title}>This link doesn’t work</Text>
+          <Text style={styles.muted}>Ask the host for a new one.</Text>
         </View>
       </AppShell>
     );
@@ -45,7 +51,7 @@ export default function ClaimScreen() {
     return (
       <AppShell meta="Loading">
         <Text style={[styles.muted, { textAlign: "center", marginTop: 80 }]}>
-          Opening the check…
+          Opening…
         </Text>
       </AppShell>
     );
@@ -75,28 +81,51 @@ export default function ClaimScreen() {
 function RsvpScreen() {
   const flow = useClaimFlow();
   const receipt = flow.receipt!;
-  const already =
-    receipt.invitees?.find(
-      (row) =>
-        (row.response === "going" ||
-          row.response === "maybe" ||
-          row.response === "cant") &&
-        flow.guest?.name &&
-        row.personName.toLowerCase() === flow.guest.name.toLowerCase(),
-    ) ?? null;
-
-  const [name, setName] = useState(() => already?.personName || flow.guest?.name || "");
-  const [contact, setContact] = useState(
-    () => already?.personContact || flow.guest?.contact || "",
-  );
-  const [note, setNote] = useState(() => already?.note || "");
+  const [name, setName] = useState(() => flow.guest?.name || "");
+  const [countryId, setCountryId] = useState(DEFAULT_COUNTRY_ID);
+  const [nationalNumber, setNationalNumber] = useState("");
+  const [contact, setContact] = useState(() => flow.guest?.contact || "");
+  const [note, setNote] = useState("");
+  const [choice, setChoice] = useState<"going" | "maybe" | "cant" | null>(null);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(
-    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
-      ? already.response
-      : null,
-  );
+  const [saved, setSaved] = useState<{
+    response: "going" | "maybe" | "cant" | null;
+    name: string;
+    phone: string;
+    contact: string;
+    note: string;
+  }>({
+    response: null,
+    name: "",
+    phone: "",
+    contact: "",
+    note: "",
+  });
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancel = false;
+    void readRsvpDraft(receipt.id).then((draft) => {
+      if (cancel || !draft) return;
+      const stored = fieldsFromStoredPhone(draft.phone);
+      setName(draft.name);
+      setCountryId(stored.countryId);
+      setNationalNumber(stored.nationalNumber);
+      setContact(draft.contact);
+      setNote(draft.note);
+      setChoice(draft.response);
+      setSaved({
+        response: draft.response,
+        name: draft.name.trim(),
+        phone: draft.phone,
+        contact: draft.contact.trim(),
+        note: draft.note.trim(),
+      });
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [receipt.id]);
 
   const whenLabel = receipt.nightAt
     ? new Date(receipt.nightAt).toLocaleString(undefined, {
@@ -111,23 +140,53 @@ function RsvpScreen() {
   const goingCount =
     receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
 
-  async function submit(response: "going" | "maybe" | "cant") {
+  const phone = composeE164(countryId, nationalNumber) ?? "";
+  const draftMatchesSave =
+    choice === saved.response &&
+    name.trim() === saved.name &&
+    phone === saved.phone &&
+    contact.trim() === saved.contact &&
+    note.trim() === saved.note;
+  const saveDisabled = busy || choice == null || draftMatchesSave;
+
+  async function save() {
+    if (!choice || busy || draftMatchesSave) return;
     if (!name.trim()) {
       setErr("Add your name so the host knows who’s in.");
       return;
     }
+    const phoneError = rsvpPhoneSaveError(countryId, nationalNumber);
+    if (phoneError || !phone) {
+      setErr(phoneError ?? "That phone number doesn’t look complete.");
+      return;
+    }
+    const response = choice;
+    const personName = name.trim();
+    const personContact = contact.trim();
+    const personNote = note.trim();
     setBusy(true);
     setErr(null);
     try {
       await postRsvp(receipt.id, {
         response,
-        personName: name.trim(),
-        personContact: contact.trim() || null,
-        note: note.trim() || null,
+        personName,
+        phone,
+        personContact: personContact || null,
+        inviteToken: flow.inviteToken || null,
+        note: personNote || null,
       });
-      await flow.join({ name: name.trim(), contact: contact.trim() });
+      await writeRsvpDraft(receipt.id, {
+        response,
+        name: personName,
+        countryId,
+        nationalNumber,
+        contact: personContact,
+        note: personNote,
+        phone,
+      });
+      await flow.join({ name: personName, contact: personContact });
       await flow.refresh();
-      setDone(response);
+      setSaved({ response, name: personName, phone, contact: personContact, note: personNote });
       void hapticNotify("success");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
@@ -139,11 +198,11 @@ function RsvpScreen() {
 
   const place = receipt.restaurant?.trim() || "the outing";
   const thanks =
-    done === "going"
-      ? "You’re going — claim opens when the host uploads the check."
-      : done === "maybe"
+    saved.response === "going"
+      ? "You’re going. You’ll pick what you ordered when the host adds the check."
+      : saved.response === "maybe"
         ? "Got it — maybe. Change anytime below."
-        : done === "cant"
+        : saved.response === "cant"
           ? "Noted. You can change this anytime below."
           : null;
 
@@ -157,25 +216,14 @@ function RsvpScreen() {
         motif="coupe-pair"
         title={place}
         keyboard
-        footer={
-          <View style={styles.rsvpActions}>
-            {thanks ? <Text style={styles.rsvpThanks}>{thanks}</Text> : null}
-            <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
-              {done === "going" ? "Still going" : "Going"}
-            </PrimaryButton>
-            <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
-              {done === "maybe" ? "Still maybe" : "Maybe"}
-            </QuietButton>
-            <QuietButton disabled={busy} onPress={() => void submit("cant")}>
-              {done === "cant" ? "Still can’t" : "Can’t"}
-            </QuietButton>
-          </View>
-        }
       >
         <HostMessage note={hostNoteText(receipt.hostInfo)} />
         <Text style={styles.lead}>
-          RSVP for this outing. Same link for everyone — you can change your answer later.
+          {receipt.hostName?.trim()
+            ? `${receipt.hostName.trim()} has invited you to RSVP.`
+            : "You’ve been invited to RSVP."}
         </Text>
+        {thanks ? <Text style={styles.rsvpThanks}>{thanks}</Text> : null}
         {goingCount > 0 ? (
           <Text style={styles.rsvpMeta}>{goingCount} going so far</Text>
         ) : null}
@@ -184,16 +232,21 @@ function RsvpScreen() {
           label="Name"
           value={name}
           onChangeText={setName}
-          placeholder="Alex"
+          placeholder="Robert Baratheon"
           autoComplete="name"
+        />
+        <RsvpPhoneField
+          countryId={countryId}
+          nationalNumber={nationalNumber}
+          onCountryId={setCountryId}
+          onNationalNumber={setNationalNumber}
         />
         <Field
           label="Contact"
           hint="(optional)"
           value={contact}
           onChangeText={setContact}
-          placeholder="phone, Venmo, or email"
-          autoComplete="tel"
+          placeholder=""
           keyboardType="default"
         />
         <Field
@@ -205,6 +258,20 @@ function RsvpScreen() {
           multiline
           style={{ minHeight: 72, height: undefined, paddingVertical: 12, textAlignVertical: "top" }}
         />
+        <View style={styles.rsvpChoices}>
+          <QuietButton selected={choice === "going"} onPress={() => setChoice("going")}>
+            Going
+          </QuietButton>
+          <QuietButton selected={choice === "maybe"} onPress={() => setChoice("maybe")}>
+            Maybe
+          </QuietButton>
+          <QuietButton selected={choice === "cant"} onPress={() => setChoice("cant")}>
+            Can’t
+          </QuietButton>
+          <PrimaryButton busy={busy} disabled={saveDisabled} onPress={() => void save()}>
+            Save
+          </PrimaryButton>
+        </View>
       </InterviewChrome>
     </AppShell>
   );
@@ -240,7 +307,7 @@ function JoinScreen() {
         <HostMessage note={hostNoteText(flow.receipt?.hostInfo)} />
         <Text style={styles.lead}>
           {flow.isHost
-            ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
+            ? "Pick what you ordered too. What’s left can stay with you when you close claiming."
             : "Just a name — no app, no account."}
         </Text>
         <ReceiptImageButton receiptId={flow.receipt!.id} hasImage={flow.receipt?.hasImage} />
@@ -665,7 +732,7 @@ const styles = StyleSheet.create({
   },
   unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
   unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
-  rsvpActions: { gap: 4 },
+  rsvpChoices: { gap: 4, marginTop: 4 },
   rsvpThanks: {
     fontSize: 15,
     lineHeight: 22,

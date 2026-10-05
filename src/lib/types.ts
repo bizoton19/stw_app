@@ -7,6 +7,11 @@ export type Invitee = {
   id: string;
   personName: string;
   personContact?: string | null;
+  /**
+   * Canonical E.164 (`+12025550100`). Unique RSVP key for this outing.
+   * Omitted from the public board.
+   */
+  phone?: string | null;
   /** Legacy personalized-invite token; new flow uses one group link only. */
   inviteToken: string;
   response: InviteeResponse;
@@ -112,6 +117,8 @@ export type Receipt = {
    * receiptDate’s calendar day after the check is attached.
    */
   nightAt?: string | null;
+  /** Host's display name on the public RSVP. Not the host note. */
+  hostName?: string | null;
   /** Optional expected claimant headcount (soft signal). */
   expectedPartySize?: number | null;
   /** Planning roster — Invited → Going / Maybe / Can’t. */

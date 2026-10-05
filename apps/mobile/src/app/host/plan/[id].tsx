@@ -53,9 +53,9 @@ export default function HostPlanBoard() {
       const result = await registerHostClaimPush(id);
       if (cancelled) return;
       if (result === "ok") {
-        setPushHint("You’ll get a ping when someone RSVPs.");
+        setPushHint("You’ll get a notification when someone RSVPs.");
       } else if (result === "denied") {
-        setPushHint("Notifications are off — you can still watch the roster here.");
+        setPushHint("Notifications are off — you can still see who’s coming here.");
       }
     })();
     return () => {
@@ -79,7 +79,12 @@ export default function HostPlanBoard() {
         router.replace({ pathname: "/r/[id]/settle", params: { id, host: "1" } });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't load outing");
+      const status = (err as { status?: number }).status;
+      setError(
+        status === 404
+          ? "This outing is no longer available."
+          : "Couldn’t load this outing. Check your connection and try again.",
+      );
     }
   }, [id, router]);
 
@@ -127,7 +132,7 @@ export default function HostPlanBoard() {
               try {
                 await hydrateSession();
                 const token = getHostToken(id) ?? hostToken;
-                if (!token) throw new Error("Missing host token on this phone");
+                if (!token) throw new Error("This phone can’t delete this outing.");
                 await api(`/api/receipts/${id}`, { method: "DELETE", hostToken: token });
               } catch (err) {
                 const e = err as { message?: string; code?: string };
@@ -175,14 +180,14 @@ export default function HostPlanBoard() {
           <View>
             {canUpload ? (
               <>
-                <FooterHint>Tonight’s the night — upload the check into this space.</FooterHint>
+                <FooterHint>Tonight’s the night — upload the check here.</FooterHint>
                 <PrimaryButton onPress={uploadCheck}>Upload the check</PrimaryButton>
                 <QuietButton onPress={() => void shareLink()}>Share invite link</QuietButton>
               </>
             ) : (
               <>
                 <FooterHint>
-                  Upload the check opens on the outing day. Share the link so people can RSVP.
+                  You can upload the check on the day of the outing. Share the link so people can RSVP.
                 </FooterHint>
                 <PrimaryButton onPress={() => void shareLink()}>Share invite link</PrimaryButton>
               </>
