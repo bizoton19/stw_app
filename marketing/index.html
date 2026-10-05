@@ -90,6 +90,120 @@
         .group:hover .wine-mark .seg-bottom {
             transform: translate(3px, 4px) rotate(4deg);
         }
+
+        /* How it works — stepped visual story */
+        .workflow-stage {
+            display: grid;
+            gap: 2rem;
+            align-items: center;
+            padding: 2.5rem 0;
+        }
+        @media (min-width: 768px) {
+            .workflow-stage {
+                grid-template-columns: 1fr 1fr;
+                gap: 3.5rem;
+                padding: 3.25rem 0;
+            }
+            .workflow-stage.reverse .workflow-copy { order: 2; }
+            .workflow-stage.reverse .workflow-visual { order: 1; }
+        }
+
+        .workflow-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6E2E35;
+            margin-bottom: 0.75rem;
+        }
+        .workflow-kicker .num {
+            display: inline-flex;
+            width: 1.65rem;
+            height: 1.65rem;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #6E2E35;
+            color: #F6F4F1;
+            font-size: 0.7rem;
+            letter-spacing: 0;
+        }
+
+        .phone-frame {
+            position: relative;
+            margin: 0 auto;
+            width: min(100%, 280px);
+            border-radius: 2rem;
+            overflow: hidden;
+            background: #2A241C;
+            box-shadow:
+                0 1px 0 rgba(42, 36, 28, 0.06),
+                0 18px 40px -18px rgba(42, 36, 28, 0.35);
+            transform: translateY(0);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @media (min-width: 768px) {
+            .phone-frame { width: min(100%, 300px); }
+        }
+        .workflow-stage:hover .phone-frame {
+            transform: translateY(-6px);
+        }
+        .phone-frame::before {
+            content: "";
+            position: absolute;
+            top: 0.55rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 28%;
+            height: 0.28rem;
+            border-radius: 999px;
+            background: rgba(246, 244, 241, 0.22);
+            z-index: 2;
+            pointer-events: none;
+        }
+        .phone-frame img,
+        .phone-frame picture,
+        .phone-frame picture img {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 9 / 19.5;
+            object-fit: cover;
+            object-position: top center;
+            background: #F6F4F1;
+        }
+
+        .phone-frame.scan-active {
+            isolation: isolate;
+        }
+        .phone-frame.scan-active::after {
+            content: "";
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            height: 2px;
+            top: 18%;
+            background: linear-gradient(90deg, transparent, rgba(110, 46, 53, 0.85), transparent);
+            box-shadow: 0 0 18px 6px rgba(110, 46, 53, 0.18);
+            animation: scanSweep 3.2s ease-in-out infinite;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0.9;
+        }
+        @keyframes scanSweep {
+            0%   { top: 14%; opacity: 0; }
+            12%  { opacity: 0.95; }
+            55%  { top: 72%; opacity: 0.85; }
+            70%  { opacity: 0; }
+            100% { top: 14%; opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .phone-frame.scan-active::after { animation: none; opacity: 0; }
+            .workflow-stage:hover .phone-frame { transform: none; }
+        }
     </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col selection:bg-merlot selection:text-white">
@@ -163,62 +277,116 @@
         </div>
     </main>
 
-    <!-- Steps Section -->
-    <section id="how-it-works" class="bg-white py-24 px-6 border-t border-[#E6E0D8]">
+    <!-- How it works — stepped product story (below the fold) -->
+    <section id="how-it-works" class="bg-white py-20 md:py-28 px-6 border-t border-[#E6E0D8]">
         <div class="max-w-5xl mx-auto">
-            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16" data-i18n="steps.title">Four steps. Zero friction.</h2>
-            
-            <div class="grid md:grid-cols-4 gap-8">
-                <!-- Step 1 -->
-                <div class="flex flex-col items-center text-center">
-                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
-                        <i data-lucide="camera" class="w-8 h-8 text-merlot"></i>
-                    </div>
-                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.1.title">1. Snap the Check</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed" data-i18n="steps.1.desc">
-                        Take a photo. Our AI reads the line items and prices instantly. You just confirm it looks right.
+            <div class="text-center max-w-2xl mx-auto mb-6 md:mb-10">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight" data-i18n="steps.title">From check to claim.</h2>
+                <p class="mt-4 text-inkSoft text-base md:text-lg leading-relaxed" data-i18n="steps.subtitle">
+                    Four beats at the table — snap, scan, share, settle among friends.
+                </p>
+            </div>
+
+            <!-- 1. Snap -->
+            <article class="workflow-stage border-t border-[#E6E0D8]">
+                <div class="workflow-copy">
+                    <div class="workflow-kicker"><span class="num">1</span> <span data-i18n="steps.1.kicker">Snap</span></div>
+                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.1.title">Load or snap the receipt</h3>
+                    <p class="text-inkSoft text-base leading-relaxed max-w-md" data-i18n="steps.1.desc">
+                        Camera or photo library. One shot of the check is enough — no typing the whole bill.
                     </p>
                 </div>
+                <div class="workflow-visual">
+                    <figure class="phone-frame">
+                        <img
+                            src="/screenshots/how-it-works/01-snap.jpg"
+                            width="780"
+                            height="1688"
+                            alt="Split the Wine: choose Take a photo or Choose from library"
+                            loading="lazy"
+                            decoding="async"
+                        >
+                    </figure>
+                </div>
+            </article>
 
-                <!-- Step 2 -->
-                <div class="flex flex-col items-center text-center">
-                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
-                        <i data-lucide="share" class="w-8 h-8 text-merlot"></i>
-                    </div>
-                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.2.title">2. Drop the Link</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed" data-i18n="steps.2.desc">
-                        Send the link in your group chat. Guests open it in their browser—no app download required.
+            <!-- 2. Scan → line items -->
+            <article class="workflow-stage reverse border-t border-[#E6E0D8]">
+                <div class="workflow-copy">
+                    <div class="workflow-kicker"><span class="num">2</span> <span data-i18n="steps.2.kicker">Scan</span></div>
+                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.2.title">Line items appear</h3>
+                    <p class="text-inkSoft text-base leading-relaxed max-w-md" data-i18n="steps.2.desc">
+                        Vision reads the check into claimable lines. You skim a short list — not a spreadsheet dump — and confirm.
                     </p>
                 </div>
+                <div class="workflow-visual">
+                    <figure class="phone-frame scan-active">
+                        <picture>
+                            <source srcset="/screenshots/how-it-works/02-scan-items.webp" type="image/webp">
+                            <img
+                                src="/screenshots/how-it-works/02-items.jpg"
+                                width="780"
+                                height="680"
+                                alt="Claimable line items after the receipt scan"
+                                loading="lazy"
+                                decoding="async"
+                            >
+                        </picture>
+                    </figure>
+                </div>
+            </article>
 
-                <!-- Step 3 -->
-                <div class="flex flex-col items-center text-center">
-                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
-                        <i data-lucide="mouse-pointer-click" class="w-8 h-8 text-merlot"></i>
-                    </div>
-                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.3.title">3. Claim Drinks and Food</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed" data-i18n="steps.3.desc">
-                        Everyone taps what they ordered. Tax and tip are calculated proportionally automatically.
+            <!-- 3. QR + claim link -->
+            <article class="workflow-stage border-t border-[#E6E0D8]">
+                <div class="workflow-copy">
+                    <div class="workflow-kicker"><span class="num">3</span> <span data-i18n="steps.3.kicker">Share</span></div>
+                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.3.title">QR with a claim link</h3>
+                    <p class="text-inkSoft text-base leading-relaxed max-w-md" data-i18n="steps.3.desc">
+                        A bright QR and a short URL for tonight’s tab. Guests open it in the browser — no app install.
                     </p>
                 </div>
+                <div class="workflow-visual">
+                    <figure class="phone-frame">
+                        <img
+                            src="/screenshots/how-it-works/03-qr-link.jpg"
+                            width="780"
+                            height="1200"
+                            alt="Share QR sheet with claim link for the table"
+                            loading="lazy"
+                            decoding="async"
+                        >
+                    </figure>
+                </div>
+            </article>
 
-                <!-- Step 4 -->
-                <div class="flex flex-col items-center text-center">
-                    <div class="w-16 h-16 rounded-2xl bg-paper flex items-center justify-center mb-6 shadow-sm border border-[#E6E0D8]">
-                        <i data-lucide="smartphone-nfc" class="w-8 h-8 text-merlot"></i>
-                    </div>
-                    <h3 class="text-lg font-bold mb-2" data-i18n="steps.4.title">4. Settle Up</h3>
-                    <p class="text-inkSoft text-sm leading-relaxed mb-4" data-i18n="steps.4.desc">
-                        Guests tap to pay. We open your preferred app pre-filled. We never hold your funds.
+            <!-- 4. Pass or send -->
+            <article class="workflow-stage reverse border-t border-[#E6E0D8]">
+                <div class="workflow-copy">
+                    <div class="workflow-kicker"><span class="num">4</span> <span data-i18n="steps.4.kicker">Pass</span></div>
+                    <h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-3" data-i18n="steps.4.title">Pass the phone — or send the link</h3>
+                    <p class="text-inkSoft text-base leading-relaxed max-w-md mb-5" data-i18n="steps.4.desc">
+                        Hand the QR around the table, or drop the link in the group chat. Friends claim what they ordered; tax and tip follow.
                     </p>
-                    <div class="flex flex-wrap justify-center gap-2 mt-auto">
+                    <div class="flex flex-wrap gap-2">
                         <span class="inline-flex items-center gap-1.5 bg-[#008CFF]/10 text-[#008CFF] px-2 py-1 rounded text-xs font-semibold">Venmo</span>
                         <span class="inline-flex items-center gap-1.5 bg-[#00D632]/10 text-[#00D632] px-2 py-1 rounded text-xs font-semibold">Cash App</span>
                         <span class="inline-flex items-center gap-1.5 bg-[#6D1ED4]/10 text-[#6D1ED4] px-2 py-1 rounded text-xs font-semibold">Zelle</span>
                         <span class="inline-flex items-center gap-1.5 bg-[#003087]/10 text-[#003087] px-2 py-1 rounded text-xs font-semibold">PayPal</span>
                     </div>
                 </div>
-            </div>
+                <div class="workflow-visual">
+                    <figure class="phone-frame">
+                        <img
+                            src="/screenshots/how-it-works/04-pass.jpg"
+                            width="780"
+                            height="1688"
+                            alt="Ready to split: snap, confirm, share the claim link"
+                            loading="lazy"
+                            decoding="async"
+                        >
+                    </figure>
+                </div>
+            </article>
         </div>
     </section>
 
@@ -279,15 +447,20 @@
                 "hero.cta": "Coming soon — notify me",
                 "hero.stores": "App Store &amp; Google Play — join the list for launch day.",
                 "hero.privacy": "No accounts required. Links expire. Total privacy.",
-                "steps.title": "Four steps. Zero friction.",
-                "steps.1.title": "1. Snap the Check",
-                "steps.1.desc": "Take a photo. Our AI reads the line items and prices instantly. You just confirm it looks right.",
-                "steps.2.title": "2. Drop the Link",
-                "steps.2.desc": "Send the link in your group chat. Guests open it in their browser—no app download required.",
-                "steps.3.title": "3. Claim Drinks and Food",
-                "steps.3.desc": "Everyone taps what they ordered. Tax and tip are calculated proportionally automatically.",
-                "steps.4.title": "4. Settle Up",
-                "steps.4.desc": "Guests tap to pay. We open your preferred app pre-filled. We never hold your funds.",
+                "steps.title": "From check to claim.",
+                "steps.subtitle": "Four beats at the table — snap, scan, share, settle among friends.",
+                "steps.1.kicker": "Snap",
+                "steps.1.title": "Load or snap the receipt",
+                "steps.1.desc": "Camera or photo library. One shot of the check is enough — no typing the whole bill.",
+                "steps.2.kicker": "Scan",
+                "steps.2.title": "Line items appear",
+                "steps.2.desc": "Vision reads the check into claimable lines. You skim a short list — not a spreadsheet dump — and confirm.",
+                "steps.3.kicker": "Share",
+                "steps.3.title": "QR with a claim link",
+                "steps.3.desc": "A bright QR and a short URL for tonight’s tab. Guests open it in the browser — no app install.",
+                "steps.4.kicker": "Pass",
+                "steps.4.title": "Pass the phone — or send the link",
+                "steps.4.desc": "Hand the QR around the table, or drop the link in the group chat. Friends claim what they ordered; tax and tip follow.",
                 "privacy.title": "Your data isn't the product.",
                 "privacy.subtitle": "You already have a group chat. We don't need your contacts or your social graph. Split the Wine uses ephemeral links designed for tonight's dinner. Once the tab is settled, the link vanishes.",
                 "privacy.1.title": "No Guest Accounts",
@@ -310,15 +483,20 @@
                 "hero.cta": "Próximamente — avísame",
                 "hero.stores": "App Store y Google Play — únete a la lista para el lanzamiento.",
                 "hero.privacy": "Sin cuentas. Los enlaces caducan. Privacidad total.",
-                "steps.title": "Cuatro pasos. Cero fricción.",
-                "steps.1.title": "1. Toma una foto",
-                "steps.1.desc": "Toma una foto. Nuestra IA lee los artículos y precios al instante. Solo confirmas que se vea bien.",
-                "steps.2.title": "2. Comparte el enlace",
-                "steps.2.desc": "Envía el enlace a tu grupo. Los invitados lo abren en su navegador, sin descargar la app.",
-                "steps.3.title": "3. Reclama tus bebidas",
-                "steps.3.desc": "Cada quien selecciona lo que pidió. Los impuestos y propinas se calculan proporcionalmente.",
-                "steps.4.title": "4. Paga tu parte",
-                "steps.4.desc": "Los invitados tocan para pagar. Abrimos tu app favorita prellenada. Nunca retenemos tus fondos.",
+                "steps.title": "De la cuenta al reclamo.",
+                "steps.subtitle": "Cuatro momentos en la mesa — foto, lectura, compartir, repartir entre amigos.",
+                "steps.1.kicker": "Foto",
+                "steps.1.title": "Carga o fotografía la cuenta",
+                "steps.1.desc": "Cámara o galería. Una foto basta — sin teclear toda la cuenta.",
+                "steps.2.kicker": "Lectura",
+                "steps.2.title": "Aparecen las líneas",
+                "steps.2.desc": "La visión lee la cuenta en líneas reclamables. Revisas una lista corta — no un volcado — y confirmas.",
+                "steps.3.kicker": "Compartir",
+                "steps.3.title": "QR con enlace para reclamar",
+                "steps.3.desc": "Un QR claro y un enlace corto para la cuenta de esta noche. Los invitados abren el navegador — sin instalar la app.",
+                "steps.4.kicker": "Pasar",
+                "steps.4.title": "Pasa el teléfono — o envía el enlace",
+                "steps.4.desc": "Pasa el QR en la mesa o mándalo al grupo. Cada quien reclama lo suyo; impuestos y propina siguen.",
                 "privacy.title": "Tus datos no son el producto.",
                 "privacy.subtitle": "Ya tienes un chat de grupo. No necesitamos tus contactos ni tu red social. Split the Wine usa enlaces efímeros. Una vez liquidada la cuenta, el enlace desaparece.",
                 "privacy.1.title": "Sin Cuentas",
@@ -341,15 +519,20 @@
                 "hero.cta": "Bientôt — prévenez-moi",
                 "hero.stores": "App Store et Google Play — inscrivez-vous pour le lancement.",
                 "hero.privacy": "Aucun compte requis. Liens éphémères. Confidentialité totale.",
-                "steps.title": "Quatre étapes. Zéro friction.",
-                "steps.1.title": "1. Prenez l'addition en photo",
-                "steps.1.desc": "Notre IA lit les articles et les prix instantanément. Vous n'avez qu'à confirmer.",
-                "steps.2.title": "2. Partagez le lien",
-                "steps.2.desc": "Envoyez le lien dans votre groupe. Les invités l'ouvrent dans leur navigateur, sans télécharger l'application.",
-                "steps.3.title": "3. Sélectionnez vos consos",
-                "steps.3.desc": "Chacun sélectionne ce qu'il a commandé. Les taxes et pourboires sont calculés automatiquement.",
-                "steps.4.title": "4. Réglez la note",
-                "steps.4.desc": "Appuyez pour payer. Nous ouvrons votre application préférée pré-remplie.",
+                "steps.title": "De l’addition à la part.",
+                "steps.subtitle": "Quatre temps à table — photo, lecture, partage, règlement entre amis.",
+                "steps.1.kicker": "Photo",
+                "steps.1.title": "Chargez ou photographiez l’addition",
+                "steps.1.desc": "Appareil photo ou pellicule. Une seule photo suffit — sans tout retaper.",
+                "steps.2.kicker": "Lecture",
+                "steps.2.title": "Les lignes apparaissent",
+                "steps.2.desc": "La vision transforme l’addition en lignes à revendiquer. Vous parcourez une courte liste — pas un dump — et confirmez.",
+                "steps.3.kicker": "Partage",
+                "steps.3.title": "QR avec lien de revendication",
+                "steps.3.desc": "Un QR lumineux et une URL courte pour ce soir. Les invités ouvrent le navigateur — sans installer l’app.",
+                "steps.4.kicker": "Passer",
+                "steps.4.title": "Passez le téléphone — ou envoyez le lien",
+                "steps.4.desc": "Faites circuler le QR à table, ou déposez le lien dans le groupe. Chacun revendique sa commande ; taxes et pourboire suivent.",
                 "privacy.title": "Vos données ne sont pas le produit.",
                 "privacy.subtitle": "Vous avez déjà un groupe de discussion. Split the Wine utilise des liens éphémères. Une fois l'addition réglée, le lien disparaît.",
                 "privacy.1.title": "Pas de compte invité",
@@ -372,15 +555,20 @@
                 "hero.cta": "Byento — avi mwen",
                 "hero.stores": "App Store ak Google Play — rantre nan lis la pou lansman.",
                 "hero.privacy": "Pa bezwen kont. Lyen yo ekspire. Vi prive total.",
-                "steps.title": "Kat etap. Zewo tèt fè mal.",
-                "steps.1.title": "1. Fè foto adisyon an",
-                "steps.1.desc": "Fè yon foto. Entèlijans atifisyèl nou an li atik ak pri yo menm kote a. Ou jis konfime li kòrèk.",
-                "steps.2.title": "2. Voye lyen an",
-                "steps.2.desc": "Voye lyen an nan gwoup ou a. Envite yo ouvri li nan navigatè yo, yo pa bezwen telechaje aplikasyon an.",
-                "steps.3.title": "3. Chwazi sa w te pran",
-                "steps.3.desc": "Tout moun klike sou sa yo te kòmande. Taks ak fiyè yo kalkile otomatikman.",
-                "steps.4.title": "4. Peye",
-                "steps.4.desc": "Envite yo klike pou peye. Nou ouvri aplikasyon ou pito a tou ranpli. Nou pa janm kenbe lajan ou.",
+                "steps.title": "Soti nan adisyon rive nan reklamasyon.",
+                "steps.subtitle": "Kat moman sou tab la — foto, lekti, pataje, regle ant zanmi.",
+                "steps.1.kicker": "Foto",
+                "steps.1.title": "Chaje oswa fè foto adisyon an",
+                "steps.1.desc": "Kamera oswa galeri. Yon sèl foto ase — pa bezwen tape tout adisyon an.",
+                "steps.2.kicker": "Lekti",
+                "steps.2.title": "Liy yo parèt",
+                "steps.2.desc": "Vizyon an li adisyon an an liy ou ka reklame. Ou gade yon ti lis — pa yon dump — epi konfime.",
+                "steps.3.kicker": "Pataje",
+                "steps.3.title": "QR ak lyen pou reklame",
+                "steps.3.desc": "Yon QR klè ak yon lyen kout pou aswè a. Envite yo ouvri navigatè a — pa bezwen telechaje app la.",
+                "steps.4.kicker": "Pase",
+                "steps.4.title": "Pase telefòn nan — oswa voye lyen an",
+                "steps.4.desc": "Pase QR a sou tab la, oswa voye lyen an nan gwoup la. Chak moun reklame sa yo te pran; taks ak fiyè yo swiv.",
                 "privacy.title": "Done ou se pa pwodwi nou.",
                 "privacy.subtitle": "Ou gen yon gwoup deja. Split the Wine itilize lyen ki la pou yon ti tan. Lè tout moun fin peye, lyen an efase.",
                 "privacy.1.title": "Pa Gen Kont Pou Envite",
