@@ -6,11 +6,12 @@ import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { HostSupportTip } from "@/components/host-support-tip";
 import { OutingWhenPicker } from "@/components/outing-when-picker";
-import { HostReachFields } from "@/components/host-reach-fields";
+import { buildHostReach, defaultDialCountry, HostReachFields } from "@/components/host-reach-fields";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { createPlanOuting } from "@/lib/api";
 import { rememberHostedReceipt } from "@/lib/host-tabs";
 import { publicClaimUrl } from "@/lib/config";
+import type { DialCountry } from "@/lib/phone";
 import { saveHostToken } from "@/lib/session";
 import { venueLocationKey } from "@/lib/venue-day";
 import type { HostReachChannel, ReceiptVenue } from "@/lib/types";
@@ -43,6 +44,8 @@ export default function HostPlanOuting() {
     Platform.OS === "ios" ? "imessage" : "sms",
   );
   const [reachValue, setReachValue] = useState("");
+  const [reachCountry, setReachCountry] = useState<DialCountry>(defaultDialCountry);
+  const [reachError, setReachError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,17 +63,21 @@ export default function HostPlanOuting() {
     if (!placeLocked || !venue) return;
     setBusy(true);
     setError(null);
+    setReachError(null);
     try {
       const trimmedNote = note.trim();
-      const trimmedReach = reachValue.trim();
+      const reachCheck = buildHostReach(reachChannel, reachValue, reachCountry);
+      if (!reachCheck.ok) {
+        setReachError(reachCheck.message);
+        setBusy(false);
+        return;
+      }
       const hostInfo =
-        trimmedNote || trimmedReach
+        trimmedNote || reachCheck.reach
           ? {
               payments: [] as const,
               ...(trimmedNote ? { note: trimmedNote } : {}),
-              ...(trimmedReach
-                ? { reach: { channel: reachChannel, value: trimmedReach } }
-                : {}),
+              ...(reachCheck.reach ? { reach: reachCheck.reach } : {}),
             }
           : undefined;
 
@@ -145,8 +152,14 @@ export default function HostPlanOuting() {
             <HostReachFields
               channel={reachChannel}
               value={reachValue}
+              country={reachCountry}
               onChangeChannel={setReachChannel}
-              onChangeValue={setReachValue}
+              onChangeValue={(v) => {
+                setReachValue(v);
+                setReachError(null);
+              }}
+              onChangeCountry={setReachCountry}
+              error={reachError}
             />
             <View style={[styles.create, { paddingBottom: Math.max(insets.bottom, 12) }]}>
               <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>

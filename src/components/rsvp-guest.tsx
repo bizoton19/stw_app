@@ -66,6 +66,8 @@ export function RsvpGuest({
     }
     setBusy(true);
     setErr(null);
+    setDone(response);
+    setShowForm(false);
     try {
       const { receipt: next } = await api<{ receipt: PublicReceipt }>(
         `/api/receipts/${receipt.id}/rsvp`,
@@ -84,10 +86,9 @@ export function RsvpGuest({
         name: name.trim(),
         contact: contact.trim(),
       });
-      setDone(response);
-      setShowForm(false);
       onDone(next);
     } catch (e) {
+      setShowForm(true);
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
     } finally {
       setBusy(false);
@@ -101,9 +102,6 @@ export function RsvpGuest({
         response={done}
         busy={busy}
         onChangeRsvp={() => setShowForm(true)}
-        onGoing={() => void submit("going")}
-        onMaybe={() => void submit("maybe")}
-        onCant={() => void submit("cant")}
       />
     );
   }
@@ -120,13 +118,13 @@ export function RsvpGuest({
       footer={
         <div className="flex flex-col gap-1">
           <ContinueButton disabled={busy} onClick={() => void submit("going")}>
-            {done === "going" ? "Still going" : "Going"}
+            Going
           </ContinueButton>
           <QuietButton disabled={busy} onClick={() => void submit("maybe")}>
-            {done === "maybe" ? "Still maybe" : "Maybe"}
+            Maybe
           </QuietButton>
           <QuietButton disabled={busy} onClick={() => void submit("cant")}>
-            {done === "cant" ? "Still can’t" : "Can’t"}
+            Can’t
           </QuietButton>
         </div>
       }

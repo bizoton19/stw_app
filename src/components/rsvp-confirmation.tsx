@@ -4,11 +4,7 @@ import { useMemo, useState } from "react";
 import { ContinueButton, QuietButton } from "@/components/interview-chrome";
 import { HostMessage } from "@/components/host-message";
 import { hostNoteText } from "@/lib/host-pay";
-import {
-  HOST_REACH_LABEL,
-  directionsUrl,
-  hostReachUrl,
-} from "@/lib/host-reach";
+import { HOST_REACH_LABEL, directionsUrl, hostReachUrl } from "@/lib/host-reach";
 import { staticMapForClient } from "@/lib/nearby-place-card";
 import type { PublicReceipt } from "@/lib/types";
 
@@ -65,20 +61,9 @@ type Props = {
   response: RsvpResponse;
   busy?: boolean;
   onChangeRsvp: () => void;
-  onGoing: () => void;
-  onMaybe: () => void;
-  onCant: () => void;
 };
 
-export function RsvpConfirmation({
-  receipt,
-  response,
-  busy,
-  onChangeRsvp,
-  onGoing,
-  onMaybe,
-  onCant,
-}: Props) {
+export function RsvpConfirmation({ receipt, response, busy, onChangeRsvp }: Props) {
   const [mapFailed, setMapFailed] = useState(false);
   const venue = receipt.venue;
   const lat = venue?.lat;
@@ -101,7 +86,7 @@ export function RsvpConfirmation({
   const reachHref = reach ? hostReachUrl(reach) : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="relative min-h-[280px] w-full overflow-hidden">
         {mapUri && !mapFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -155,17 +140,6 @@ export function RsvpConfirmation({
         <QuietButton disabled={busy} onClick={onChangeRsvp}>
           Change RSVP
         </QuietButton>
-        <div className="mt-1 flex flex-col gap-1">
-          <QuietButton disabled={busy} onClick={onGoing}>
-            {response === "going" ? "Still going" : "Going"}
-          </QuietButton>
-          <QuietButton disabled={busy} onClick={onMaybe}>
-            {response === "maybe" ? "Still maybe" : "Maybe"}
-          </QuietButton>
-          <QuietButton disabled={busy} onClick={onCant}>
-            {response === "cant" ? "Still can't" : "Can't"}
-          </QuietButton>
-        </div>
       </div>
     </div>
   );

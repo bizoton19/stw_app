@@ -1,5 +1,15 @@
 import { Linking, Platform } from "react-native";
 import type { HostReach, HostReachChannel } from "./types";
+import { digitsOnly, validateE164 } from "./phone";
+
+const ALL_REACH_CHANNELS: HostReachChannel[] = [
+  "imessage",
+  "sms",
+  "whatsapp",
+  "email",
+  "signal",
+  "other",
+];
 
 export const HOST_REACH_CHANNELS: HostReachChannel[] =
   Platform.OS === "ios"
@@ -15,8 +25,45 @@ export const HOST_REACH_LABEL: Record<HostReachChannel, string> = {
   other: "Other",
 };
 
+export const PHONE_REACH_CHANNELS: HostReachChannel[] = [
+  "imessage",
+  "sms",
+  "whatsapp",
+  "signal",
+];
+
+export function isPhoneReachChannel(channel: HostReachChannel): boolean {
+  return (PHONE_REACH_CHANNELS as string[]).includes(channel);
+}
+
 function isChannel(value: unknown): value is HostReachChannel {
-  return typeof value === "string" && (HOST_REACH_CHANNELS as string[]).includes(value);
+  return typeof value === "string" && (ALL_REACH_CHANNELS as string[]).includes(value);
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function validateHostReach(
+  channel: HostReachChannel,
+  value: string,
+): { ok: true; reach: HostReach } | { ok: false; message: string } {
+  const trimmed = value.trim();
+  if (!trimmed) return { ok: false, message: "Add how people can reach you." };
+
+  if (isPhoneReachChannel(channel)) {
+    const phone = validateE164(trimmed);
+    if (!phone.ok) return phone;
+    return { ok: true, reach: { channel, value: phone.e164 } };
+  }
+
+  if (channel === "email") {
+    if (!EMAIL_RE.test(trimmed)) {
+      return { ok: false, message: "That email doesn’t look right." };
+    }
+    return { ok: true, reach: { channel, value: trimmed } };
+  }
+
+  if (trimmed.length < 2) return { ok: false, message: "Add a bit more detail." };
+  return { ok: true, reach: { channel, value: trimmed } };
 }
 
 export function normalizeHostReach(raw: unknown): HostReach | undefined {
@@ -25,13 +72,8 @@ export function normalizeHostReach(raw: unknown): HostReach | undefined {
   if (!isChannel(body.channel)) return undefined;
   const value = typeof body.value === "string" ? body.value.trim() : "";
   if (!value) return undefined;
-  return { channel: body.channel, value };
-}
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function digitsOnly(s: string): string {
-  return s.replace(/\D/g, "");
+  const checked = validateHostReach(body.channel, value);
+  return checked.ok ? checked.reach : undefined;
 }
 
 export function hostReachUrl(reach: HostReach): string | null {
@@ -47,18 +89,21 @@ export function hostReachUrl(reach: HostReach): string | null {
     }
     case "signal": {
       const phone = digitsOnly(value);
-      if (phone) return `https://signal.me/#p/+${phone.replace(/^\+/, "")}`;
+      if (phone) return `https://signal.me/#p/+${phone}`;
       return value.startsWith("http") ? value : null;
     }
     case "imessage":
     case "sms": {
-      const tel = value.replace(/\s/g, "");
-      return `sms:${tel}`;
+      const e164 = value.startsWith("+") ? value.replace(/\s/g, "") : `+${digitsOnly(value)}`;
+      return `sms:${e164}`;
     }
     case "other":
       if (EMAIL_RE.test(value)) return `mailto:${encodeURIComponent(value)}`;
       if (/^https?:\/\//i.test(value)) return value;
-      if (digitsOnly(value).length >= 7) return `sms:${value.replace(/\s/g, "")}`;
+      if (digitsOnly(value).length >= 7) {
+        const e164 = value.startsWith("+") ? value.replace(/\s/g, "") : `+${digitsOnly(value)}`;
+        return `sms:${e164}`;
+      }
       return null;
   }
 }

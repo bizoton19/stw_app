@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Image, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton, QuietButton } from "@/components/chrome";
 import { HostMessage } from "@/components/host-message";
 import { getApiUrl } from "@/lib/config";
@@ -50,7 +51,6 @@ function subtitle(response: RsvpResponse): string {
     case "going":
       return "Claim opens when the host uploads the check.";
     case "maybe":
-      return "You can change this anytime.";
     case "cant":
       return "You can change this anytime.";
   }
@@ -61,21 +61,11 @@ type Props = {
   response: RsvpResponse;
   busy?: boolean;
   onChangeRsvp: () => void;
-  onGoing: () => void;
-  onMaybe: () => void;
-  onCant: () => void;
 };
 
-export function RsvpConfirmation({
-  receipt,
-  response,
-  busy,
-  onChangeRsvp,
-  onGoing,
-  onMaybe,
-  onCant,
-}: Props) {
+export function RsvpConfirmation({ receipt, response, busy, onChangeRsvp }: Props) {
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [mapFailed, setMapFailed] = useState(false);
   const venue = receipt.venue;
   const lat = venue?.lat;
@@ -100,11 +90,14 @@ export function RsvpConfirmation({
   );
 
   const reachHref = reach ? hostReachUrl(reach) : null;
-
-  const heroMin = Math.min(Math.max(height * 0.38, 260), 360);
+  const heroMin = Math.min(Math.max(height * 0.42, 280), 400);
 
   return (
-    <View style={styles.root}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }}
+      bounces
+    >
       <View style={[styles.hero, { minHeight: heroMin }]}>
         {mapUri && !mapFailed ? (
           <Image
@@ -154,24 +147,11 @@ export function RsvpConfirmation({
             </PrimaryButton>
           )
         ) : null}
-        <View style={styles.changeRow}>
-          <QuietButton disabled={busy} onPress={onChangeRsvp}>
-            Change RSVP
-          </QuietButton>
-        </View>
-        <View style={styles.actions}>
-          <QuietButton disabled={busy} onPress={onGoing}>
-            {response === "going" ? "Still going" : "Going"}
-          </QuietButton>
-          <QuietButton disabled={busy} onPress={onMaybe}>
-            {response === "maybe" ? "Still maybe" : "Maybe"}
-          </QuietButton>
-          <QuietButton disabled={busy} onPress={onCant}>
-            {response === "cant" ? "Still can't" : "Can't"}
-          </QuietButton>
-        </View>
+        <QuietButton disabled={busy} onPress={onChangeRsvp}>
+          Change RSVP
+        </QuietButton>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -218,10 +198,8 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   body: {
-    flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
     gap: 10,
   },
   sub: {
@@ -230,6 +208,4 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginBottom: 4,
   },
-  changeRow: { marginTop: 4 },
-  actions: { gap: 4, marginTop: 4 },
 });

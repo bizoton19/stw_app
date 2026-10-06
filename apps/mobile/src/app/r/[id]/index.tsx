@@ -128,6 +128,10 @@ function RsvpScreen() {
     }
     setBusy(true);
     setErr(null);
+    // Land on the ticket immediately — don't wait on refresh (that was leaving
+    // people on the form with only the button label flipping to "Still going").
+    setDone(response);
+    setShowForm(false);
     try {
       await postRsvp(receipt.id, {
         response,
@@ -136,11 +140,10 @@ function RsvpScreen() {
         note: note.trim() || null,
       });
       await flow.join({ name: name.trim(), contact: contact.trim() });
-      await flow.refresh();
-      setDone(response);
-      setShowForm(false);
+      void flow.refresh();
       void hapticNotify("success");
     } catch (e) {
+      setShowForm(true);
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
       void hapticNotify("error");
     } finally {
@@ -157,9 +160,6 @@ function RsvpScreen() {
           response={done}
           busy={busy}
           onChangeRsvp={() => setShowForm(true)}
-          onGoing={() => void submit("going")}
-          onMaybe={() => void submit("maybe")}
-          onCant={() => void submit("cant")}
         />
       </AppShell>
     );
@@ -178,13 +178,13 @@ function RsvpScreen() {
         footer={
           <View style={styles.rsvpActions}>
             <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
-              {done === "going" ? "Still going" : "Going"}
+              Going
             </PrimaryButton>
             <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
-              {done === "maybe" ? "Still maybe" : "Maybe"}
+              Maybe
             </QuietButton>
             <QuietButton disabled={busy} onPress={() => void submit("cant")}>
-              {done === "cant" ? "Still can’t" : "Can’t"}
+              Can’t
             </QuietButton>
           </View>
         }
