@@ -62,13 +62,16 @@ export function normalizePlanInput(input: PlanCreateInput): {
     if (n >= 2 && n <= 40) expectedPartySize = n;
   }
   let hostInfo: HostInfo | undefined;
-  if (input.hostInfo?.payments?.length) {
+  const noteFromInput =
+    input.hostInfo?.note?.trim() || input.note?.trim() || undefined;
+  const reach = input.hostInfo?.reach ?? undefined;
+  const payments = input.hostInfo?.payments ?? [];
+  if (payments.length || noteFromInput || reach) {
     hostInfo = {
-      payments: input.hostInfo.payments,
-      note: input.hostInfo.note ?? input.note ?? null,
+      payments,
+      ...(noteFromInput ? { note: noteFromInput } : {}),
+      ...(reach ? { reach } : {}),
     };
-  } else if (input.note?.trim()) {
-    hostInfo = { payments: [], note: input.note.trim() };
   }
   return {
     venue: input.venue,

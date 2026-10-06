@@ -6,6 +6,7 @@ import { HostMessage } from "@/components/host-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RsvpConfirmation } from "@/components/rsvp-confirmation";
 import { api, getGuest, saveGuest } from "@/lib/session";
 import type { PublicReceipt } from "@/lib/types";
 
@@ -35,11 +36,12 @@ export function RsvpGuest({
   );
   const [note, setNote] = useState(already?.note ?? "");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(
+  const initialDone =
     already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
       ? already.response
-      : null,
-  );
+      : null;
+  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(initialDone);
+  const [showForm, setShowForm] = useState(!initialDone);
   const [err, setErr] = useState<string | null>(null);
 
   const whenLabel = useMemo(() => {
@@ -83,6 +85,7 @@ export function RsvpGuest({
         contact: contact.trim(),
       });
       setDone(response);
+      setShowForm(false);
       onDone(next);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
@@ -91,14 +94,19 @@ export function RsvpGuest({
     }
   }
 
-  const thanks =
-    done === "going"
-      ? "You’re going — claim opens when the host uploads the check."
-      : done === "maybe"
-        ? "Got it — maybe. Change anytime below."
-        : done === "cant"
-          ? "Noted. You can change this anytime below."
-          : null;
+  if (done && !showForm) {
+    return (
+      <RsvpConfirmation
+        receipt={receipt}
+        response={done}
+        busy={busy}
+        onChangeRsvp={() => setShowForm(true)}
+        onGoing={() => void submit("going")}
+        onMaybe={() => void submit("maybe")}
+        onCant={() => void submit("cant")}
+      />
+    );
+  }
 
   return (
     <InterviewChrome
@@ -111,11 +119,6 @@ export function RsvpGuest({
       stepKey="rsvp"
       footer={
         <div className="flex flex-col gap-1">
-          {thanks ? (
-            <p className="px-1 py-2 text-center text-[15px] leading-[22px] text-ink-soft">
-              {thanks}
-            </p>
-          ) : null}
           <ContinueButton disabled={busy} onClick={() => void submit("going")}>
             {done === "going" ? "Still going" : "Going"}
           </ContinueButton>

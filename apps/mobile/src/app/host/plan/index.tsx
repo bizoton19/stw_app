@@ -1,18 +1,19 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { HostSupportTip } from "@/components/host-support-tip";
 import { OutingWhenPicker } from "@/components/outing-when-picker";
+import { HostReachFields } from "@/components/host-reach-fields";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { createPlanOuting } from "@/lib/api";
 import { rememberHostedReceipt } from "@/lib/host-tabs";
 import { publicClaimUrl } from "@/lib/config";
 import { saveHostToken } from "@/lib/session";
 import { venueLocationKey } from "@/lib/venue-day";
-import type { ReceiptVenue } from "@/lib/types";
+import type { HostReachChannel, ReceiptVenue } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
 function defaultNight(): Date {
@@ -38,6 +39,10 @@ export default function HostPlanOuting() {
   const [venue, setVenue] = useState<ReceiptVenue | null>(null);
   const [night, setNight] = useState(defaultNight);
   const [note, setNote] = useState("");
+  const [reachChannel, setReachChannel] = useState<HostReachChannel>(
+    Platform.OS === "ios" ? "imessage" : "sms",
+  );
+  const [reachValue, setReachValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,11 +61,25 @@ export default function HostPlanOuting() {
     setBusy(true);
     setError(null);
     try {
+      const trimmedNote = note.trim();
+      const trimmedReach = reachValue.trim();
+      const hostInfo =
+        trimmedNote || trimmedReach
+          ? {
+              payments: [] as const,
+              ...(trimmedNote ? { note: trimmedNote } : {}),
+              ...(trimmedReach
+                ? { reach: { channel: reachChannel, value: trimmedReach } }
+                : {}),
+            }
+          : undefined;
+
       const created = await createPlanOuting({
         venue,
         nightAt,
         receiptDate,
-        note: note.trim() || null,
+        note: trimmedNote || null,
+        hostInfo,
       });
       await saveHostToken(created.receiptId, created.hostToken);
       const claimUrl = publicClaimUrl(created.receiptId);
@@ -122,6 +141,12 @@ export default function HostPlanOuting() {
               placeholderTextColor={colors.muted}
               style={[styles.input, styles.note]}
               multiline
+            />
+            <HostReachFields
+              channel={reachChannel}
+              value={reachValue}
+              onChangeChannel={setReachChannel}
+              onChangeValue={setReachValue}
             />
             <View style={[styles.create, { paddingBottom: Math.max(insets.bottom, 12) }]}>
               <FooterHint>Share a link before the check — friends can RSVP now.</FooterHint>

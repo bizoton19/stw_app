@@ -1,4 +1,12 @@
-import { Alert, FlatList, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Users } from "lucide-react-native";
 import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
@@ -7,6 +15,7 @@ import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { HostMessage } from "@/components/host-message";
+import { RsvpConfirmation } from "@/components/rsvp-confirmation";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { useClaimFlow } from "@/context/claim-flow";
@@ -91,11 +100,12 @@ function RsvpScreen() {
   );
   const [note, setNote] = useState(() => already?.note || "");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(
+  const initialDone =
     already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
       ? already.response
-      : null,
-  );
+      : null;
+  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(initialDone);
+  const [showForm, setShowForm] = useState(!initialDone);
   const [err, setErr] = useState<string | null>(null);
 
   const whenLabel = receipt.nightAt
@@ -128,6 +138,7 @@ function RsvpScreen() {
       await flow.join({ name: name.trim(), contact: contact.trim() });
       await flow.refresh();
       setDone(response);
+      setShowForm(false);
       void hapticNotify("success");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
@@ -138,14 +149,21 @@ function RsvpScreen() {
   }
 
   const place = receipt.restaurant?.trim() || "the outing";
-  const thanks =
-    done === "going"
-      ? "You’re going — claim opens when the host uploads the check."
-      : done === "maybe"
-        ? "Got it — maybe. Change anytime below."
-        : done === "cant"
-          ? "Noted. You can change this anytime below."
-          : null;
+  if (done && !showForm) {
+    return (
+      <AppShell meta="RSVP">
+        <RsvpConfirmation
+          receipt={receipt}
+          response={done}
+          busy={busy}
+          onChangeRsvp={() => setShowForm(true)}
+          onGoing={() => void submit("going")}
+          onMaybe={() => void submit("maybe")}
+          onCant={() => void submit("cant")}
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell meta="RSVP">
@@ -159,7 +177,6 @@ function RsvpScreen() {
         keyboard
         footer={
           <View style={styles.rsvpActions}>
-            {thanks ? <Text style={styles.rsvpThanks}>{thanks}</Text> : null}
             <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
               {done === "going" ? "Still going" : "Going"}
             </PrimaryButton>

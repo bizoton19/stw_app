@@ -1,3 +1,4 @@
+import { normalizeHostReach } from "./host-reach";
 import type { HostInfo, HostPayment, PayMethod } from "./types";
 
 export const PAY_METHODS: PayMethod[] = [
@@ -43,8 +44,18 @@ export function normalizeHostInfo(input: unknown): HostInfo | null {
     method?: unknown;
     handle?: unknown;
     note?: unknown;
+    reach?: unknown;
   };
   const note = normalizeHostNote(body.note);
+  const reach = normalizeHostReach(body.reach);
+
+  function finish(payments: HostPayment[]): HostInfo | null {
+    if (payments.length === 0 && !note && !reach) return null;
+    const info: HostInfo = { payments };
+    if (note) info.note = note;
+    if (reach) info.reach = reach;
+    return info;
+  }
 
   if (Array.isArray(body.payments)) {
     const payments: HostPayment[] = [];
@@ -57,16 +68,13 @@ export function normalizeHostInfo(input: unknown): HostInfo | null {
       if (payments.some((p) => p.method === payment.method)) continue;
       payments.push({ method: payment.method, handle });
     }
-    return payments.length > 0 ? withNote({ payments }, note) : null;
+    return finish(payments);
   }
 
   if (isMethod(body.method) && typeof body.handle === "string" && body.handle.trim()) {
-    return withNote(
-      { payments: [{ method: body.method, handle: body.handle.trim() }] },
-      note,
-    );
+    return finish([{ method: body.method, handle: body.handle.trim() }]);
   }
-  return null;
+  return finish([]);
 }
 
 export function hostPayments(info?: HostInfo | null): HostPayment[] {

@@ -67,11 +67,27 @@ export type HostPayment = {
   handle: string;
 };
 
+export type HostReachChannel =
+  | "imessage"
+  | "sms"
+  | "whatsapp"
+  | "email"
+  | "signal"
+  | "other";
+
+/** How guests can message the host before settle (RSVP / planning). */
+export type HostReach = {
+  channel: HostReachChannel;
+  value: string;
+};
+
 export type HostInfo = {
   /** One or more ways people can pay the host. */
   payments: HostPayment[];
   /** Optional note shown to claimers (expandable on the claim link). */
   note?: string | null;
+  /** Optional — shown on RSVP confirmation for questions before the check. */
+  reach?: HostReach | null;
 };
 
 export type ParseReviewChoice = "looks_good" | "remove_items" | "needs_edits";

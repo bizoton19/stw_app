@@ -75,6 +75,7 @@ export async function createPlanOuting(input: {
   receiptDate?: string | null;
   expectedPartySize?: number | null;
   note?: string | null;
+  hostInfo?: import("./types").HostInfo | null;
 }): Promise<{
   receiptId: string;
   hostToken: string;
