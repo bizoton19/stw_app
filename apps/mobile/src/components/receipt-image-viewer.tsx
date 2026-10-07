@@ -45,21 +45,27 @@ type ReceiptImageSheetProps = {
 export function ReceiptImageButton({
   receiptId,
   hasImage,
+  onOpenChange,
 }: {
   receiptId: string;
   hasImage?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   if (!hasImage) return null;
+  function setSheet(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
   return (
     <>
-      <PressScale haptic="select" onPress={() => setOpen(true)} style={styles.trigger}>
+      <PressScale haptic="select" onPress={() => setSheet(true)} style={styles.trigger}>
         <Text style={styles.triggerText}>View tab photo</Text>
       </PressScale>
       <ReceiptImageSheet
         receiptId={receiptId}
         visible={open}
-        onClose={() => setOpen(false)}
+        onClose={() => setSheet(false)}
       />
     </>
   );

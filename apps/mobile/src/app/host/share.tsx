@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
+import { HostPushPrime } from "@/components/host-push-prime";
 import { IconActionButton } from "@/components/icon-action-button";
 import { useHostDraft } from "@/context/host-draft";
-import { registerHostClaimPush } from "@/lib/host-push";
 import { centsToLabel } from "@/lib/money";
 import { goHostDesk } from "@/lib/navigation";
 import { shareLink } from "@/lib/share-link";
@@ -17,6 +17,7 @@ export default function HostShare() {
   const draft = useHostDraft();
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const [pushHint, setPushHint] = useState<string | null>(null);
   const activeItems = draft.items.filter((i) => !i.removed);
   const total =
@@ -24,18 +25,6 @@ export default function HostShare() {
     draft.fees.reduce((s, f) => s + f.amountCents, 0);
   const place = draft.venue?.name?.trim() || draft.restaurant.trim() || "Tonight’s check";
   const receiptId = draft.receiptId ?? "demo";
-
-  useEffect(() => {
-    if (!draft.receiptId) return;
-    void (async () => {
-      const result = await registerHostClaimPush(draft.receiptId!);
-      if (result === "ok") {
-        setPushHint("You’ll get a ping when someone claims.");
-      } else if (result === "denied") {
-        setPushHint("Notifications are off — you can still watch the live board.");
-      }
-    })();
-  }, [draft.receiptId]);
 
   return (
     <AppShell>
@@ -104,6 +93,7 @@ export default function HostShare() {
               icon="share"
               label="Share"
               onPress={async () => {
+                setShareBusy(true);
                 try {
                   await shareLink({
                     message: `Claim what you ordered on ${place}:`,
@@ -112,6 +102,8 @@ export default function HostShare() {
                 } catch {
                   await Clipboard.setStringAsync(draft.claimUrl);
                   setCopied(true);
+                } finally {
+                  setShareBusy(false);
                 }
               }}
             />
@@ -131,6 +123,13 @@ export default function HostShare() {
         url={draft.claimUrl}
         place={place}
         onClose={() => setQrOpen(false)}
+      />
+      <HostPushPrime
+        receiptId={draft.receiptId}
+        trigger="share-claim"
+        enabled={Boolean(draft.receiptId)}
+        blocked={qrOpen || shareBusy}
+        onRegistered={() => setPushHint("You’ll get a ping when someone claims.")}
       />
     </AppShell>
   );

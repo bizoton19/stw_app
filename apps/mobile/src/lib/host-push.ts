@@ -3,6 +3,11 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { api } from "@/lib/api";
+import {
+  classifyHostPushPermission,
+  mayRequestHostPushPermission,
+  type HostPushPermission,
+} from "@/lib/host-push-prime-policy";
 import { getHostToken } from "@/lib/session";
 
 export const HOST_PUSH_DONE_CATEGORY = "stw-tab-done";
@@ -43,23 +48,35 @@ function easProjectId(): string | undefined {
   );
 }
 
-/** Request permission + Expo push token; register with API for this receipt (host only). */
-export async function registerHostClaimPush(
-  receiptId: string,
-): Promise<"ok" | "denied" | "skip" | "error"> {
+export type HostPushRegisterResult = "ok" | "denied" | "undetermined" | "skip" | "error";
+
+/** Read OS notification permission. Does not prompt. */
+export async function readHostPushPermission(): Promise<HostPushPermission | "skip"> {
+  if (Platform.OS === "web") return "skip";
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    return classifyHostPushPermission({
+      status: current.status,
+      canAskAgain: current.canAskAgain,
+    });
+  } catch {
+    return "skip";
+  }
+}
+
+/**
+ * Register this phone's Expo push token when permission is already granted.
+ * Never calls requestPermissionsAsync — the priming sheet asks first.
+ */
+export async function registerHostClaimPush(receiptId: string): Promise<HostPushRegisterResult> {
   if (!Device.isDevice) return "skip";
   const hostToken = getHostToken(receiptId);
   if (!hostToken) return "skip";
 
-  await ensureHostPushCategories();
+  const permission = await readHostPushPermission();
+  if (permission !== "granted") return permission;
 
-  const current = await Notifications.getPermissionsAsync();
-  let status = current.status;
-  if (status !== "granted") {
-    const asked = await Notifications.requestPermissionsAsync();
-    status = asked.status;
-  }
-  if (status !== "granted") return "denied";
+  await ensureHostPushCategories();
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("claims", {
@@ -85,6 +102,29 @@ export async function registerHostClaimPush(
   } catch {
     return "error";
   }
+}
+
+/**
+ * Undetermined sheet primary only. One system prompt, then the same token PUT.
+ * Denied (or canAskAgain false) returns without calling requestPermissionsAsync.
+ */
+export async function requestHostPushPermissionAndRegister(
+  receiptId: string,
+): Promise<HostPushRegisterResult> {
+  const permission = await readHostPushPermission();
+  if (permission === "skip") return "skip";
+  if (!mayRequestHostPushPermission(permission)) {
+    if (permission === "granted") return registerHostClaimPush(receiptId);
+    return "denied";
+  }
+
+  const asked = await Notifications.requestPermissionsAsync();
+  const next = classifyHostPushPermission({
+    status: asked.status,
+    canAskAgain: asked.canAskAgain,
+  });
+  if (next !== "granted") return next;
+  return registerHostClaimPush(receiptId);
 }
 
 export async function finalizeTabFromPush(receiptId: string): Promise<boolean> {
