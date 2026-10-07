@@ -7,6 +7,7 @@ import { ClaimQrSheet } from "@/components/claim-qr-sheet";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import type { MotifName } from "@/components/motifs";
 import { PayMethodIcon } from "@/components/pay-method-icon";
+import { HOST_LINE_QTY_MAX, HOST_LINE_QTY_MIN, QtyStepper } from "@/components/qty-stepper";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NearbyPlaceDetail } from "@/components/nearby-place-detail";
@@ -625,20 +626,21 @@ export function HostInterview() {
                   placeholder="Item name"
                 />
               </label>
-              <label className="w-10 shrink-0">
-                <span className={denseLabelClass}>qty</span>
-                <Input
-                  id={`item-qty-${item.id}`}
-                  inputMode="numeric"
-                  aria-label="Quantity"
+              <div className="shrink-0">
+                <span id={`item-qty-${item.id}`} className={denseLabelClass}>
+                  qty
+                </span>
+                <QtyStepper
+                  variant="field"
                   value={item.qty}
-                  onChange={(e) => {
-                    const qty = Math.max(1, Math.floor(Number(e.target.value) || 0));
-                    setItems(items.map((row) => (row.id === item.id ? { ...row, qty } : row)));
-                  }}
-                  className={`${denseFieldClass} text-left tabular-nums`}
+                  min={HOST_LINE_QTY_MIN}
+                  max={HOST_LINE_QTY_MAX}
+                  labelledBy={`item-qty-${item.id}`}
+                  onChange={(qty) =>
+                    setItems(items.map((row) => (row.id === item.id ? { ...row, qty } : row)))
+                  }
                 />
-              </label>
+              </div>
               <label className="w-[3.6rem] shrink-0">
                 <span className={denseLabelClass}>amt</span>
                 <Input
