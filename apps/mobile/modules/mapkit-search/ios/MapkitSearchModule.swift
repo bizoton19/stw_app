@@ -58,6 +58,9 @@ public class MapkitSearchModule: Module {
           "lat": coord.latitude,
           "lng": coord.longitude,
           "formattedAddress": address,
+          // Contract: emit MKPointOfInterestCategory.rawValue unchanged
+          // (MKPOICategoryRestaurant, MKPOICategoryNightlife, …).
+          // classifyVenueKind strips the MKPOICategory prefix — see line-kind.ts.
           "category": item.pointOfInterestCategory?.rawValue,
         ]
       }

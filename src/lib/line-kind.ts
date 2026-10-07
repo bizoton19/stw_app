@@ -1,18 +1,42 @@
-/** Classify Places category → restaurant | bar | grocery | null. */
+/**
+ * Classify a place into restaurant | bar | grocery | null (no kind icon).
+ *
+ * Callers pass provider category strings through unchanged. This function
+ * normalizes them into words before matching:
+ * - MapKit: `MKPointOfInterestCategory.rawValue` (`MKPOICategoryRestaurant`,
+ *   `MKPOICategoryCafe`, `MKPOICategoryNightlife`, `MKPOICategoryFoodMarket`, …).
+ *   The iOS bridge emits that raw value; do not slug it in Swift.
+ * - Google Places primaryType / types: `italian_restaurant`, `coffee_shop`, `night_club`.
+ * - Mapbox poi_category: `restaurant`, `cafe`, `wine_bar`, `fast_food`.
+ *
+ * Keep this word list in sync with `apps/mobile/src/lib/line-kind.ts`.
+ */
 export type VenueKind = "restaurant" | "bar" | "grocery";
 
-const BAR = /\b(bar|pub|nightlife|night_club|wine_bar|brewery|beer|speakeasy|lounge)\b/i;
+const BAR =
+  /\b(bar|pub|nightlife|night club|wine bar|brewery|winery|beer|speakeasy|lounge)\b/i;
 const GROCERY =
-  /\b(grocery|supermarket|super_market|convenience(_store)?|liquor_store|liquor\s*store|bodega)\b/i;
+  /\b(grocery|supermarket|super market|convenience( store)?|liquor store|bodega|food market)\b/i;
 const RESTAURANT =
-  /\b(restaurant|cafe|café|bakery|food|bistro|diner|eatery|steakhouse|pizzeria|sushi|fast_food|food_and_drink)\b/i;
+  /\b(restaurant|cafe|café|bakery|coffee shop|coffee|food|bistro|diner|eatery|steakhouse|steak house|pizzeria|sushi|fast food|food and drink)\b/i;
+
+/** Strip MapKit's MKPOICategory prefix, split camelCase, and unfold snake_case. */
+function venueKindHaystack(category?: string | null, name?: string | null): string {
+  return `${category ?? ""} ${name ?? ""}`
+    .replace(/MKPOICategory/gi, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export function classifyVenueKind(
   category?: string | null,
   name?: string | null,
 ): VenueKind | null {
-  const hay = `${category ?? ""} ${name ?? ""}`.trim();
+  const hay = venueKindHaystack(category, name);
   if (!hay) return null;
+  // Bars before grocery/restaurant — "wine bar" / "brewery" should not become food.
   if (BAR.test(hay)) return "bar";
   if (GROCERY.test(hay)) return "grocery";
   if (RESTAURANT.test(hay)) return "restaurant";
