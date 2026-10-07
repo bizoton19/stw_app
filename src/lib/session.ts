@@ -1,3 +1,5 @@
+import { isGuestId, resolveGuestId } from "./guest-id";
+
 const HOST_PREFIX = "stw-host:";
 const GUEST_PREFIX = "stw-guest:";
 const TOKEN_PREFIX = "stw-tokens:";
@@ -14,20 +16,55 @@ export function ensureDemoHost(isHostQuery: boolean) {
   if (isHostQuery) saveHostToken("demo", "demo-host");
 }
 
-export type GuestIdentity = { name: string; contact: string };
+export type GuestIdentity = { guestId: string; name: string; contact: string };
 
-export function saveGuest(receiptId: string, guest: GuestIdentity) {
-  sessionStorage.setItem(`${GUEST_PREFIX}${receiptId}`, JSON.stringify(guest));
-}
+/** Name + optional contact. `guestId` is filled from storage or minted. */
+export type GuestDraft = { guestId?: string; name: string; contact?: string };
 
-export function getGuest(receiptId: string): GuestIdentity | null {
+type StoredGuest = { guestId?: string; name?: string; contact?: string };
+
+function readStoredGuest(receiptId: string): StoredGuest | null {
   const raw = sessionStorage.getItem(`${GUEST_PREFIX}${receiptId}`);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as GuestIdentity;
+    const parsed = JSON.parse(raw) as StoredGuest;
+    if (!parsed || typeof parsed.name !== "string" || !parsed.name.trim()) return null;
+    return parsed;
   } catch {
     return null;
   }
+}
+
+function toIdentity(stored: StoredGuest | null, draft?: GuestDraft): GuestIdentity | null {
+  const name = (draft?.name ?? stored?.name ?? "").trim();
+  if (!name) return null;
+  return {
+    guestId: resolveGuestId(draft?.guestId ?? stored?.guestId, stored?.guestId),
+    name,
+    contact: (draft?.contact ?? stored?.contact ?? "").trim(),
+  };
+}
+
+export function saveGuest(receiptId: string, guest: GuestDraft): GuestIdentity {
+  const next = toIdentity(readStoredGuest(receiptId), guest);
+  if (!next) {
+    throw new Error("name_required");
+  }
+  sessionStorage.setItem(`${GUEST_PREFIX}${receiptId}`, JSON.stringify(next));
+  return next;
+}
+
+export function getGuest(receiptId: string): GuestIdentity | null {
+  const stored = readStoredGuest(receiptId);
+  if (!stored) return null;
+  const next = toIdentity(stored);
+  if (!next) return null;
+  const canonicalGuestId = next.guestId;
+  const storedId = typeof stored.guestId === "string" ? stored.guestId.trim().toLowerCase() : "";
+  if (!isGuestId(stored.guestId) || storedId !== canonicalGuestId || stored.name !== next.name) {
+    sessionStorage.setItem(`${GUEST_PREFIX}${receiptId}`, JSON.stringify(next));
+  }
+  return next;
 }
 
 export function saveClaimToken(receiptId: string, claimId: string, token: string) {
@@ -39,6 +76,10 @@ export function saveClaimToken(receiptId: string, claimId: string, token: string
 
 export function getClaimToken(receiptId: string, claimId: string): string | null {
   return readTokens(receiptId)[claimId] ?? null;
+}
+
+export function getClaimTokens(receiptId: string): Record<string, string> {
+  return { ...readTokens(receiptId) };
 }
 
 export function clearClaimToken(receiptId: string, claimId: string) {

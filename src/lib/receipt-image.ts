@@ -30,6 +30,11 @@ function diskDir() {
   return path.join(process.cwd(), ".data", "receipt-images");
 }
 
+/** Ensure `receipt_images` exists for the active DB_SCHEMA (safe to call repeatedly). */
+export async function ensureReceiptImageTable() {
+  await ensureImageTable();
+}
+
 async function ensureImageTable() {
   await ensureSchema();
   await getPool().query(`
@@ -89,21 +94,37 @@ export async function putReceiptImage(receiptId: string, image: ReceiptImage): P
   const store = blobStore();
 
   if (store && usingDatabase()) {
+    await ensureImageTable();
+    const prev = await getPool().query<{ storage_key: string | null }>(
+      `SELECT storage_key FROM ${DB_SCHEMA}.receipt_images WHERE receipt_id = $1`,
+      [receiptId],
+    );
+    const previousKey = prev.rows[0]?.storage_key ?? null;
     const key = receiptImageObjectKey(receiptId, mime);
     await store.put(key, { bytes: image.bytes, mime });
-    await ensureImageTable();
-    await getPool().query(
-      `INSERT INTO ${DB_SCHEMA}.receipt_images
-         (receipt_id, mime, bytes, byte_size, storage_key, updated_at)
-       VALUES ($1, $2, NULL, $3, $4, now())
-       ON CONFLICT (receipt_id) DO UPDATE
-         SET mime = EXCLUDED.mime,
-             bytes = NULL,
-             byte_size = EXCLUDED.byte_size,
-             storage_key = EXCLUDED.storage_key,
-             updated_at = now()`,
-      [receiptId, mime, image.bytes.length, key],
-    );
+    try {
+      await getPool().query(
+        `INSERT INTO ${DB_SCHEMA}.receipt_images
+           (receipt_id, mime, bytes, byte_size, storage_key, updated_at)
+         VALUES ($1, $2, NULL, $3, $4, now())
+         ON CONFLICT (receipt_id) DO UPDATE
+           SET mime = EXCLUDED.mime,
+               bytes = NULL,
+               byte_size = EXCLUDED.byte_size,
+               storage_key = EXCLUDED.storage_key,
+               updated_at = now()`,
+        [receiptId, mime, image.bytes.length, key],
+      );
+    } catch (err) {
+      // Avoid leaving a blob with no DB row when the insert fails.
+      if (previousKey !== key) {
+        await store.delete(key).catch(() => undefined);
+      }
+      throw err;
+    }
+    if (previousKey && previousKey !== key) {
+      await store.delete(previousKey).catch(() => undefined);
+    }
     console.log(
       JSON.stringify({
         event: "receipt.image.put",

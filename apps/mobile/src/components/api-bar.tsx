@@ -8,17 +8,20 @@ import {
   hydrateApiUrl,
   inferredApiUrl,
   setApiUrlOverride,
+  showApiStatus,
 } from "@/lib/config";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
 export function ApiBar() {
+  const visible = showApiStatus();
   const [url, setUrl] = useState(getApiUrl());
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(getApiUrl());
   const [reachable, setReachable] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (!visible) return;
     let cancelled = false;
     void (async () => {
       await hydrateApiUrl();
@@ -31,7 +34,9 @@ export function ApiBar() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [visible]);
+
+  if (!visible) return null;
 
   async function save() {
     await setApiUrlOverride(draft);

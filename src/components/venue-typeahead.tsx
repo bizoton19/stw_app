@@ -2,9 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ShoppingBasket, UtensilsCrossed, Wine } from "lucide-react";
+import { NearbyPlaceCards } from "@/components/nearby-place-cards";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { classifyVenueKind } from "@/lib/line-kind";
+import {
+  formatPlaceRating,
+  nearbyQuery,
+  readNearbyPlaces,
+  shouldShowNearbyCards,
+  type NearbyPlaceCard,
+} from "@/lib/nearby-place-card";
 import type { ReceiptVenue } from "@/lib/types";
 
 type PlacePrediction = {
@@ -24,6 +32,8 @@ type Props = {
   receiptDate?: string | null;
   onChangeName: (name: string) => void;
   onChangeVenue: (venue: ReceiptVenue | null) => void;
+  /** Opens the place detail. The card is not selected until Plan here. */
+  onOpenNearby?: (card: NearbyPlaceCard) => void;
   fieldClass?: string;
 };
 
@@ -45,12 +55,70 @@ function typedVenue(name: string): ReceiptVenue {
   };
 }
 
+type BridgedPlace = {
+  placeId?: string;
+  name?: string;
+  formattedAddress?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  category?: string | null;
+  provider?: string;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  photoUrl?: string | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
+};
+
+/** Name + coordinates only. A Mapbox id is not sent and is kept if the bridge misses. */
+async function bridgeSelectedVenue(venue: ReceiptVenue): Promise<ReceiptVenue> {
+  if (
+    typeof venue.lat !== "number" ||
+    typeof venue.lng !== "number" ||
+    !Number.isFinite(venue.lat) ||
+    !Number.isFinite(venue.lng) ||
+    !venue.name.trim()
+  ) {
+    return venue;
+  }
+  try {
+    const params = new URLSearchParams({
+      name: venue.name.trim(),
+      lat: String(venue.lat),
+      lng: String(venue.lng),
+    });
+    const res = await fetch(`/api/places/bridge?${params}`);
+    if (!res.ok) return venue;
+    const data = (await res.json()) as { bridged?: boolean; place?: BridgedPlace | null };
+    const place = data.place;
+    if (!data.bridged || !place || place.provider !== "google" || !place.placeId) return venue;
+    return {
+      name: place.name || venue.name,
+      placeId: place.placeId,
+      provider: "google",
+      formattedAddress: place.formattedAddress ?? venue.formattedAddress ?? null,
+      lat: typeof place.lat === "number" ? place.lat : venue.lat,
+      lng: typeof place.lng === "number" ? place.lng : venue.lng,
+      category: place.category ?? venue.category ?? null,
+      source: "places",
+      confirmedAt: venue.confirmedAt,
+      rating: place.rating ?? null,
+      userRatingCount: place.userRatingCount ?? null,
+      photoUrl: place.photoUrl ?? null,
+      websiteUri: place.websiteUri ?? null,
+      googleMapsUri: place.googleMapsUri ?? null,
+    };
+  } catch {
+    return venue;
+  }
+}
+
 function VenueGlyph({ category, name }: { category?: string | null; name?: string | null }) {
   const kind = classifyVenueKind(category, name);
   if (!kind) return null;
   const tint =
     kind === "bar"
-      ? { bg: "bg-[rgba(110,46,53,0.12)] text-[#6E2E35]", label: "Bar" }
+      ? { bg: "bg-[rgba(110,46,53,0.12)] text-[var(--stw-merlot)]", label: "Bar" }
       : kind === "grocery"
         ? { bg: "bg-[rgba(61,90,128,0.14)] text-[#3D5A80]", label: "Grocery" }
         : { bg: "bg-[rgba(92,122,94,0.14)] text-[#4F6B50]", label: "Restaurant" };
@@ -86,9 +154,12 @@ export function VenueTypeahead({
   receiptDate,
   onChangeName,
   onChangeVenue,
+  onOpenNearby,
   fieldClass,
 }: Props) {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+  const [nearby, setNearby] = useState<NearbyPlaceCard[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const sessionRef = useRef(newSession());
@@ -121,6 +192,7 @@ export function VenueTypeahead({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setNearbyLoading(true);
         setHint("Using nearby places to rank results.");
         setLocationReady(true);
       },
@@ -131,6 +203,25 @@ export function VenueTypeahead({
       { enableHighAccuracy: false, timeout: 8000 },
     );
   }, []);
+
+  useEffect(() => {
+    if (!coords) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(nearbyQuery(coords.lat, coords.lng));
+        const cards = await readNearbyPlaces(res);
+        if (!cancelled) setNearby(cards);
+      } catch {
+        if (!cancelled) setNearby([]);
+      } finally {
+        if (!cancelled) setNearbyLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [coords]);
 
   const runSearch = useCallback(
     (q: string) => {
@@ -192,11 +283,16 @@ export function VenueTypeahead({
     runSearch(text);
   };
 
+  const selectNearbyCard = (card: NearbyPlaceCard) => {
+    onOpenNearby?.(card);
+  };
+
   const onSelect = async (row: PlacePrediction) => {
     lockedRef.current = true;
     onChangeName(row.name);
     setPredictions([]);
-    onChangeVenue({
+    const confirmedAt = new Date().toISOString();
+    let venue: ReceiptVenue = {
       name: row.name,
       placeId: row.placeId,
       provider: row.provider,
@@ -205,8 +301,9 @@ export function VenueTypeahead({
       lng: row.lng ?? null,
       category: row.category ?? null,
       source: "places",
-      confirmedAt: new Date().toISOString(),
-    });
+      confirmedAt,
+    };
+    onChangeVenue(venue);
     try {
       const res = await fetch(
         `/api/places/details?placeId=${encodeURIComponent(row.placeId)}&session=${encodeURIComponent(sessionRef.current)}`,
@@ -223,7 +320,7 @@ export function VenueTypeahead({
           provider: "mapbox" | "apple";
         };
       };
-      onChangeVenue({
+      venue = {
         name: data.place.name || row.name,
         placeId: data.place.placeId,
         provider: data.place.provider === "apple" ? "apple" : "mapbox",
@@ -233,12 +330,15 @@ export function VenueTypeahead({
         lng: data.place.lng,
         category: data.place.category || row.category || null,
         source: "places",
-        confirmedAt: new Date().toISOString(),
-      });
+        confirmedAt,
+      };
       sessionRef.current = newSession();
     } catch {
       /* keep optimistic venue from dropdown row */
     }
+    const bridged = await bridgeSelectedVenue(venue);
+    if (!lockedRef.current) return;
+    onChangeVenue(bridged);
   };
 
   const clearSelection = () => {
@@ -261,6 +361,11 @@ export function VenueTypeahead({
             {address ? (
               <div className="mt-0.5 text-[12px] text-muted-foreground">{address}</div>
             ) : null}
+            {formatPlaceRating(venue?.rating, venue?.userRatingCount) ? (
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                {formatPlaceRating(venue?.rating, venue?.userRatingCount)}
+              </div>
+            ) : null}
             {dateLabel ? (
               <div className="mt-2 text-[12px] text-muted-foreground">
                 Receipt date · {dateLabel}
@@ -280,7 +385,7 @@ export function VenueTypeahead({
           <img
             src={`/api/places/static-map?lat=${venue!.lat}&lng=${venue!.lng}&w=600&h=220`}
             alt={`Map of ${venue!.name}`}
-            className="h-[280px] w-full rounded-[14px] border border-border object-cover bg-[#EDE8E1]"
+            className="h-[280px] w-full rounded-[14px] border border-border object-cover bg-[var(--stw-chrome)]"
           />
         ) : null}
       </div>
@@ -303,6 +408,13 @@ export function VenueTypeahead({
       {hint ? <p className="mt-2 text-[12px] text-muted-foreground">{hint}</p> : null}
       {dateLabel ? (
         <p className="mt-2 text-[12px] text-muted-foreground">Receipt date · {dateLabel}</p>
+      ) : null}
+      {coords && shouldShowNearbyCards(value) ? (
+        <NearbyPlaceCards
+          places={nearby}
+          loading={nearbyLoading}
+          onSelect={selectNearbyCard}
+        />
       ) : null}
       {value.trim().length >= 2 && predictions.length === 0 ? (
         <p className="mt-2 text-[12px] text-muted-foreground">

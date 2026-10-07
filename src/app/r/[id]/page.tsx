@@ -14,5 +14,12 @@ export default async function ReceiptClaimPage({
     host === "1" ||
     host === "true" ||
     (Array.isArray(host) && (host.includes("1") || host.includes("true")));
-  return <ClaimPage receiptId={id} hostQuery={hostQuery} />;
+  const inviteRaw = query.invite;
+  const inviteToken =
+    typeof inviteRaw === "string"
+      ? inviteRaw
+      : Array.isArray(inviteRaw)
+        ? inviteRaw[0] ?? ""
+        : "";
+  return <ClaimPage receiptId={id} hostQuery={hostQuery} inviteToken={inviteToken} />;
 }

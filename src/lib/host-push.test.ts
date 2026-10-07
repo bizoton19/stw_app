@@ -76,4 +76,43 @@ describe("host push copy", () => {
       "Alex dropped Latte · 2 items ($9.00) still unclaimed",
     );
   });
+
+  it("formats RSVP Going with place", () => {
+    assert.equal(
+      formatHostPushBody({
+        receiptId: "r1",
+        kind: "rsvp",
+        personName: "Sam",
+        lines: [],
+        rsvpResponse: "going",
+        restaurant: "Bar Marilou",
+      }),
+      "Sam is Going · Bar Marilou",
+    );
+  });
+
+  it("formats RSVP Maybe and Can’t", () => {
+    assert.equal(
+      formatHostPushBody({
+        receiptId: "r1",
+        kind: "rsvp",
+        personName: "Jordan",
+        lines: [],
+        rsvpResponse: "maybe",
+        restaurant: "Bar Marilou",
+      }),
+      "Jordan said Maybe · Bar Marilou",
+    );
+    assert.equal(
+      formatHostPushBody({
+        receiptId: "r1",
+        kind: "rsvp",
+        personName: "Alex",
+        lines: [],
+        rsvpResponse: "cant",
+        restaurant: "Bar Marilou",
+      }),
+      "Alex can’t make it · Bar Marilou",
+    );
+  });
 });

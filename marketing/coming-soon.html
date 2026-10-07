@@ -82,7 +82,14 @@
 
         <p id="form-error" class="hidden mb-4 text-sm font-medium text-[#A33B32]" role="alert"></p>
 
-        <!-- Posts to Railway API; Netlify Forms kept as no-JS fallback when hosted on Netlify -->
+        <!--
+          Primary path: JavaScript POSTs JSON to the Railway API, which upserts
+          Postgres launch_notify. That list is the source of truth.
+          Netlify Forms (data-netlify) is only a fallback: no-JS submit, or the
+          API cannot be reached (network, CORS, HTTP 5xx). Those Netlify rows
+          are NOT synced into launch_notify — merge them by hand before the
+          launch email (plans/launch-todo.md). A 4xx from the API stays here.
+        -->
         <form
             id="notify-form"
             name="app-notify"
@@ -155,6 +162,8 @@
         &copy; 2026 Split the Wine
     </footer>
 
+    <!-- API origin: /api-config.js, written at build from STW_API_BASE. -->
+    <script src="/api-config.js"></script>
     <script>
         const i18n = {
             en: {
@@ -171,6 +180,9 @@
                 "form.ios": "iPhone",
                 "form.android": "Android",
                 "form.submit": "Notify me at launch",
+                "form.error.email": "Enter a valid email address.",
+                "form.error.rate": "Too many tries from this network. Wait a few minutes and try again.",
+                "form.error.generic": "Couldn’t save that. Check the email and try again.",
                 "form.legal": "One launch email only. Unsubscribe anytime. See our <a href=\"/privacy\" class=\"underline hover:text-merlot\">Privacy Policy</a>.",
                 "footnote": "Hosts use the app. Guests claim from a link — no download required.",
                 "footer.privacy": "Privacy Policy",
@@ -190,6 +202,9 @@
                 "form.ios": "iPhone",
                 "form.android": "Android",
                 "form.submit": "Avísame en el lanzamiento",
+                "form.error.email": "Escribe un email válido.",
+                "form.error.rate": "Demasiados intentos desde esta red. Espera unos minutos y vuelve a probar.",
+                "form.error.generic": "No se pudo guardar. Revisa el email e inténtalo de nuevo.",
                 "form.legal": "Solo un email de lanzamiento. Baja cuando quieras. Ver la <a href=\"/privacy\" class=\"underline hover:text-merlot\">Política de privacidad</a>.",
                 "footnote": "El anfitrión usa la app. Los invitados reclaman con un enlace — sin descargar.",
                 "footer.privacy": "Privacidad",
@@ -209,6 +224,9 @@
                 "form.ios": "iPhone",
                 "form.android": "Android",
                 "form.submit": "Prévenez-moi au lancement",
+                "form.error.email": "Indiquez un email valide.",
+                "form.error.rate": "Trop d’essais depuis ce réseau. Patientez quelques minutes, puis réessayez.",
+                "form.error.generic": "Enregistrement impossible. Vérifiez l’email et réessayez.",
                 "form.legal": "Un seul email de lancement. Désabonnement à tout moment. Voir la <a href=\"/privacy\" class=\"underline hover:text-merlot\">Politique de confidentialité</a>.",
                 "footnote": "L’hôte utilise l’app. Les invités réclament via un lien — sans téléchargement.",
                 "footer.privacy": "Confidentialité",
@@ -228,6 +246,9 @@
                 "form.ios": "iPhone",
                 "form.android": "Android",
                 "form.submit": "Avi mwen nan lansman",
+                "form.error.email": "Antre yon imèl ki valab.",
+                "form.error.rate": "Twòp tantativ sou rezo sa a. Tann kèk minit epi eseye ankò.",
+                "form.error.generic": "Nou pa t kapab anrejistre li. Verifye imèl la epi eseye ankò.",
                 "form.legal": "Yon sèl imèl lansman. Ou ka retire ou nenpòt lè. Gade <a href=\"/privacy\" class=\"underline hover:text-merlot\">Règleman sou vi prive</a>.",
                 "footnote": "Moun ki resevwa a itilize app la. Envite yo reklame ak yon lyen — pa bezwen telechaje.",
                 "footer.privacy": "Vi Prive",
@@ -269,17 +290,53 @@
         const errorEl = document.getElementById("form-error");
         const submitBtn = document.getElementById("submit-btn");
 
+        function t(key) {
+            const lang = (document.documentElement.lang || "en").slice(0, 2).toLowerCase();
+            const pack = i18n[lang] || i18n.en;
+            return pack[key] || i18n.en[key] || "";
+        }
+
         function showThanks() {
             thanksEl.classList.remove("hidden");
             formEl.classList.add("hidden");
             if (errorEl) errorEl.classList.add("hidden");
         }
 
+        function showFormError(code) {
+            if (!errorEl) return;
+            const key = code === "invalid_email"
+                ? "form.error.email"
+                : code === "rate_limited"
+                    ? "form.error.rate"
+                    : "form.error.generic";
+            errorEl.textContent = t(key);
+            errorEl.classList.remove("hidden");
+        }
+
+        function fallbackToNetlify() {
+            // API unreachable — Netlify Forms keeps the signup, outside Postgres.
+            formEl.removeEventListener("submit", onNotifySubmit);
+            formEl.submit();
+        }
+
         if (params.get("success") === "1" || window.location.hash === "#thanks") {
             showThanks();
         }
 
-        const API_BASE = "https://api.splitthewine.app";
+        function readApiBase() {
+            const raw = window.STW_API_BASE;
+            if (typeof raw !== "string" || !raw.trim()) return "";
+            try {
+                const url = new URL(raw);
+                if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+                if (url.username || url.password) return "";
+                return url.origin;
+            } catch (e) {
+                return "";
+            }
+        }
+
+        const API_BASE = readApiBase();
 
         async function onNotifySubmit(e) {
             e.preventDefault();
@@ -291,27 +348,39 @@
                 errorEl.classList.add("hidden");
                 errorEl.textContent = "";
             }
+            const botField = (formEl.querySelector('input[name="bot-field"]') || {}).value || "";
+            const payload = { email, platforms, source: "coming-soon" };
+            if (String(botField).trim()) payload["bot-field"] = String(botField).trim();
             submitBtn.disabled = true;
+            let res;
             try {
-                const res = await fetch(`${API_BASE}/api/waitlist`, {
+                res = await fetch(`${API_BASE}/api/waitlist`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, platforms, source: "coming-soon" }),
+                    body: JSON.stringify(payload),
                 });
-                if (!res.ok) {
-                    const data = await res.json().catch(() => ({}));
-                    throw new Error(data.error || "request_failed");
-                }
+            } catch (err) {
+                fallbackToNetlify();
+                return;
+            }
+            if (res.ok) {
                 showThanks();
                 history.replaceState(null, "", "/coming-soon?success=1");
-            } catch (err) {
-                // Fall back to native Netlify Forms post if API is unreachable.
-                formEl.removeEventListener("submit", onNotifySubmit);
-                formEl.submit();
+                return;
             }
+            // 5xx: API is up but cannot store. Keep the address via Netlify.
+            // 4xx: show the error. Do not also write a second list.
+            if (res.status >= 500) {
+                fallbackToNetlify();
+                return;
+            }
+            const data = await res.json().catch(() => ({}));
+            showFormError(data.error);
+            submitBtn.disabled = false;
         }
 
-        formEl.addEventListener("submit", onNotifySubmit);
+        // No injected host: keep the native Netlify post. Do not guess a production URL.
+        if (API_BASE) formEl.addEventListener("submit", onNotifySubmit);
     </script>
 </body>
 </html>

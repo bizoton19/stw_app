@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-09-27 ~20:15 −04:00 |
-| **Elapsed** | **~7 days** |
-| **Commits on `main`** | **~190** (refresh with `git rev-list --count HEAD`) |
+| **This snapshot** | 2026-10-06 ~12:35 −04:00 |
+| **Elapsed** | **~16 days** |
+| **Commits on this branch** | **286** (latest: settle pay visuals) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -77,6 +77,30 @@ git log --reverse -1 --format='%aI %s'
 - Progress stats doc + Cursor rule to keep milestones current
 - Host desk: camera + upload shortcuts (skip beginner guide); edit pay handles after publish
 - Web brand mark matches official tilted merlot bottle icon
+
+### Day 12 — Fri 2026-10-02
+- **The app now knows what time it is.** Cards paint `linen` by day and a dimmer, warmer `candlelight` after 19:00 local — automatically, with no picker and no setting to explain. A blocking script in `<head>` sets the theme before first paint, so there is no flash and no hydration mismatch.
+- **Hand-drawn motif kit replaces generic icons** on both web and native: a stem marks a drink line, a torn check stub marks food and "the tab", a carafe marks a shared bottle, a label band marks the venue. All stroke-only and colour-inheriting, so one drawing serves every theme.
+- **Settle got card treatment** — a masked split watermark behind "You owe", and a tear line instead of a plain divider.
+- The day palette is unchanged on purpose: every theme token holds the exact value it shipped with, so dusk is one-line reversible and "too ugly" never costs a migration.
+- Same display name no longer merges on the claim board or settle: each join keeps a stable guest id, and “you owe” follows that id.
+- Launch waitlist is production-safe: validated emails, in-process rate limits, and `launch_notify` documented in the ERD. Coming-soon prefers the Railway list; Netlify Forms stays an unsynced fallback when the API cannot be reached.
+- Coming-soon waitlist host is chosen at Netlify build time (`STW_API_BASE` → `api-config.js`), so staging and local can override the production API.
+- CORS + waitlist smoke checklist for `www` → Railway `POST /api/waitlist`.
+
+### Day 13 — Sat 2026-10-03 · **candidate release**
+- Plan-an-outing uses a dedicated date/time picker; place search stays above When, and Create unpins until a place is locked.
+- Labeled **`candidate-release-2026-10-03`** on `plan-an-outing` (friend-test / store-prep freeze point before Places hybrid work).
+- Receipt read is snappier: skip host classify by default, sharp-downscale before Gemini, **15s** extract timeout, default model **gemini-3.5-flash-lite**.
+- Home paints hosted tabs from local storage first; close/reopen apply the POST receipt and GET no longer takes a Postgres row lock.
+- Nearby food and drink (top 7) comes from Google Places through the server. Picking a Mapbox or MapKit suggestion asks Google for that place’s id by name and location; the receipt keeps Google when that works, and the Mapbox or Apple pin when it does not. There is no Places key in the app — without one, the proxy says so and does not call Google.
+- Nearby photos on a phone use the same API address as the rest of the app, so a `0.0.0.0` photo link from the dev server still loads. Each list card is one full photo. Opening a place scrolls up to three nearby photos, labels the Google rating, and shows a Mapbox map of the pin.
+- On “Where are you going?” and the web restaurant step, nearby places swipe sideways as photo cards (the first nearby photo, plus name, address, and category) until you type two letters. A tap opens that one place, scrolls up to three nearby photos, and loads its rating and website from Place Details; Plan here saves them with the first nearby photo, and back returns to the place step. Typing still uses Mapbox or MapKit and the place-id bridge. If nearby or that details call cannot load, the row stays empty or the place still saves without a rating, and search still works.
+- On the phone, the place screen leads the address, Google rating, category, website, and maps lines with small line icons. Tapping a gallery photo opens that same image in the full-page tab-photo sheet, centered, with the close control on screen. Swipe down or tap the scrim to close. The tab photo uses that same sheet.
+- Guest claim-link copy matches the ad message (“Claim what you ordered” / pay-the-host settle).
+
+### Day 16 — Tue 2026-10-06
+- RSVP confirmation is a ticket moment: map hero, venue name, date above time, **Get directions**, and optional **Contact host** (iMessage / text / WhatsApp / email / Signal) set when the host plans the outing.
 
 ## How to extend this file
 

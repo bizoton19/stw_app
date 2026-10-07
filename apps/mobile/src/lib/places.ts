@@ -1,5 +1,13 @@
 import { Platform } from "react-native";
 import { api } from "./api";
+import {
+  nearbyQuery,
+  parsePlaceDetail,
+  placeDetailsQuery,
+  placesFromNearbyResponse,
+  type NearbyPlaceCard,
+  type PlaceDetail,
+} from "./nearby-places";
 import type { ReceiptVenue } from "./types";
 
 export type PlacePrediction = {
@@ -78,6 +86,82 @@ export async function searchPlaces(
   return mapboxSuggest(q, coords, session);
 }
 
+type BridgedPlace = {
+  placeId?: string;
+  name?: string;
+  formattedAddress?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  category?: string | null;
+  provider?: string;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  photoUrl?: string | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
+};
+
+/**
+ * Text Search by name + coordinates. The Mapbox/MapKit id is not a Google id
+ * and is not sent. A miss or a missing server key keeps the original provider.
+ */
+async function bridgeToGooglePlace(venue: ReceiptVenue): Promise<ReceiptVenue> {
+  if (
+    typeof venue.lat !== "number" ||
+    typeof venue.lng !== "number" ||
+    !Number.isFinite(venue.lat) ||
+    !Number.isFinite(venue.lng) ||
+    !venue.name.trim()
+  ) {
+    return venue;
+  }
+  try {
+    const params = new URLSearchParams({
+      name: venue.name.trim(),
+      lat: String(venue.lat),
+      lng: String(venue.lng),
+    });
+    const data = await api<{ bridged?: boolean; place?: BridgedPlace | null }>(
+      `/api/places/bridge?${params}`,
+    );
+    const place = data.place;
+    if (!data.bridged || !place || place.provider !== "google" || !place.placeId) {
+      return venue;
+    }
+    return {
+      name: place.name || venue.name,
+      placeId: place.placeId,
+      provider: "google",
+      formattedAddress: place.formattedAddress ?? venue.formattedAddress ?? null,
+      lat: typeof place.lat === "number" ? place.lat : venue.lat,
+      lng: typeof place.lng === "number" ? place.lng : venue.lng,
+      category: place.category ?? venue.category ?? null,
+      source: "places",
+      confirmedAt: venue.confirmedAt,
+      rating: place.rating ?? null,
+      userRatingCount: place.userRatingCount ?? null,
+      photoUrl: place.photoUrl ?? null,
+      websiteUri: place.websiteUri ?? null,
+      googleMapsUri: place.googleMapsUri ?? null,
+    };
+  } catch {
+    return venue;
+  }
+}
+
+/**
+ * Nearby food and drink. 503 (no server key) and 502 (Google upstream) are an
+ * empty list — the caller keeps the typeahead. Never throws.
+ */
+export async function fetchNearbyPlaces(coords: Coords): Promise<NearbyPlaceCard[]> {
+  try {
+    const data = await api<unknown>(nearbyQuery(coords.lat, coords.lng));
+    return placesFromNearbyResponse(200, data);
+  } catch {
+    return [];
+  }
+}
+
 export async function resolvePlaceDetails(
   prediction: PlacePrediction,
   session: string,
@@ -89,7 +173,7 @@ export async function resolvePlaceDetails(
     typeof prediction.lat === "number" &&
     typeof prediction.lng === "number"
   ) {
-    return {
+    return bridgeToGooglePlace({
       name: prediction.name,
       placeId: prediction.placeId,
       provider: "apple",
@@ -99,7 +183,7 @@ export async function resolvePlaceDetails(
       category: prediction.category ?? null,
       source: "places",
       confirmedAt,
-    };
+    });
   }
 
   const data = await api<{
@@ -116,7 +200,7 @@ export async function resolvePlaceDetails(
     `/api/places/details?placeId=${encodeURIComponent(prediction.placeId)}&session=${encodeURIComponent(session)}`,
   );
 
-  return {
+  return bridgeToGooglePlace({
     name: data.place.name || prediction.name,
     placeId: data.place.placeId,
     provider: data.place.provider === "apple" ? "apple" : "mapbox",
@@ -131,7 +215,7 @@ export async function resolvePlaceDetails(
     category: data.place.category,
     source: "places",
     confirmedAt,
-  };
+  });
 }
 
 export async function resolveVenueFromName(
@@ -165,6 +249,19 @@ export async function resolveVenueFromName(
   const resolved = await resolvePlaceDetails(best, session);
   if (resolved.lat == null || resolved.lng == null) return null;
   return resolved;
+}
+
+/**
+ * Place Details for the one place the user opened. 400 (including a Mapbox
+ * id), 502, and 503 are null — Plan here still keeps the nearby card.
+ */
+export async function fetchPlaceDetail(placeId: string): Promise<PlaceDetail | null> {
+  try {
+    const data = await api<unknown>(placeDetailsQuery(placeId));
+    return parsePlaceDetail(200, data);
+  } catch {
+    return null;
+  }
 }
 
 export function typedVenue(name: string): ReceiptVenue {

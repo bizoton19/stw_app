@@ -112,6 +112,124 @@ describe("fee split", () => {
     assert.equal(sam.feeCents + Math.round((10000 * 42000) / 42400), 10000);
   });
 
+  it("does not merge two guests who share a display name", () => {
+    const alexA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const alexB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const receipt: Receipt = {
+      id: "dup",
+      status: "open",
+      restaurant: "The Bar",
+      createdAt: "",
+      items: [
+        { id: "wine", name: "BQ Wine Package ($60)", qty: 7, totalCents: 42000 },
+        { id: "juice", name: "Apple Juice", qty: 1, totalCents: 400 },
+      ],
+      fees: [{ id: "tax", name: "Tax", amountCents: 10000 }],
+      claims: [
+        {
+          id: "c1",
+          itemId: "wine",
+          guestId: alexA,
+          personName: "Alex",
+          units: 7,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "c2",
+          itemId: "juice",
+          guestId: alexB,
+          personName: "Alex",
+          units: 1,
+          createdAt: "2026-01-01T00:00:01.000Z",
+        },
+      ],
+    };
+    const totals = computeTotals(receipt);
+    const people = totals.people.filter((p) => p.personName === "Alex");
+    assert.equal(people.length, 2);
+    const a = people.find((p) => p.guestId === alexA);
+    const b = people.find((p) => p.guestId === alexB);
+    assert.ok(a && b);
+    assert.equal(a.itemCents, 42000);
+    assert.equal(b.itemCents, 400);
+    assert.equal(a.feeCents + b.feeCents, 10000);
+  });
+
+  it("keeps one person when the same guestId claims under a new display name", () => {
+    const guestId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    const receipt: Receipt = {
+      id: "rename",
+      status: "open",
+      restaurant: "The Bar",
+      createdAt: "",
+      items: [
+        { id: "wine", name: "BQ Wine Package ($60)", qty: 7, totalCents: 42000 },
+        { id: "juice", name: "Apple Juice", qty: 1, totalCents: 400 },
+      ],
+      fees: [],
+      claims: [
+        {
+          id: "c1",
+          itemId: "wine",
+          guestId,
+          personName: "Alex",
+          units: 7,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "c2",
+          itemId: "juice",
+          guestId,
+          personName: "Alex R.",
+          units: 1,
+          createdAt: "2026-01-01T00:00:02.000Z",
+        },
+      ],
+    };
+    const totals = computeTotals(receipt);
+    assert.equal(totals.people.length, 1);
+    assert.equal(totals.people[0]?.guestId, guestId);
+    assert.equal(totals.people[0]?.personName, "Alex R.");
+    assert.equal(totals.people[0]?.itemCents, 42400);
+  });
+
+  it("does not fold a legacy name-only claim into a guestId row with the same name", () => {
+    const guestId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+    const receipt: Receipt = {
+      id: "legacy",
+      status: "open",
+      restaurant: "The Bar",
+      createdAt: "",
+      items: [
+        { id: "wine", name: "BQ Wine Package ($60)", qty: 7, totalCents: 42000 },
+        { id: "juice", name: "Apple Juice", qty: 1, totalCents: 400 },
+      ],
+      fees: [],
+      claims: [
+        {
+          id: "c1",
+          itemId: "wine",
+          personName: "Alex",
+          units: 7,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "c2",
+          itemId: "juice",
+          guestId,
+          personName: "Alex",
+          units: 1,
+          createdAt: "2026-01-01T00:00:01.000Z",
+        },
+      ],
+    };
+    const totals = computeTotals(receipt);
+    assert.equal(totals.people.length, 2);
+    assert.equal(totals.people.filter((p) => p.personName === "Alex").length, 2);
+    assert.equal(totals.people.find((p) => p.guestId === guestId)?.itemCents, 400);
+    assert.equal(totals.people.find((p) => !p.guestId)?.itemCents, 42000);
+  });
+
   it("keeps proportional remainders exact", () => {
     assert.deepEqual(allocateProportional(100, [1, 1, 1]), [34, 33, 33]);
     assert.equal(sumCents(allocateProportional(32735, [42400, 47180])), 32735);

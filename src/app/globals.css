@@ -85,6 +85,73 @@
   --sidebar-ring: oklch(0.4 0.08 18);
   --canvas: oklch(0.988 0.004 95);
   --ink-soft: oklch(0.52 0.012 55);
+
+  /* Card theme: linen (default). Values match the shipped palette exactly, and
+     apply with no `data-card-theme` set so the page is correct before the dusk
+     script runs — and if it never runs. See plans/card-design-themes.md §3. */
+  --stw-paper: #f6f4f1;
+  --stw-sheet: #fffcf8;
+  --stw-ink: #2a241c;
+  --stw-ink-soft: #7a7268;
+  --stw-muted: #8a847c;
+  --stw-border: #e6e0d8;
+  --stw-chrome: #ede8e1;
+  --stw-chrome-border: #d4cdc3;
+  --stw-merlot: #6e2e35;
+  --stw-merlot-fg: #fbf8f5;
+  --stw-select: #2f5d50;
+  --stw-select-wash: rgba(47, 93, 80, 0.14);
+  --stw-danger: #a33b32;
+  --stw-kind-drink: #9c1f3d;
+  --stw-kind-drink-wash: rgba(156, 31, 61, 0.16);
+  --stw-kind-food: #c9892a;
+  --stw-kind-food-wash: rgba(201, 137, 42, 0.22);
+  --stw-wash: rgba(110, 46, 53, 0.05);
+  --stw-grain: 0.035;
+}
+
+/* Card theme: candlelight — the same identity after dusk, not a new one.
+   Applied by the clock only (plans/card-design-themes.md §3.3); there is no
+   picker. Deleting this block reverts the app to linen with nothing else to
+   clean up. It remaps the shadcn semantic tokens too, because most components
+   paint through `bg-canvas` / `text-foreground` / `bg-primary`. */
+[data-card-theme="candlelight"] {
+  --stw-paper: #efe7dc;
+  --stw-sheet: #f8f2e8;
+  --stw-ink: #241c14;
+  --stw-ink-soft: #6e6253;
+  --stw-muted: #857a6a;
+  --stw-border: #dcd0be;
+  --stw-chrome: #e5dacb;
+  --stw-chrome-border: #cdbfa9;
+  --stw-merlot: #7a2630;
+  --stw-merlot-fg: #fbf5ec;
+  --stw-select-wash: rgba(47, 93, 80, 0.16);
+  --stw-kind-drink-wash: rgba(156, 31, 61, 0.18);
+  --stw-kind-food-wash: rgba(201, 137, 42, 0.24);
+  --stw-wash: rgba(201, 137, 42, 0.09);
+  --stw-grain: 0.05;
+
+  --background: var(--stw-paper);
+  --canvas: var(--stw-paper);
+  --foreground: var(--stw-ink);
+  --card: var(--stw-sheet);
+  --card-foreground: var(--stw-ink);
+  --popover: var(--stw-sheet);
+  --popover-foreground: var(--stw-ink);
+  --primary: var(--stw-merlot);
+  --primary-foreground: var(--stw-merlot-fg);
+  --secondary: #e7ddce;
+  --secondary-foreground: var(--stw-ink);
+  --muted: #e7ddce;
+  --muted-foreground: var(--stw-ink-soft);
+  --accent: #e7ddce;
+  --accent-foreground: var(--stw-ink);
+  --destructive: var(--stw-danger);
+  --border: var(--stw-border);
+  --input: var(--stw-border);
+  --ring: var(--stw-merlot);
+  --ink-soft: var(--stw-ink-soft);
 }
 
 .dark {
@@ -137,5 +204,50 @@
   }
   .pressable:active:not(:disabled) {
     transform: scale(0.98);
+  }
+
+  /* Card watermark — oversized split motif, bottom-right. The mask is not
+     decoration: at a flat opacity the wash crossed the payment rows and read as
+     a rendering artifact, so it has to die before it reaches content.
+     `max-height` is the other half of that: the motif is square, so on a short
+     card an 86%-wide copy is taller than the card and climbs over the content
+     the mask was meant to protect. Capping the height keeps it in the bottom
+     corner whatever the card's proportions turn out to be. */
+  .stw-wash {
+    position: absolute;
+    inset: auto -14% -14% auto;
+    width: 86%;
+    height: auto;
+    max-height: 58%;
+    color: var(--stw-merlot);
+    opacity: 0.038;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to top, #000, transparent);
+    mask-image: linear-gradient(to top, #000, transparent);
+  }
+
+  /* Linen tooth. Opacity is themed and capped at 0.05. */
+  .stw-grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--stw-grain);
+    background-size: 120px 120px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
+  }
+
+  /* Tear line between card sections. Deliberately CSS, not `perforation.svg`:
+     stretching that file deforms the ticket notches into arrowheads, and the end
+     notches only read as cut-outs between two separate sheets anyway. */
+  .stw-perf {
+    position: relative;
+    height: 0.75rem;
+  }
+  .stw-perf::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0.375rem;
+    top: 50%;
+    border-top: 1.5px dashed var(--stw-border);
   }
 }

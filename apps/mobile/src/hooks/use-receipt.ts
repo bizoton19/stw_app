@@ -4,23 +4,29 @@ import { api } from "@/lib/api";
 import { getApiUrl } from "@/lib/config";
 import type { PublicReceipt } from "@/lib/types";
 
-export function useReceipt(id: string) {
+export function useReceipt(id: string, opts?: { inviteToken?: string | null }) {
+  const inviteToken = opts?.inviteToken?.trim() || "";
   const [receipt, setReceipt] = useState<PublicReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState<"live" | "reconnecting" | "offline">("reconnecting");
 
+  const applyReceipt = useCallback((next: PublicReceipt) => {
+    setReceipt(next);
+    setError(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
-      const next = await api<PublicReceipt>(`/api/receipts/${id}`);
-      setReceipt(next);
-      setError(null);
+      const qs = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : "";
+      const next = await api<PublicReceipt>(`/api/receipts/${id}${qs}`);
+      applyReceipt(next);
       return next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "offline");
       setLive("offline");
       return null;
     }
-  }, [id]);
+  }, [applyReceipt, id, inviteToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,5 +69,5 @@ export function useReceipt(id: string) {
     };
   }, [id, refresh]);
 
-  return { receipt, error, live, refresh };
+  return { receipt, error, live, refresh, applyReceipt };
 }

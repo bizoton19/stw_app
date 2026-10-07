@@ -4,8 +4,19 @@ import { DB_SCHEMA, ensureSchema, getPool, withTransaction } from "./db";
 import { dollarsToCents } from "./money";
 import { claimCapacity, normalizePour } from "./pour";
 import { SAMPLE_PARSE } from "./sample-tab";
+import { readGuestId } from "./guest-id";
 import { computeTotals, leftoverAssignments, remainingForItem, remainingMap, latestClaimerForItem } from "./totals";
 import { findVenueDayConflict, isValidatedVenue } from "./venue-day";
+import {
+  applyRsvp,
+  assertNoVenueDayConflict,
+  canParseStatus,
+  hostInvitees,
+  normalizePlanInput,
+  promotePlanningToDraftIfDue,
+  publicInvitees,
+  type PlanCreateInput,
+} from "./outing";
 import type {
   Claim,
   Fee,
@@ -16,6 +27,7 @@ import type {
   ParseReviewChoice,
   PublicReceipt,
   Receipt,
+  ReceiptVenue,
 } from "./types";
 import { parseReceiptImage, type ParseMeta, type ReceiptImage } from "./parse-receipt";
 
@@ -74,7 +86,10 @@ function feesFromParse(parsed: ParseResult): Fee[] {
   }));
 }
 
-function toPublic(receipt: InternalReceipt): PublicReceipt {
+function toPublic(
+  receipt: InternalReceipt,
+  opts?: { host?: boolean; inviteToken?: string | null },
+): PublicReceipt {
   const claims: Claim[] = receipt.claims.map(({ ownerToken, autoLeftover, ...claim }) => {
     void ownerToken;
     void autoLeftover;
@@ -86,6 +101,11 @@ function toPublic(receipt: InternalReceipt): PublicReceipt {
     restaurant: receipt.restaurant,
     venue: receipt.venue ?? null,
     receiptDate: receipt.receiptDate ?? null,
+    nightAt: receipt.nightAt ?? null,
+    expectedPartySize: receipt.expectedPartySize ?? null,
+    invitees: opts?.host
+      ? hostInvitees(receipt.invitees)
+      : publicInvitees(receipt.invitees, opts?.inviteToken),
     items: receipt.items,
     fees: receipt.fees,
     claims,
@@ -234,6 +254,7 @@ export async function createReceipt(input?: { imageName?: string }): Promise<{
     items: [],
     fees: [],
     claims: [],
+    invitees: [],
     createdAt: now(),
     imageName: input?.imageName,
     hostToken: randomUUID(),
@@ -242,10 +263,64 @@ export async function createReceipt(input?: { imageName?: string }): Promise<{
   return { receiptId: id, hostToken: receipt.hostToken };
 }
 
-export async function getPublicReceipt(id: string): Promise<PublicReceipt> {
+export async function createPlanReceipt(input: PlanCreateInput): Promise<{
+  receiptId: string;
+  hostToken: string;
+  receipt: PublicReceipt;
+}> {
+  await ensureSchema();
+  const normalized = normalizePlanInput(input);
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<{ body: Omit<InternalReceipt, "hostToken">; id: string }>(
+      `SELECT id, body FROM ${DB_SCHEMA}.receipts`,
+    );
+    const candidates = rows.map((row) => ({ ...row.body, id: row.id })) as Receipt[];
+    assertNoVenueDayConflict(
+      candidates,
+      "",
+      normalized.venue,
+      normalized.restaurant,
+      normalized.receiptDate,
+    );
+    const id = shortId();
+    const hostToken = randomUUID();
+    const receipt: InternalReceipt = {
+      id,
+      status: "planning",
+      restaurant: normalized.restaurant,
+      venue: normalized.venue,
+      receiptDate: normalized.receiptDate,
+      nightAt: normalized.nightAt,
+      expectedPartySize: normalized.expectedPartySize,
+      invitees: [],
+      items: [],
+      fees: [],
+      claims: [],
+      hostInfo: normalized.hostInfo,
+      createdAt: now(),
+      hostToken,
+    };
+    await upsertReceipt(client, receipt);
+    return { receiptId: id, hostToken, receipt: toPublic(receipt, { host: true }) };
+  });
+}
+
+export async function getPublicReceipt(
+  id: string,
+  opts?: { hostToken?: string | null; inviteToken?: string | null },
+): Promise<PublicReceipt> {
   await ensureSchema();
   await seedDemoIfNeeded();
-  return withTransaction(async (client) => toPublic(await requireReceipt(client, id)));
+  // Read path: no FOR UPDATE — home status refresh + board polls used to serialize on the row.
+  return withTransaction(async (client) => {
+    const receipt = await requireReceipt(client, id);
+    if (promotePlanningToDraftIfDue(receipt)) {
+      await upsertReceipt(client, receipt);
+      emit(receipt, "updated");
+    }
+    const host = Boolean(opts?.hostToken) && opts!.hostToken === receipt.hostToken;
+    return toPublic(receipt, { host, inviteToken: opts?.inviteToken });
+  });
 }
 
 export async function parseReceipt(
@@ -258,7 +333,7 @@ export async function parseReceipt(
   // Auth + draft check under lock, then release before the slow vision call.
   await withTransaction(async (client) => {
     const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
-    if (receipt.status !== "draft") {
+    if (!canParseStatus(receipt.status)) {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
   });
@@ -295,13 +370,13 @@ export async function parseReceipt(
   const persistStarted = Date.now();
   const out = await withTransaction(async (client) => {
     const receipt = assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
-    if (receipt.status !== "draft") {
+    if (!canParseStatus(receipt.status)) {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
-    // Leave venue unset — host confirms from Places suggestions on step 4.
-    receipt.restaurant = result.restaurant;
-    receipt.venue = null;
-    receipt.receiptDate = result.receiptDate ?? null;
+    const keepVenue = receipt.status === "planning" ? receipt.venue : null;
+    receipt.restaurant = keepVenue?.name?.trim() || result.restaurant;
+    receipt.venue = keepVenue;
+    receipt.receiptDate = result.receiptDate ?? receipt.receiptDate ?? null;
     receipt.items = itemsFromParse(result);
     receipt.fees = feesFromParse(result);
     receipt.imageName = image?.name ?? receipt.imageName;
@@ -464,7 +539,7 @@ export async function saveReceipt(
 
 export async function addClaim(
   id: string,
-  input: { itemId: string; personName: string; personContact?: string; units: number },
+  input: { itemId: string; personName: string; personContact?: string; guestId?: string; units: number },
 ) {
   await ensureSchema();
   return withTransaction(async (client) => {
@@ -473,6 +548,7 @@ export async function addClaim(
       throw Object.assign(new Error("not_open"), { code: "conflict" });
     }
     const name = input.personName.trim();
+    const guestId = readGuestId(input.guestId);
     if (!name) {
       throw Object.assign(new Error("name_required"), { code: "invalid" });
     }
@@ -485,7 +561,7 @@ export async function addClaim(
     }
     const remaining = remainingForItem(item, receipt.claims);
     if (input.units > remaining) {
-      const claimedBy = latestClaimerForItem(receipt.claims, item.id, name);
+      const claimedBy = latestClaimerForItem(receipt.claims, item.id, name, guestId);
       throw Object.assign(new Error("not_enough_remaining"), {
         code: "not_enough_remaining",
         remaining,
@@ -504,6 +580,7 @@ export async function addClaim(
     const claim: InternalClaim = {
       id: `cl_${shortId()}`,
       itemId: item.id,
+      guestId,
       personName: name,
       personContact: input.personContact?.trim() || undefined,
       units: input.units,
@@ -517,6 +594,7 @@ export async function addClaim(
       claim: {
         id: claim.id,
         itemId: claim.itemId,
+        guestId: claim.guestId,
         personName: claim.personName,
         personContact: claim.personContact,
         units: claim.units,
@@ -533,6 +611,7 @@ export async function addClaims(
   input: {
     personName: string;
     personContact?: string;
+    guestId?: string;
     claims: { itemId: string; units: number }[];
   },
 ) {
@@ -543,6 +622,7 @@ export async function addClaims(
       throw Object.assign(new Error("not_open"), { code: "conflict" });
     }
     const name = input.personName.trim();
+    const guestId = readGuestId(input.guestId);
     if (!name) {
       throw Object.assign(new Error("name_required"), { code: "invalid" });
     }
@@ -565,7 +645,7 @@ export async function addClaims(
       }
       const remaining = remainingForItem(item, receipt.claims);
       if (units > remaining) {
-        const claimedBy = latestClaimerForItem(receipt.claims, itemId, name);
+        const claimedBy = latestClaimerForItem(receipt.claims, itemId, name, guestId);
         throw Object.assign(new Error("not_enough_remaining"), {
           code: "not_enough_remaining",
           remaining,
@@ -588,6 +668,7 @@ export async function addClaims(
       const claim: InternalClaim = {
         id: `cl_${shortId()}`,
         itemId,
+        guestId,
         personName: name,
         personContact: input.personContact?.trim() || undefined,
         units,
@@ -651,6 +732,45 @@ export async function removeClaim(
     await upsertReceipt(client, receipt);
     emit(receipt, "unclaim");
     return { receipt: toPublic(receipt), removed };
+  });
+}
+
+/** Stamp guestId onto claims this device can prove with owner tokens. Host token is not enough. */
+export async function attachGuestClaims(
+  id: string,
+  input: { guestId: string; tokens?: Record<string, string> | null },
+) {
+  const guestId = readGuestId(input.guestId);
+  if (!guestId) {
+    throw Object.assign(new Error("guest_id_required"), {
+      code: "invalid",
+      message: "guestId is required",
+    });
+  }
+  const tokens = input.tokens ?? {};
+  const ids = Object.keys(tokens);
+  if (ids.length > 500) {
+    throw Object.assign(new Error("too_many_tokens"), { code: "invalid" });
+  }
+  await ensureSchema();
+  return withTransaction(async (client) => {
+    const receipt = await requireReceipt(client, id, { forUpdate: true });
+    let updated = 0;
+    for (const claimId of ids) {
+      const token = tokens[claimId];
+      if (!token) continue;
+      const claim = receipt.claims.find((row) => row.id === claimId);
+      if (!claim || claim.autoLeftover) continue;
+      if (claim.ownerToken !== token) continue;
+      if (claim.guestId === guestId) continue;
+      claim.guestId = guestId;
+      updated += 1;
+    }
+    if (updated > 0) {
+      await upsertReceipt(client, receipt);
+      emit(receipt, "updated");
+    }
+    return { updated };
   });
 }
 
@@ -768,21 +888,53 @@ export async function reopenReceipt(id: string, hostToken: string | null) {
   });
 }
 
+export async function rsvp(
+  id: string,
+  input: {
+    response: "going" | "maybe" | "cant";
+    personName?: string;
+    personContact?: string | null;
+    inviteToken?: string | null;
+    note?: string | null;
+  },
+): Promise<PublicReceipt> {
+  await ensureSchema();
+  return withTransaction(async (client) => {
+    const receipt = await requireReceipt(client, id, { forUpdate: true });
+    if (receipt.status !== "planning" && receipt.status !== "draft" && receipt.status !== "open") {
+      throw Object.assign(new Error("rsvp_closed"), {
+        code: "conflict",
+        message: "This outing is not taking RSVPs.",
+      });
+    }
+    receipt.invitees = applyRsvp(receipt.invitees, input);
+    await upsertReceipt(client, receipt);
+    emit(receipt, "updated");
+    return toPublic(receipt);
+  });
+}
+
 export async function deleteReceipt(id: string, hostToken: string | null): Promise<void> {
   await ensureSchema();
+  // Staging schemas may not have created receipt_images yet; create it before we touch it
+  // inside a transaction (a failed SELECT aborts the whole TX in Postgres).
+  const { ensureReceiptImageTable } = await import("./receipt-image");
+  await ensureReceiptImageTable();
   const { deleteObjectKey } = await import("./object-storage");
   const storageKey = await withTransaction(async (client) => {
-    // Host may delete open or closed tabs so a venue/day slot can be reused after a bad publish.
+    // Host may delete planning / draft / open / closed tabs (frees the venue/day slot).
     assertHostToken(await requireReceipt(client, id, { forUpdate: true }), hostToken);
     let storageKey: string | null = null;
+    await client.query("SAVEPOINT stw_receipt_image");
     try {
       const { rows } = await client.query<{ storage_key: string | null }>(
         `SELECT storage_key FROM ${DB_SCHEMA}.receipt_images WHERE receipt_id = $1`,
         [id],
       );
       storageKey = rows[0]?.storage_key ?? null;
+      await client.query("RELEASE SAVEPOINT stw_receipt_image");
     } catch {
-      /* receipt_images may not exist yet on older schemas */
+      await client.query("ROLLBACK TO SAVEPOINT stw_receipt_image");
     }
     await client.query(`DELETE FROM ${DB_SCHEMA}.receipts WHERE id = $1`, [id]);
     listeners().listeners.delete(id);

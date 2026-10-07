@@ -1,0 +1,47 @@
+---
+description: Railway + Expo staging/prod deploy map, Node 20 pin, and CLI deploy until GitHub triggers work
+alwaysApply: true
+---
+
+# Railway / Expo deployment
+
+## Environments (both use the same Railway project + Postgres)
+
+| Git branch | Railway service | Public URL | Postgres schema | Expo |
+|---|---|---|---|---|
+| `main` | `api` | `https://api.splitthewine.app` | `split_the_wine` (default) | EAS `production` / `preview` |
+| `plan-an-outing` (staging) | `api-dev` | `https://apidev.splitthewine.app` (cert may lag) or `https://api-dev-production-c2d1.up.railway.app` | `DB_SCHEMA=split_the_wine_dev` | EAS `dev` + Expo Go `.env.local` |
+
+**This is not “dev-only.”** Prod and staging share the same deploy rules (Node pin, GitHub access, CLI fallback).
+
+## Node 20 (required)
+
+Next.js 16 needs Node `>=20.9`. Pin is in-repo — do not remove:
+
+- `.nvmrc` → `20`
+- `package.json` → `"engines": { "node": ">=20.9.0" }`
+- `mise.toml` → `[tools] node = "20"` (Railpack reads this)
+
+GitHub-connected builds without these used Node 18 and failed `next build`. Service vars `NODE_VERSION=20` / `NIXPACKS_NODE_VERSION=20` are set on **both** `api` and `api-dev` as backup.
+
+## GitHub auto-deploy status
+
+`serviceConnect` can attach the repo once, but **persistent deployment triggers are empty** for this project. Creating triggers via API fails with: *no one in the project has access to `bizoton19/stw_app`*.
+
+Until Railway ↔ GitHub is reconnected in the dashboard (**Project → Settings → GitHub**, grant access to `stw_app`, then set branch triggers: `main`→`api`, `plan-an-outing`→`api-dev`):
+
+```bash
+# Staging
+railway up -s api-dev -d -m "…"
+
+# Production
+railway up -s api -d -m "…"
+```
+
+Do **not** assume `git push` redeploys either service until triggers show up in Railway.
+
+## After shipping staging or prod API changes
+
+1. Confirm the right service is live (`railway service status -s api-dev` or `-s api`).
+2. Smoke: `POST /api/receipts/plan` on staging should 400 `venue and nightAt required` (route mounted); prod claim demo/open tab still works.
+3. Expo: staging builds use `eas.json` profile `dev`; do not point TestFlight `production` at api-dev.

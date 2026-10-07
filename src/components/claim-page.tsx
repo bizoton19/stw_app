@@ -4,17 +4,22 @@ import { useEffect, useState } from "react";
 import { ClaimBoard } from "@/components/claim-board";
 import { JoinGuest } from "@/components/join-guest";
 import { PhoneShell } from "@/components/phone-shell";
+import { RsvpGuest } from "@/components/rsvp-guest";
 import { useReceipt } from "@/hooks/use-receipt";
 import { ensureDemoHost, getGuest, getHostToken, type GuestIdentity } from "@/lib/session";
 
 export function ClaimPage({
   receiptId,
   hostQuery,
+  inviteToken = "",
 }: {
   receiptId: string;
   hostQuery: boolean;
+  inviteToken?: string;
 }) {
-  const { receipt, error, live, refresh } = useReceipt(receiptId);
+  const { receipt, error, live, refresh, setReceipt } = useReceipt(receiptId, {
+    inviteToken,
+  });
   const [guest, setGuest] = useState<GuestIdentity | null>(null);
   const [isHost, setIsHost] = useState(false);
 
@@ -61,6 +66,26 @@ export function ClaimPage({
         <div className="px-5 py-16 text-center text-[14px] text-muted-foreground">
           Opening the check…
         </div>
+      </PhoneShell>
+    );
+  }
+
+  if (
+    receipt.status === "planning" ||
+    (receipt.status === "draft" &&
+      receipt.nightAt &&
+      (receipt.items?.length ?? 0) === 0)
+  ) {
+    return (
+      <PhoneShell meta="RSVP">
+        <RsvpGuest
+          receipt={receipt}
+          inviteToken={inviteToken}
+          onDone={(next) => {
+            setReceipt(next);
+            void refresh();
+          }}
+        />
       </PhoneShell>
     );
   }

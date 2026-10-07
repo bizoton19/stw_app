@@ -84,6 +84,7 @@
         }
       ],
       "expo-sharing",
+      "@react-native-community/datetimepicker",
       [
         "expo-share-intent",
         {

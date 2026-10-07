@@ -1,17 +1,21 @@
 /**
- * Host claim push — Expo Push API.
- * Tokens registered per receipt with host token; fire-and-forget after claim/unclaim.
+ * Host push — Expo Push API.
+ * Tokens registered per receipt with host token; fire-and-forget after claim/unclaim/RSVP.
  */
 
 import { centsToLabel } from "./money";
 
 export type HostPushLine = { name: string; units: number };
 
+export type HostRsvpResponse = "going" | "maybe" | "cant";
+
 export type HostPushPayload = {
   receiptId: string;
-  kind: "claim" | "unclaim";
+  kind: "claim" | "unclaim" | "rsvp";
   personName: string;
   lines: HostPushLine[];
+  /** Present when kind === "rsvp". */
+  rsvpResponse?: HostRsvpResponse;
   restaurant?: string | null;
   /** ISO date `YYYY-MM-DD` when known. */
   receiptDate?: string | null;
@@ -39,6 +43,20 @@ export function formatHostPushTitle(payload: HostPushPayload): string {
   const place = payload.restaurant?.trim() || "Tonight’s tab";
   const day = formatReceiptDayLabel(payload.receiptDate);
   return day ? `${place} · ${day}` : place;
+}
+
+function rsvpAction(payload: HostPushPayload): string {
+  const who = payload.personName.trim() || "Someone";
+  switch (payload.rsvpResponse) {
+    case "going":
+      return `${who} is Going`;
+    case "maybe":
+      return `${who} said Maybe`;
+    case "cant":
+      return `${who} can’t make it`;
+    default:
+      return `${who} RSVP’d`;
+  }
 }
 
 function claimAction(payload: HostPushPayload): string {
@@ -81,6 +99,11 @@ function boardStatus(payload: HostPushPayload): string | null {
 }
 
 export function formatHostPushBody(payload: HostPushPayload): string {
+  if (payload.kind === "rsvp") {
+    const action = rsvpAction(payload);
+    const place = payload.restaurant?.trim();
+    return place ? `${action} · ${place}` : action;
+  }
   const action = claimAction(payload);
   const status = boardStatus(payload);
   return status ? `${action} · ${status}` : action;
@@ -88,6 +111,7 @@ export function formatHostPushBody(payload: HostPushPayload): string {
 
 /** True when nothing remains to claim — show Close tab action on the push. */
 export function hostPushTabFullyClaimed(payload: HostPushPayload): boolean {
+  if (payload.kind === "rsvp") return false;
   if (typeof payload.unitsLeft === "number" && payload.unitsLeft > 0) return false;
   if (typeof payload.unclaimedCents === "number" && payload.unclaimedCents > 0) return false;
   if (typeof payload.unitsLeft === "number" && payload.unitsLeft <= 0) return true;
@@ -109,6 +133,7 @@ export async function sendExpoPushMessages(
   const title = formatHostPushTitle(payload);
   const body = formatHostPushBody(payload);
   const done = hostPushTabFullyClaimed(payload);
+  const screen = payload.kind === "rsvp" ? "plan" : "settle";
   const messages = unique.map((to) => ({
     to,
     sound: "default" as const,
@@ -118,7 +143,7 @@ export async function sendExpoPushMessages(
     data: {
       receiptId: payload.receiptId,
       kind: payload.kind,
-      screen: "settle",
+      screen,
       tabDone: done,
     },
   }));

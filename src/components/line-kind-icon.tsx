@@ -1,22 +1,26 @@
-import { GlassWater, UtensilsCrossed } from "lucide-react";
+import { Motif, type MotifName } from "@/components/motifs";
 import { classifyLineKind, type LineKind } from "@/lib/line-kind";
-import type { ItemKind } from "@/lib/types";
+import { usesCarafeMotif } from "@/lib/pour";
+import type { ItemKind, ItemPour } from "@/lib/types";
 
 /** Distinct from CTA merlot + bottle-green select — food vs drink must read at a glance. */
-const TINT: Record<LineKind, { bg: string; fg: string }> = {
-  drink: { bg: "rgba(156, 31, 61, 0.16)", fg: "#9C1F3D" },
-  food: { bg: "rgba(201, 137, 42, 0.22)", fg: "#C9892A" },
+const TINT: Record<LineKind, { bg: string; fg: string; motif: MotifName }> = {
+  drink: { bg: "var(--stw-kind-drink-wash)", fg: "var(--stw-kind-drink)", motif: "stem" },
+  food: { bg: "var(--stw-kind-food-wash)", fg: "var(--stw-kind-food)", motif: "check-stub" },
 };
 
 export function LineKindIcon({
   name,
   kind,
+  pour,
   size = 14,
   className,
 }: {
   name: string;
   /** Prefer vision/storage kind; fall back to name heuristic. */
   kind?: ItemKind | null;
+  /** When a drink is split into glasses / carafe, show the shared-pour motif. */
+  pour?: ItemPour | null;
   size?: number;
   className?: string;
 }) {
@@ -24,7 +28,8 @@ export function LineKindIcon({
     kind === "food" || kind === "drink" ? kind : classifyLineKind(name);
   if (!resolved) return null;
   const tint = TINT[resolved];
-  const Icon = resolved === "drink" ? GlassWater : UtensilsCrossed;
+  const motif: MotifName =
+    resolved === "drink" && usesCarafeMotif({ name, pour }) ? "carafe" : tint.motif;
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-[7px] ${className ?? ""}`}
@@ -32,10 +37,13 @@ export function LineKindIcon({
         width: size + 10,
         height: size + 10,
         backgroundColor: tint.bg,
+        color: tint.fg,
       }}
-      aria-label={resolved === "drink" ? "Drink" : "Food"}
+      aria-label={
+        resolved === "food" ? "Food" : motif === "carafe" ? "Shared drink" : "Drink"
+      }
     >
-      <Icon size={size} color={tint.fg} strokeWidth={2.25} aria-hidden />
+      <Motif name={motif} size={size + 2} />
     </span>
   );
 }

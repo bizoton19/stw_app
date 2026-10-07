@@ -31,6 +31,17 @@ const DISMISS_Y = 120;
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 
+// Reanimated shared values are updated in place.
+/* eslint-disable react-hooks/immutability */
+
+type ReceiptImageSheetProps = {
+  visible: boolean;
+  onClose: () => void;
+} & (
+  | { mode?: "receipt"; receiptId: string; uri?: undefined; title?: undefined }
+  | { mode: "place"; uri: string | null; title: string; receiptId?: undefined }
+);
+
 export function ReceiptImageButton({
   receiptId,
   hasImage,
@@ -55,18 +66,15 @@ export function ReceiptImageButton({
 }
 
 /**
- * Bottom sheet for the tab photo — swipe handle / ✕ to close.
- * Pinch or double-tap to zoom; long-press to save/share (no download button).
+ * Full-page paper sheet for one photo. Receipt mode can zoom and save.
+ * Place mode is the same chrome, view only.
  */
-export function ReceiptImageSheet({
-  receiptId,
-  visible,
-  onClose,
-}: {
-  receiptId: string;
-  visible: boolean;
-  onClose: () => void;
-}) {
+export function ReceiptImageSheet(props: ReceiptImageSheetProps) {
+  const { visible, onClose } = props;
+  const placeView = props.mode === "place";
+  const receiptId = placeView ? "" : props.receiptId;
+  const uri = placeView ? (props.uri ?? "") : `${getApiUrl()}/api/receipts/${props.receiptId}/image`;
+  const title = placeView ? props.title.trim() || "Place" : "Tab photo";
   const insets = useSafeAreaInsets();
   const { height: winH, width: winW } = useWindowDimensions();
   const sheetTY = useSharedValue(0);
@@ -77,8 +85,8 @@ export function ReceiptImageSheet({
   const savedTx = useSharedValue(0);
   const savedTy = useSharedValue(0);
   const [sharing, setSharing] = useState(false);
-  const uri = `${getApiUrl()}/api/receipts/${receiptId}/image`;
-  const imageH = Math.min(560, Math.max(300, winH * 0.58));
+  const imageW = Math.max(220, winW - 32);
+  const imageH = Math.max(220, winH - insets.top - insets.bottom - 148);
 
   function resetZoom() {
     scale.value = 1;
@@ -102,7 +110,7 @@ export function ReceiptImageSheet({
   }
 
   async function holdToSave() {
-    if (sharing) return;
+    if (placeView || sharing || !receiptId) return;
     setSharing(true);
     try {
       void hapticImpact("medium");
@@ -123,17 +131,16 @@ export function ReceiptImageSheet({
   const dismissPan = Gesture.Pan()
     .activeOffsetY(8)
     .onUpdate((e) => {
-      // Only dismiss when not zoomed in.
-      if (scale.value > 1.05) return;
+      if (!placeView && scale.value > 1.05) return;
       sheetTY.value = Math.max(0, e.translationY);
     })
     .onEnd((e) => {
-      if (scale.value > 1.05) {
+      if (!placeView && scale.value > 1.05) {
         sheetTY.value = withSpring(0, { damping: 22, stiffness: 280 });
         return;
       }
       if (e.translationY > DISMISS_Y || e.velocityY > 900) {
-        sheetTY.value = withTiming(600, { duration: 180 }, () => {
+        sheetTY.value = withTiming(winH, { duration: 180 }, () => {
           runOnJS(close)();
         });
       } else {
@@ -210,9 +217,55 @@ export function ReceiptImageSheet({
     ],
   }));
 
+  const header = (
+    <>
+      <View style={styles.handle} accessibilityElementsHidden />
+      <View style={styles.head}>
+        <Text style={styles.sheetTitle} numberOfLines={2}>
+          {title}
+        </Text>
+        <Pressable accessibilityLabel="Close" onPress={close} hitSlop={14} style={styles.close}>
+          <X size={22} color={colors.ink} strokeWidth={2.25} />
+        </Pressable>
+      </View>
+    </>
+  );
+
+  const placeImage = uri ? (
+    <View style={[styles.frame, styles.placeFrame, { width: imageW, height: imageH }]}>
+      {/* Decorative. The sheet title names the place. */}
+      {/* eslint-disable-next-line jsx-a11y/alt-text */}
+      <Image
+        source={{ uri }}
+        style={{ width: imageW, height: imageH }}
+        resizeMode="contain"
+        accessible={false}
+      />
+    </View>
+  ) : null;
+
+  const receiptImage = (
+    <GestureDetector gesture={imageGestures}>
+      <Animated.View
+        style={[styles.frame, { height: imageH, width: imageW }]}
+        accessibilityLabel="Tab photo. Pinch to zoom, double-tap to zoom, hold to save."
+      >
+        <Animated.View style={[{ width: imageW, height: imageH }, imageStyle]}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          <Image source={{ uri }} style={{ width: imageW, height: imageH }} resizeMode="contain" />
+        </Animated.View>
+        {sharing ? (
+          <View style={styles.sharingOverlay}>
+            <ActivityIndicator color="#F6F4F1" />
+          </View>
+        ) : null}
+      </Animated.View>
+    </GestureDetector>
+  );
+
   return (
     <Modal
-      visible={visible}
+      visible={visible && (!placeView || Boolean(uri))}
       animationType="slide"
       transparent
       onRequestClose={close}
@@ -224,44 +277,31 @@ export function ReceiptImageSheet({
           style={[
             styles.sheet,
             sheetStyle,
-            { paddingBottom: Math.max(insets.bottom, 16) },
+            {
+              paddingTop: Math.max(insets.top, 12),
+              paddingBottom: Math.max(insets.bottom, 16),
+            },
           ]}
         >
-          <GestureDetector gesture={dismissPan}>
-            <Animated.View>
-              <View style={styles.handle} accessibilityElementsHidden />
-              <View style={styles.head}>
-                <Text style={styles.sheetTitle}>Tab photo</Text>
-                <Pressable
-                  accessibilityLabel="Close"
-                  onPress={close}
-                  hitSlop={14}
-                  style={styles.close}
-                >
-                  <X size={22} color={colors.ink} strokeWidth={2.25} />
-                </Pressable>
-              </View>
-            </Animated.View>
-          </GestureDetector>
-
-          <GestureDetector gesture={imageGestures}>
-            <Animated.View
-              style={[styles.frame, { height: imageH, width: winW - 32 }]}
-              accessibilityLabel="Tab photo. Pinch to zoom, double-tap to zoom, hold to save."
-            >
-              <Animated.View style={[styles.imageWrap, imageStyle]}>
-                <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+          {placeView ? (
+            <GestureDetector gesture={dismissPan}>
+              <Animated.View style={styles.fill}>
+                {header}
+                <View style={styles.stage}>{placeImage}</View>
               </Animated.View>
-              {sharing ? (
-                <View style={styles.sharingOverlay}>
-                  <ActivityIndicator color="#F6F4F1" />
-                </View>
-              ) : null}
-            </Animated.View>
-          </GestureDetector>
-
+            </GestureDetector>
+          ) : (
+            <>
+              <GestureDetector gesture={dismissPan}>
+                <Animated.View>{header}</Animated.View>
+              </GestureDetector>
+              <View style={styles.stage}>{receiptImage}</View>
+            </>
+          )}
           <Text style={styles.hint}>
-            Pinch or double-tap to zoom · Hold to save · Swipe handle to close
+            {placeView
+              ? "Swipe down to close."
+              : "Pinch or double-tap to zoom · Hold to save · Swipe handle to close"}
           </Text>
         </Animated.View>
       </View>
@@ -286,16 +326,13 @@ const styles = StyleSheet.create({
   triggerText: { fontSize: 13, fontWeight: "700", color: colors.merlot },
   backdrop: {
     flex: 1,
-    justifyContent: "flex-end",
     backgroundColor: "rgba(42, 36, 28, 0.55)",
   },
   sheet: {
+    flex: 1,
+    height: "100%",
     backgroundColor: colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    maxHeight: "92%",
     ...Platform.select({
       ios: {
         shadowColor: "#1A1510",
@@ -306,6 +343,12 @@ const styles = StyleSheet.create({
       android: { elevation: 16 },
       default: {},
     }),
+  },
+  fill: { flex: 1 },
+  stage: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   handle: {
     alignSelf: "center",
@@ -319,9 +362,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
     marginBottom: 12,
   },
-  sheetTitle: { fontSize: 17, fontWeight: "800", color: colors.ink, letterSpacing: -0.2 },
+  sheetTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "800",
+    color: colors.ink,
+    letterSpacing: -0.2,
+  },
   close: {
     width: 40,
     height: 40,
@@ -334,13 +384,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: "hidden",
     backgroundColor: "#1a1612",
-    alignSelf: "center",
   },
-  imageWrap: {
-    width: "100%",
-    height: "100%",
+  placeFrame: {
+    borderRadius: 16,
+    backgroundColor: colors.chrome,
   },
-  image: { width: "100%", height: "100%" },
   sharingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",

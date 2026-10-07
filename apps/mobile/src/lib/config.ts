@@ -83,3 +83,26 @@ export function apiUrlHint(): string {
   if (Platform.OS === "android") return "Android emulator default";
   return "This computer only (localhost)";
 }
+
+/**
+ * Home-screen “Server reachable” bar — local Metro and staging/dev builds only.
+ * Production / TestFlight stay clean. Override with EXPO_PUBLIC_SHOW_API_STATUS=1|0.
+ */
+export function showApiStatus(): boolean {
+  const flag = process.env.EXPO_PUBLIC_SHOW_API_STATUS?.trim().toLowerCase();
+  if (flag === "1" || flag === "true" || flag === "yes") return true;
+  if (flag === "0" || flag === "false" || flag === "no") return false;
+
+  if (typeof __DEV__ !== "undefined" && __DEV__) return true;
+
+  const extra = Constants.expoConfig?.extra as
+    | { showApiStatus?: boolean; appVariant?: string }
+    | undefined;
+  if (extra?.showApiStatus === true) return true;
+  if (extra?.appVariant === "dev") return true;
+
+  const envVariant = process.env.EXPO_PUBLIC_APP_VARIANT?.trim();
+  if (envVariant === "dev") return true;
+
+  return false;
+}

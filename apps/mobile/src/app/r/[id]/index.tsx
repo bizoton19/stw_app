@@ -1,18 +1,29 @@
-import { Alert, FlatList, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Users } from "lucide-react-native";
-import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
+import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { HostMessage } from "@/components/host-message";
+import { RsvpConfirmation } from "@/components/rsvp-confirmation";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
 import { hostNoteText } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
+import { postRsvp } from "@/lib/api";
+import { personRowKey, sameGuest } from "@/lib/guest-id";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
 import { goHostDesk } from "@/lib/navigation";
@@ -49,6 +60,16 @@ export default function ClaimScreen() {
     );
   }
 
+  if (flow.receipt.status === "planning" || flow.receipt.status === "draft") {
+    // Draft from a planned outing (has nightAt, no items yet) still shows RSVP.
+    if (
+      flow.receipt.status === "planning" ||
+      (flow.receipt.nightAt && (flow.receipt.items?.length ?? 0) === 0)
+    ) {
+      return <RsvpScreen />;
+    }
+  }
+
   if (!flow.guest) {
     return <JoinScreen />;
   }
@@ -56,6 +77,152 @@ export default function ClaimScreen() {
   return (
     <AppShell meta={meta}>
       <PickBoard />
+    </AppShell>
+  );
+}
+
+function RsvpScreen() {
+  const flow = useClaimFlow();
+  const receipt = flow.receipt!;
+  const already =
+    receipt.invitees?.find(
+      (row) =>
+        (row.response === "going" ||
+          row.response === "maybe" ||
+          row.response === "cant") &&
+        flow.guest?.name &&
+        row.personName.toLowerCase() === flow.guest.name.toLowerCase(),
+    ) ?? null;
+
+  const [name, setName] = useState(() => already?.personName || flow.guest?.name || "");
+  const [contact, setContact] = useState(
+    () => already?.personContact || flow.guest?.contact || "",
+  );
+  const [note, setNote] = useState(() => already?.note || "");
+  const [busy, setBusy] = useState(false);
+  const initialDone =
+    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
+      ? already.response
+      : null;
+  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(initialDone);
+  const [showForm, setShowForm] = useState(!initialDone);
+  const [err, setErr] = useState<string | null>(null);
+
+  const whenLabel = receipt.nightAt
+    ? new Date(receipt.nightAt).toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+
+  const goingCount =
+    receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
+
+  async function submit(response: "going" | "maybe" | "cant") {
+    if (!name.trim()) {
+      setErr("Add your name so the host knows who’s in.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    // Land on the ticket immediately — don't wait on refresh (that was leaving
+    // people on the form with only the button label flipping to "Still going").
+    setDone(response);
+    setShowForm(false);
+    try {
+      await postRsvp(receipt.id, {
+        response,
+        personName: name.trim(),
+        personContact: contact.trim() || null,
+        note: note.trim() || null,
+      });
+      await flow.join({ name: name.trim(), contact: contact.trim() });
+      void flow.refresh();
+      void hapticNotify("success");
+    } catch (e) {
+      setShowForm(true);
+      setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
+      void hapticNotify("error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const place = receipt.restaurant?.trim() || "the outing";
+  if (done && !showForm) {
+    return (
+      <AppShell meta="RSVP">
+        <RsvpConfirmation
+          receipt={receipt}
+          response={done}
+          busy={busy}
+          onChangeRsvp={() => setShowForm(true)}
+        />
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell meta="RSVP">
+      <InterviewChrome
+        step={1}
+        total={2}
+        hideProgress
+        kicker={whenLabel || "Upcoming"}
+        motif="coupe-pair"
+        title={place}
+        keyboard
+        footer={
+          <View style={styles.rsvpActions}>
+            <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
+              Going
+            </PrimaryButton>
+            <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
+              Maybe
+            </QuietButton>
+            <QuietButton disabled={busy} onPress={() => void submit("cant")}>
+              Can’t
+            </QuietButton>
+          </View>
+        }
+      >
+        <HostMessage note={hostNoteText(receipt.hostInfo)} />
+        <Text style={styles.lead}>
+          RSVP for this outing. Same link for everyone — you can change your answer later.
+        </Text>
+        {goingCount > 0 ? (
+          <Text style={styles.rsvpMeta}>{goingCount} going so far</Text>
+        ) : null}
+        {err ? <Text style={styles.err}>{err}</Text> : null}
+        <Field
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Alex"
+          autoComplete="name"
+        />
+        <Field
+          label="Contact"
+          hint="(optional)"
+          value={contact}
+          onChangeText={setContact}
+          placeholder="phone, Venmo, or email"
+          autoComplete="tel"
+          keyboardType="default"
+        />
+        <Field
+          label="Note"
+          hint="(optional)"
+          value={note}
+          onChangeText={setNote}
+          placeholder="Bringing a +1, running late…"
+          multiline
+          style={{ minHeight: 72, height: undefined, paddingVertical: 12, textAlignVertical: "top" }}
+        />
+      </InterviewChrome>
     </AppShell>
   );
 }
@@ -73,10 +240,9 @@ function JoinScreen() {
         total={3}
         hideProgress={flow.isHost}
         kicker={restaurant}
+        motif="label-band"
         title={
-          flow.isHost
-            ? "You're hosting — claim under what name?"
-            : `Here is the tab for ${restaurant}`
+          flow.isHost ? "You're hosting — claim under what name?" : "Claim what you ordered"
         }
         keyboard
         footer={
@@ -92,7 +258,7 @@ function JoinScreen() {
         <Text style={styles.lead}>
           {flow.isHost
             ? "Pick what you ordered too. Leftovers can still land on you when you close claiming."
-            : "Your host has added you to the tab. You can claim items that you consumed by starting with adding your name and contact."}
+            : "Just a name — no app, no account."}
         </Text>
         <ReceiptImageButton receiptId={flow.receipt!.id} hasImage={flow.receipt?.hasImage} />
         <Field label="Name" value={name} onChangeText={setName} placeholder="Alex" autoComplete="name" />
@@ -118,6 +284,10 @@ function PickBoard() {
   const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
   const closed = receipt.status === "finalized";
   const totals = useMemo(() => computeTotals(receipt), [receipt]);
+  const guestShare = flow.guest
+    ? totals.people.find((person) => person.personName === flow.guest?.name)
+    : undefined;
+  const shareSoFarCents = guestShare ? guestShare.totalCents : null;
   const totalSteps = 3;
   const pickStep = 2;
   const activeQueued = flow.queued.filter((id) => (receipt.remaining[id] ?? 0) > 0);
@@ -180,13 +350,14 @@ function PickBoard() {
         total={totalSteps}
         hideProgress={flow.isHost}
         kicker={receipt.restaurant || "The check"}
+        motif="label-band"
         title="Claiming is closed"
         onBack={flow.isHost ? goHostDesk : undefined}
         supportTip={flow.isHost}
         footer={
           <View>
             <PrimaryButton onPress={goSettle}>
-              {flow.isHost ? "Live board" : "Settle Payment"}
+              {flow.isHost ? "Live board" : "Pay the host"}
             </PrimaryButton>
             {flow.isHost ? (
               hostTabBar
@@ -194,6 +365,7 @@ function PickBoard() {
           </View>
         }
       >
+        <ShareSoFar cents={shareSoFarCents} />
         <HostMessage note={note} />
         <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
@@ -231,9 +403,9 @@ function PickBoard() {
       {remainingItems.length === 0
         ? flow.isHost
           ? "Live board"
-          : "Settle Payment"
+          : "Pay the host"
         : activeQueued.length === 0
-          ? "Pick what you had"
+          ? "Pick what you ordered"
           : flow.needsQty
             ? activeQueued.length === 1
               ? "Claim 1 item"
@@ -259,7 +431,8 @@ function PickBoard() {
       total={totalSteps}
       hideProgress={flow.isHost}
       kicker={receipt.restaurant || "The check"}
-      title="What did you have?"
+      motif="label-band"
+      title="Claim what you ordered"
       onBack={flow.isHost ? goHostDesk : undefined}
       footer={footer}
       scroll={false}
@@ -283,6 +456,7 @@ function PickBoard() {
                 {flow.guest.contact ? ` · ${flow.guest.contact}` : ""}
               </Text>
             ) : null}
+            <ShareSoFar cents={shareSoFarCents} />
             <HostMessage note={note} />
             <ReceiptImageButton receiptId={receipt.id} hasImage={receipt.hasImage} />
             {totals.unclaimedItemCents > 0 ? (
@@ -330,6 +504,15 @@ function PickBoard() {
   );
 }
 
+function ShareSoFar({ cents }: { cents: number | null }) {
+  if (cents == null) return null;
+  return (
+    <Text style={styles.shareSoFar}>
+      Your share so far · {centsToLabel(cents)} (incl. tax & tip)
+    </Text>
+  );
+}
+
 function History() {
   const flow = useClaimFlow();
   const receipt = flow.receipt!;
@@ -338,22 +521,31 @@ function History() {
   const claimants = useMemo(() => {
     const map = new Map<
       string,
-      { personName: string; personContact?: string; claims: Claim[] }
+      { guestId?: string; personName: string; personContact?: string; seenAt: string; claims: Claim[] }
     >();
     for (const claim of receipt.claims) {
-      const key = `${claim.personName}\0${claim.personContact ?? ""}`;
+      const key = personRowKey(claim);
       let row = map.get(key);
       if (!row) {
         row = {
+          guestId: claim.guestId,
           personName: claim.personName,
           personContact: claim.personContact,
+          seenAt: claim.createdAt,
           claims: [],
         };
         map.set(key, row);
+      } else if (claim.createdAt >= row.seenAt) {
+        row.seenAt = claim.createdAt;
+        row.personName = claim.personName;
+        if (claim.personContact) row.personContact = claim.personContact;
+        if (claim.guestId) row.guestId = claim.guestId;
       }
       row.claims.push(claim);
     }
-    return [...map.values()].sort((a, b) => a.personName.localeCompare(b.personName));
+    return [...map.values()].sort(
+      (a, b) => a.personName.localeCompare(b.personName) || (a.guestId ?? "").localeCompare(b.guestId ?? ""),
+    );
   }, [receipt.claims]);
 
   if (claimants.length === 0) return null;
@@ -374,14 +566,15 @@ function History() {
         style={styles.claimScroller}
       >
         {claimants.map((person) => {
-          const isYou = flow.guest?.name === person.personName;
+          const isYou = sameGuest(person, flow.guest);
           return (
-            <View
-              key={`${person.personName}\0${person.personContact ?? ""}`}
-              style={styles.claimCard}
-            >
+            <View key={personRowKey(person)} style={styles.claimCard}>
               <View style={styles.claimCardHead}>
-                <ClaimerAvatar name={person.personName} size={32} />
+                <ClaimerAvatar
+                  name={person.personName}
+                  colorKey={person.guestId || person.personName}
+                  size={32}
+                />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.claimCardName} numberOfLines={1}>
                     {person.personName}
@@ -435,6 +628,14 @@ const styles = StyleSheet.create({
   muted: { fontSize: 13, color: colors.muted, marginTop: 2 },
   lead: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 16 },
   as: { fontSize: 15, lineHeight: 22, color: colors.muted, marginBottom: 12 },
+  shareSoFar: {
+    marginBottom: 12,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "500",
+    color: colors.inkSoft,
+    fontVariant: ["tabular-nums"],
+  },
   remainBanner: {
     marginBottom: 12,
     fontSize: 14,
@@ -481,4 +682,13 @@ const styles = StyleSheet.create({
   },
   unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
   unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
+  rsvpActions: { gap: 4 },
+  rsvpThanks: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.inkSoft,
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  rsvpMeta: { fontSize: 13, color: colors.muted, marginBottom: 12 },
 });

@@ -13,10 +13,12 @@ import {
   getClaimToken,
 } from "@/lib/session";
 import { api, type ApiError } from "@/lib/api";
-import type { GuestIdentity, PublicReceipt } from "@/lib/types";
+import { bindOwnedClaims } from "@/lib/bind-guest";
+import type { GuestDraft, GuestIdentity, PublicReceipt } from "@/lib/types";
 
 type ClaimFlow = {
   id: string;
+  inviteToken: string;
   receipt: PublicReceipt | null;
   error: string | null;
   live: "live" | "reconnecting" | "offline";
@@ -30,7 +32,7 @@ type ClaimFlow = {
   /** True when any selected line still has >1 unit left (qty screen needed). */
   needsQty: boolean;
   setMessage: (v: string | null) => void;
-  join: (guest: GuestIdentity) => Promise<void>;
+  join: (guest: GuestDraft) => Promise<void>;
   toggle: (itemId: string) => void;
   setUnit: (itemId: string, qty: number) => void;
   claimQueued: () => Promise<boolean>;
@@ -43,10 +45,11 @@ type ClaimFlow = {
 const Ctx = createContext<ClaimFlow | null>(null);
 
 export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
-  const params = useLocalSearchParams<{ id: string; host?: string }>();
+  const params = useLocalSearchParams<{ id: string; host?: string; invite?: string }>();
   const id = String(params.id ?? "");
   const hostQuery = params.host === "1" || params.host === "true";
-  const { receipt, error, live, refresh } = useReceipt(id);
+  const inviteToken = typeof params.invite === "string" ? params.invite : "";
+  const { receipt, error, live, refresh, applyReceipt } = useReceipt(id, { inviteToken });
   const [guest, setGuest] = useState<GuestIdentity | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [queued, setQueued] = useState<string[]>([]);
@@ -94,12 +97,27 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
   );
 
   const join = useCallback(
-    async (next: GuestIdentity) => {
-      await saveGuest(id, next);
-      setGuest(next);
+    async (next: GuestDraft) => {
+      const saved = await saveGuest(id, next);
+      setGuest(saved);
     },
     [id],
   );
+
+  useEffect(() => {
+    if (!receipt || !guest?.guestId) return;
+    let cancelled = false;
+    void bindOwnedClaims(receipt.id, guest.guestId, receipt.claims)
+      .then((changed) => {
+        if (changed && !cancelled) void refresh();
+      })
+      .catch(() => {
+        /* next visit retries */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [guest?.guestId, receipt, refresh]);
 
   const toggle = useCallback(
     (itemId: string) => {
@@ -154,6 +172,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           personName: guest.name,
           personContact: guest.contact || undefined,
+          guestId: guest.guestId,
           claims: queuedItems.map((item) => ({
             itemId: item.id,
             units: Math.min(Math.max(1, units[item.id] ?? 1), receipt.remaining[item.id] ?? 0),
@@ -237,10 +256,14 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     const token = getHostToken(id);
     setBusy(true);
     try {
-      await api(`/api/receipts/${id}/finalize`, { method: "POST", hostToken: token });
+      const result = await api<{ receipt: PublicReceipt }>(`/api/receipts/${id}/finalize`, {
+        method: "POST",
+        hostToken: token,
+      });
       const { patchHostedReceipt } = await import("@/lib/host-tabs");
       await patchHostedReceipt(id, { status: "finalized" });
-      await refresh();
+      if (result.receipt) applyReceipt(result.receipt);
+      else await refresh();
       return true;
     } catch {
       setMessage("Only the host can close claiming.");
@@ -248,16 +271,20 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, [id, refresh]);
+  }, [applyReceipt, id, refresh]);
 
   const reopen = useCallback(async () => {
     const token = getHostToken(id);
     setBusy(true);
     try {
-      await api(`/api/receipts/${id}/reopen`, { method: "POST", hostToken: token });
+      const result = await api<{ receipt: PublicReceipt }>(`/api/receipts/${id}/reopen`, {
+        method: "POST",
+        hostToken: token,
+      });
       const { patchHostedReceipt } = await import("@/lib/host-tabs");
       await patchHostedReceipt(id, { status: "open" });
-      await refresh();
+      if (result.receipt) applyReceipt(result.receipt);
+      else await refresh();
       return true;
     } catch {
       setMessage("Only the host can reopen claiming.");
@@ -265,7 +292,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, [id, refresh]);
+  }, [applyReceipt, id, refresh]);
 
   const deleteClosed = useCallback(async () => {
     const token = getHostToken(id);
@@ -293,6 +320,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       id,
+      inviteToken,
       receipt,
       error,
       live,
@@ -323,6 +351,7 @@ export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
       error,
       guest,
       id,
+      inviteToken,
       isHost,
       join,
       live,

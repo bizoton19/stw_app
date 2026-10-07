@@ -10,10 +10,11 @@ import {
 import type { ReactNode, RefObject } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
+import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
+import { Motif, type MotifName } from "@/components/motifs";
 import { colors, type } from "@/lib/theme";
 import { HostSupportTip } from "./host-support-tip";
 import { PressScale } from "./press-scale";
-import { WineMark } from "./wine-mark";
 
 /** Product name stays English — brands aren't translated. */
 const BRAND = "Split the Wine";
@@ -29,7 +30,7 @@ export function AppShell({
     <View style={styles.root}>
       <SafeAreaView edges={["top"]} style={styles.headerSafe}>
         <View style={styles.header}>
-          <WineMark size={26} />
+          <Motif name="split-bottle" size={22} color={colors.merlot} />
           <Text style={styles.brand} allowFontScaling>
             {BRAND}
           </Text>
@@ -52,12 +53,13 @@ export function InterviewChrome({
   step,
   total,
   kicker,
+  motif,
   title,
   onBack,
   onHome,
   children,
   footer,
-  keyboard = false,
+  keyboard = true,
   dense = false,
   /** Short screens: grow content area so body can use vertical space. */
   sparse = false,
@@ -76,12 +78,16 @@ export function InterviewChrome({
   step: number;
   total: number;
   kicker?: string;
+  /** Atmosphere beside the kicker. Carries no meaning the kicker doesn't. */
+  motif?: MotifName;
   title: string;
   onBack?: () => void;
   /** Jump to host desk without stacking Back through every step. */
   onHome?: () => void;
   children: ReactNode;
-  footer: ReactNode;
+  /** Omit to leave the step unscrolled by a pinned bar (plan-outing place/date). */
+  footer?: ReactNode;
+  /** Keyboard avoiding — default on; pass false only if a screen must opt out. */
   keyboard?: boolean;
   dense?: boolean;
   sparse?: boolean;
@@ -90,14 +96,30 @@ export function InterviewChrome({
   hideProgress?: boolean;
   scrollRef?: RefObject<ScrollView | null>;
 }) {
+  const keyboardOpen = useKeyboardVisible();
   const progress = (step / total) * 100;
+  const kickerStyle = [
+    styles.kicker,
+    dense && styles.kickerDense,
+    sparse && styles.kickerSparse,
+  ];
   const heading = (
     <>
-      {kicker ? (
-        <Text
-          allowFontScaling
-          style={[styles.kicker, dense && styles.kickerDense, sparse && styles.kickerSparse]}
+      {kicker && motif ? (
+        <View
+          style={[
+            styles.kickerRow,
+            dense && styles.kickerRowDense,
+            sparse && styles.kickerRowSparse,
+          ]}
         >
+          <Motif name={motif} size={15} color={colors.merlot} opacity={0.8} />
+          <Text allowFontScaling style={[kickerStyle, styles.kickerInRow]}>
+            {kicker}
+          </Text>
+        </View>
+      ) : kicker ? (
+        <Text allowFontScaling style={kickerStyle}>
           {kicker}
         </Text>
       ) : null}
@@ -118,6 +140,7 @@ export function InterviewChrome({
         styles.scrollContent,
         dense && styles.scrollContentDense,
         sparse && styles.scrollContentSparse,
+        keyboardOpen && styles.scrollContentKeyboard,
       ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
@@ -198,13 +221,19 @@ export function InterviewChrome({
         )}
       </View>
       {body}
-      <SafeAreaView edges={["bottom"]} style={styles.footer}>
-        {footer}
-        {supportTip ? <HostSupportTip /> : null}
-      </SafeAreaView>
+      {footer != null || supportTip ? (
+        <SafeAreaView
+          edges={keyboardOpen ? [] : ["bottom"]}
+          style={[styles.footer, keyboardOpen && styles.footerKeyboard]}
+        >
+          {footer}
+          {supportTip && !keyboardOpen ? <HostSupportTip /> : null}
+        </SafeAreaView>
+      ) : null}
     </>
   );
 
+  // Default on for all interview screens; pass keyboard={false} to opt out.
   if (!keyboard) {
     return <View style={styles.chrome}>{inner}</View>;
   }
@@ -212,7 +241,10 @@ export function InterviewChrome({
   return (
     <KeyboardAvoidingView
       style={styles.chrome}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      // iOS: pad so sticky CTAs sit above the keyboard.
+      // Android: app.json uses softwareKeyboardLayoutMode "resize" — skip
+      // behavior="height" so we don't double-shrink and fight the bottom nav.
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 56 : 0}
     >
       {inner}
@@ -316,9 +348,15 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   scrollContentDense: { paddingTop: 10, paddingBottom: 8 },
   scrollContentSparse: { flexGrow: 1, paddingTop: 28, paddingBottom: 32 },
+  scrollContentKeyboard: { paddingBottom: 24 },
   kicker: { fontSize: type.kicker, fontWeight: "600", color: colors.inkSoft, marginBottom: 4 },
   kickerDense: { marginBottom: 2, fontSize: 12 },
   kickerSparse: { fontSize: 14, marginBottom: 8 },
+  /** Spacing moves to the row so the motif and kicker share one baseline. */
+  kickerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  kickerRowDense: { marginBottom: 2 },
+  kickerRowSparse: { marginBottom: 8 },
+  kickerInRow: { marginBottom: 0 },
   title: {
     fontSize: type.title,
     fontWeight: "700",
@@ -345,6 +383,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 4,
+  },
+  footerKeyboard: {
+    // Keyboard already covers the home indicator — drop extra bottom chrome.
+    paddingBottom: 8,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   footerHint: {
     textAlign: "center",
