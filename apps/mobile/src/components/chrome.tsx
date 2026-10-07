@@ -6,9 +6,11 @@ import {
   StyleSheet,
   Text,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import type { ReactNode, RefObject } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
 import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
 import { Motif, type MotifName } from "@/components/motifs";
@@ -18,6 +20,16 @@ import { PressScale } from "./press-scale";
 
 /** Product name stays English — brands aren't translated. */
 const BRAND = "Split the Wine";
+
+/** Brand bar under the status-bar inset. Interview chrome starts below it. */
+const APP_HEADER_HEIGHT = 48;
+
+/**
+ * Sticky footer padding while the keyboard is open. Host items adds this
+ * to the footer slot height when scrolling a row clear of the bar.
+ */
+export const FOOTER_PADDING_TOP = 12;
+export const FOOTER_PADDING_KEYBOARD_BOTTOM = 8;
 
 export function AppShell({
   children,
@@ -74,6 +86,8 @@ export function InterviewChrome({
   hideProgress = false,
   /** Optional ref to the body ScrollView (scroll-to-error, etc.). */
   scrollRef,
+  /** Track offset so a screen can scroll a focused field clear of the footer. */
+  onScroll,
 }: {
   step: number;
   total: number;
@@ -95,8 +109,10 @@ export function InterviewChrome({
   supportTip?: boolean;
   hideProgress?: boolean;
   scrollRef?: RefObject<ScrollView | null>;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }) {
   const keyboardOpen = useKeyboardVisible();
+  const insets = useSafeAreaInsets();
   const progress = (step / total) * 100;
   const kickerStyle = [
     styles.kicker,
@@ -144,6 +160,8 @@ export function InterviewChrome({
       ]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+      onScroll={onScroll}
+      scrollEventThrottle={onScroll ? 16 : undefined}
       contentInsetAdjustmentBehavior="automatic"
       bounces={Platform.OS === "ios"}
       overScrollMode={Platform.OS === "android" ? "auto" : undefined}
@@ -238,6 +256,13 @@ export function InterviewChrome({
     return <View style={styles.chrome}>{inner}</View>;
   }
 
+  // onLayout y is parent-relative (0 under the brand bar). RN treats
+  // keyboardVerticalOffset as the distance from the top of the screen to this
+  // view, so the status-bar inset + brand bar have to be included or the
+  // sticky footer stays partly under the keyboard.
+  const keyboardVerticalOffset =
+    Platform.OS === "ios" ? insets.top + APP_HEADER_HEIGHT : 0;
+
   return (
     <KeyboardAvoidingView
       style={styles.chrome}
@@ -245,7 +270,7 @@ export function InterviewChrome({
       // Android: app.json uses softwareKeyboardLayoutMode "resize" — skip
       // behavior="height" so we don't double-shrink and fight the bottom nav.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 56 : 0}
+      keyboardVerticalOffset={keyboardVerticalOffset}
     >
       {inner}
     </KeyboardAvoidingView>
@@ -318,7 +343,7 @@ const styles = StyleSheet.create({
     }),
   },
   header: {
-    height: 48,
+    height: APP_HEADER_HEIGHT,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -343,7 +368,7 @@ const styles = StyleSheet.create({
   stepLabelSpacer: { flex: 1 },
   track: { height: 2, borderRadius: 99, backgroundColor: colors.border, overflow: "hidden" },
   fill: { height: 2, backgroundColor: colors.merlot, borderRadius: 99 },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, minHeight: 0 },
   scrollFill: { flex: 1, minHeight: 0 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   scrollContentDense: { paddingTop: 10, paddingBottom: 8 },
@@ -375,7 +400,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.chromeBorder,
     backgroundColor: colors.chrome,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: FOOTER_PADDING_TOP,
     gap: 6,
     // Match host desk / live-board bottom nav contrast.
     shadowColor: "#2A241C",
@@ -386,7 +411,7 @@ const styles = StyleSheet.create({
   },
   footerKeyboard: {
     // Keyboard already covers the home indicator — drop extra bottom chrome.
-    paddingBottom: 8,
+    paddingBottom: FOOTER_PADDING_KEYBOARD_BOTTOM,
     shadowOpacity: 0,
     elevation: 0,
   },
