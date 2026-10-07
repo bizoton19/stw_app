@@ -23,8 +23,10 @@ import {
 } from "@/components/chrome";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
+import { QtyStepper } from "@/components/qty-stepper";
 import { useHostDraft, type DraftItem } from "@/context/host-draft";
 import { t } from "@/lib/i18n";
+import { HOST_LINE_QTY_MAX, HOST_LINE_QTY_MIN, rescaleLineTotal } from "@/lib/host-line-qty";
 import { centsToLabel, unitPriceCents } from "@/lib/money";
 import { pourCandidates } from "@/lib/pour";
 import { revealScrollDelta } from "@/lib/reveal-in-scroll";
@@ -196,23 +198,15 @@ function ItemRow({
       </View>
       <View style={styles.qtyCol}>
         <Text style={styles.colLabel}>{t("items.qty")}</Text>
-        <TextInput
-          value={String(item.qty)}
-          keyboardType="number-pad"
-          style={styles.numInput}
-          accessibilityLabel={t("items.qty")}
-          onChangeText={(raw) => {
-            const qty = Math.max(1, Math.floor(Number(raw) || 0));
-            const prevQty = Math.max(1, item.qty);
-            const unitCents = Math.round(item.totalCents / prevQty);
-            const totalCents = unitCents * qty;
-            onChange({
-              ...item,
-              qty,
-              totalCents,
-              totalInput: (totalCents / 100).toFixed(2),
-            });
-          }}
+        <QtyStepper
+          variant="field"
+          value={item.qty}
+          min={HOST_LINE_QTY_MIN}
+          max={HOST_LINE_QTY_MAX}
+          labelledBy={t("items.qty")}
+          onChange={(qty) =>
+            onChange({ ...item, ...rescaleLineTotal(item.totalCents, item.qty, qty) })
+          }
         />
       </View>
       <View style={styles.amtCol}>
@@ -557,7 +551,7 @@ const styles = StyleSheet.create({
   },
   rowRemoved: { opacity: 0.72 },
   nameCol: { flex: 1, minWidth: 0 },
-  qtyCol: { width: 44 },
+  qtyCol: { width: 76 },
   amtCol: { width: 64 },
   colLabel: {
     fontSize: 10,

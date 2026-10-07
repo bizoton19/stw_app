@@ -9,33 +9,58 @@ export function QtyStepper({
   max,
   onChange,
   labelledBy,
+  variant = "plain",
 }: {
   value: number;
   min?: number;
   max: number;
   onChange: (next: number) => void;
   labelledBy?: string;
+  /**
+   * `plain` is the claim stepper (44pt hits, no field chrome).
+   * `field` sits in a dense host line beside name and amount inputs.
+   */
+  variant?: "plain" | "field";
 }) {
+  const field = variant === "field";
+  const icon = field ? 14 : 16;
+  const glyph = field ? colors.inkSoft : colors.ink;
+
+  function step(delta: number) {
+    if (delta < 0) {
+      if (value <= min) return;
+      onChange(value - 1);
+      return;
+    }
+    if (value >= max) return;
+    onChange(value + 1);
+  }
+
   return (
-    <View style={styles.row} accessibilityLabel={labelledBy}>
+    <View
+      style={field ? styles.field : styles.row}
+      accessibilityLabel={labelledBy}
+    >
       <PressScale
         accessibilityLabel="Decrease quantity"
         disabled={value <= min}
         haptic="select"
-        onPress={() => onChange(Math.max(min, value - 1))}
-        style={styles.hit}
+        onPress={() => step(-1)}
+        hitSlop={field ? { top: 6, bottom: 6, left: 6, right: 2 } : undefined}
+        style={field ? styles.fieldHit : styles.hit}
       >
-        <Minus size={16} color={colors.ink} />
+        <Minus size={icon} color={glyph} />
       </PressScale>
-      <Text style={styles.value}>{value}</Text>
+      <Text style={field ? styles.fieldValue : styles.value}>{value}</Text>
       <PressScale
         accessibilityLabel="Increase quantity"
         disabled={value >= max}
         haptic="select"
-        onPress={() => onChange(Math.min(max, value + 1))}
-        style={styles.hit}
+        onPress={() => step(1)}
+        hitSlop={field ? { top: 6, bottom: 6, left: 2, right: 6 } : undefined}
+        style={field ? styles.fieldHit : styles.hit}
       >
-        <Plus size={16} color={colors.ink} />
+        <Plus size={icon} color={glyph} />
       </PressScale>
     </View>
   );
@@ -46,6 +71,26 @@ const styles = StyleSheet.create({
   hit: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   value: {
     minWidth: 32,
+    textAlign: "center",
+    fontSize: 15,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    color: colors.ink,
+  },
+  /** Same box as the host line inputs: 36pt, hairline, radius 8, paper. */
+  field: {
+    height: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.paper,
+    paddingHorizontal: 2,
+  },
+  fieldHit: { width: 26, height: 36, alignItems: "center", justifyContent: "center" },
+  fieldValue: {
+    minWidth: 18,
     textAlign: "center",
     fontSize: 15,
     fontWeight: "600",
