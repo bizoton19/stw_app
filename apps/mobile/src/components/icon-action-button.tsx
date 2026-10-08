@@ -18,16 +18,17 @@ export function IconActionButton({
   accessibilityLabel?: string;
 }) {
   const Icon = icon === "copy" ? Copy : icon === "qr" ? QrCode : Share2;
+  const off = Boolean(disabled) || !onPress;
   return (
     <PressScale
       onPress={onPress}
-      disabled={disabled || !onPress}
+      disabled={off}
       haptic="light"
-      style={styles.btn}
+      style={[styles.btn, off && styles.btnOff]}
       accessibilityLabel={accessibilityLabel ?? label}
     >
-      <Icon size={18} color={colors.ink} strokeWidth={2.25} />
-      <Text style={styles.label} numberOfLines={1}>
+      <Icon size={18} color={off ? colors.inkFirm : colors.ink} strokeWidth={2.25} />
+      <Text style={[styles.label, off && styles.labelOff]} numberOfLines={1}>
         {label}
       </Text>
     </PressScale>
@@ -47,5 +48,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFcf8",
     paddingHorizontal: 10,
   },
+  btnOff: {
+    backgroundColor: "transparent",
+    borderColor: colors.chromeBorder,
+  },
   label: { fontSize: 15, fontWeight: "600", color: colors.ink },
+  labelOff: { color: colors.inkFirm },
 });

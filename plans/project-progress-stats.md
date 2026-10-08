@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-06 ~12:35 −04:00 |
-| **Elapsed** | **~16 days** |
-| **Commits on this branch** | **286** (latest: settle pay visuals) |
+| **This snapshot** | 2026-10-08 ~07:40 −04:00 |
+| **Elapsed** | **~18 days** |
+| **Commits on this branch** | **299** (latest: contrast fixes for disabled buttons, place cards, and Closed) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -101,6 +101,11 @@ git log --reverse -1 --format='%aI %s'
 
 ### Day 16 — Tue 2026-10-06
 - RSVP confirmation is a ticket moment: map hero, venue name, date above time, **Get directions**, and optional **Contact host** (iMessage / text / WhatsApp / email / Signal) set when the host plans the outing.
+
+### Day 19 — Thu 2026-10-08
+- Disabled buttons stay readable: a flat chrome fill and a darker label, instead of a faded button. A busy spinner still sits on the merlot button.
+- Nearby place cards put a warm ink gradient behind the name so it stays readable on a light photo. A place with no photo shows the stem on chrome.
+- Closed tabs use a darker label on the host desk. A draft on Tonight's tab shows the merlot Draft chip, without the green Open dot.
 
 ## How to extend this file
 

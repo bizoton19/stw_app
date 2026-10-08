@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { DoorOpen, Home, LayoutList, RotateCcw, Trash2, Utensils } from "lucide-react-native";
 import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
+import { controlShowsSpinner } from "@/lib/pending-control";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
@@ -27,6 +28,7 @@ export function HostLiveTabBar({
   mode = "live",
   closed,
   busy,
+  pendingAction,
   onClose,
   onReopen,
   onDelete,
@@ -40,6 +42,8 @@ export function HostLiveTabBar({
   mode?: "live" | "claims";
   closed: boolean;
   busy?: boolean;
+  /** Which of close / reopen / delete was tapped. Only that tab spins. */
+  pendingAction?: "close" | "reopen" | "delete" | null;
   onClose: () => void;
   onReopen: () => void;
   /** Shown next to Reopen when the tab is closed. */
@@ -113,25 +117,42 @@ export function HostLiveTabBar({
       style={[styles.bar, stacked && styles.barStacked]}
       accessibilityRole="tablist"
     >
-      {tabs.map((tab) => (
-        <PressScale
-          key={tab.key}
-          onPress={tab.onPress}
-          disabled={tab.disabled}
-          haptic="light"
-          style={styles.tab}
-          accessibilityLabel={tab.accessibilityLabel ?? tab.label}
-          accessibilityRole="button"
-        >
-          <TabIcon name={tab.icon} danger={tab.danger} />
-          <Text
-            style={[styles.label, tab.danger && styles.labelDanger]}
-            numberOfLines={1}
+      {tabs.map((tab) => {
+        const spinning = Boolean(tab.disabled) && controlShowsSpinner(pendingAction, tab.key);
+        const quiet = Boolean(tab.disabled) && !spinning;
+        return (
+          <PressScale
+            key={tab.key}
+            onPress={tab.onPress}
+            disabled={tab.disabled}
+            busy={spinning}
+            haptic="light"
+            style={styles.tab}
+            accessibilityLabel={tab.accessibilityLabel ?? tab.label}
+            accessibilityRole="button"
           >
-            {tab.label}
-          </Text>
-        </PressScale>
-      ))}
+            <TabIcon name={tab.icon} danger={tab.danger} muted={quiet} />
+            {spinning ? (
+              <ActivityIndicator
+                accessible={false}
+                color={tab.danger ? colors.merlot : colors.ink}
+                size="small"
+              />
+            ) : (
+              <Text
+                style={[
+                  styles.label,
+                  tab.danger && styles.labelDanger,
+                  quiet && styles.labelMuted,
+                ]}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </Text>
+            )}
+          </PressScale>
+        );
+      })}
     </View>
   );
 }
@@ -139,11 +160,13 @@ export function HostLiveTabBar({
 function TabIcon({
   name,
   danger,
+  muted,
 }: {
   name: Tab["icon"];
   danger?: boolean;
+  muted?: boolean;
 }) {
-  const color = danger ? colors.merlot : colors.ink;
+  const color = muted ? colors.muted : danger ? colors.merlot : colors.ink;
   const size = 22;
   const stroke = 2.1;
   if (name === "home") return <Home size={size} color={color} strokeWidth={stroke} />;
@@ -195,4 +218,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   labelDanger: { color: colors.merlot },
+  labelMuted: { color: colors.muted },
 });

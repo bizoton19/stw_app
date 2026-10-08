@@ -16,6 +16,7 @@ import {
   type PourSuggestion,
 } from "@/lib/pour";
 import type { ItemPour } from "@/lib/types";
+import { stepperLimitPaint } from "@/lib/stepper-limit";
 import { colors } from "@/lib/theme";
 
 type PourMode = "glasses" | "as_printed";
@@ -122,6 +123,8 @@ function PourCard({
 }) {
   const unresolved = row.needsResolve && !mode;
   const showStepper = mode === "glasses" || (!row.needsResolve && mode !== "as_printed");
+  const fewer = stepperLimitPaint(glasses <= MIN_GLASSES_PER_UNIT);
+  const more = stepperLimitPaint(glasses >= MAX_GLASSES_PER_UNIT);
 
   return (
     <View style={[styles.card, unresolved && styles.cardResolve]}>
@@ -140,18 +143,30 @@ function PourCard({
               accessibilityLabel="Fewer glasses"
               disabled={glasses <= MIN_GLASSES_PER_UNIT}
               onPress={() => onGlasses(Math.max(MIN_GLASSES_PER_UNIT, glasses - 1))}
-              style={styles.stepBtn}
+              style={[
+                styles.stepBtn,
+                fewer.hairline && {
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: colors[fewer.outline],
+                },
+              ]}
             >
-              <Text style={styles.stepBtnText}>−</Text>
+              <Text style={[styles.stepBtnText, { color: colors[fewer.glyph] }]}>−</Text>
             </PressScale>
             <Text style={styles.stepVal}>{glasses}</Text>
             <PressScale
               accessibilityLabel="More glasses"
               disabled={glasses >= MAX_GLASSES_PER_UNIT}
               onPress={() => onGlasses(Math.min(MAX_GLASSES_PER_UNIT, glasses + 1))}
-              style={styles.stepBtn}
+              style={[
+                styles.stepBtn,
+                more.hairline && {
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: colors[more.outline],
+                },
+              ]}
             >
-              <Text style={styles.stepBtnText}>+</Text>
+              <Text style={[styles.stepBtnText, { color: colors[more.glyph] }]}>+</Text>
             </PressScale>
           </View>
         </View>

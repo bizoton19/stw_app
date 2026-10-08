@@ -20,6 +20,12 @@ export type CardTheme = {
   sheet: string;
   ink: string;
   inkSoft: string;
+  /**
+   * Secondary ink that clears 4.5:1 where inkSoft does not: disabled primary
+   * labels, Closed status, and no-photo place meta. Linen is 4.87:1 on
+   * chromeBorder; candlelight is darker so the same ratio holds on its chrome.
+   */
+  inkFirm: string;
   muted: string;
   border: string;
   /** Sticky bottom chrome (interview footer + host tab bar) — warmer than paper. */
@@ -38,6 +44,11 @@ export type CardTheme = {
   kindFoodWash: string;
   /** Watermark tint for the `split-wash` motif. Carries its own alpha. */
   wash: string;
+  /**
+   * Warm ink composited over place photos. Same in both palettes — it sits on
+   * the picture, not on paper.
+   */
+  photoScrim: string;
   /** Paper-grain opacity, capped at 2–4% per `ui-enhance.guide.md` §4. */
   grain: string;
 };
@@ -48,6 +59,7 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     sheet: "#fffcf8",
     ink: "#2a241c",
     inkSoft: "#7a7268",
+    inkFirm: "#5a5248",
     muted: "#8a847c",
     border: "#e6e0d8",
     chrome: "#ede8e1",
@@ -62,6 +74,7 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     kindFood: "#c9892a",
     kindFoodWash: "rgba(201, 137, 42, 0.22)",
     wash: "rgba(110, 46, 53, 0.05)",
+    photoScrim: "#241c14",
     grain: "0.035",
   },
   candlelight: {
@@ -69,6 +82,7 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     sheet: "#f8f2e8",
     ink: "#241c14",
     inkSoft: "#6e6253",
+    inkFirm: "#56483b",
     muted: "#857a6a",
     border: "#dcd0be",
     chrome: "#e5dacb",
@@ -83,6 +97,7 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     kindFood: "#c9892a",
     kindFoodWash: "rgba(201, 137, 42, 0.24)",
     wash: "rgba(201, 137, 42, 0.09)",
+    photoScrim: "#241c14",
     grain: "0.05",
   },
 };

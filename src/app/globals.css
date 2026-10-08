@@ -93,6 +93,7 @@
   --stw-sheet: #fffcf8;
   --stw-ink: #2a241c;
   --stw-ink-soft: #7a7268;
+  --stw-ink-firm: #5a5248;
   --stw-muted: #8a847c;
   --stw-border: #e6e0d8;
   --stw-chrome: #ede8e1;
@@ -107,6 +108,7 @@
   --stw-kind-food: #c9892a;
   --stw-kind-food-wash: rgba(201, 137, 42, 0.22);
   --stw-wash: rgba(110, 46, 53, 0.05);
+  --stw-photo-scrim: #241c14;
   --stw-grain: 0.035;
 }
 
@@ -120,6 +122,7 @@
   --stw-sheet: #f8f2e8;
   --stw-ink: #241c14;
   --stw-ink-soft: #6e6253;
+  --stw-ink-firm: #56483b;
   --stw-muted: #857a6a;
   --stw-border: #dcd0be;
   --stw-chrome: #e5dacb;

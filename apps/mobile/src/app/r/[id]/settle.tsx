@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
@@ -46,6 +46,10 @@ export default function SettleScreen() {
   const [editingPay, setEditingPay] = useState(false);
   const [payDraft, setPayDraft] = useState<HostPayment[]>([]);
   const [payBusy, setPayBusy] = useState(false);
+  const [hostAction, setHostAction] = useState<null | "close" | "reopen" | "delete">(null);
+  useEffect(() => {
+    if (!flow.busy) setHostAction(null);
+  }, [flow.busy]);
   const [payError, setPayError] = useState<string | null>(null);
 
   const prime = (
@@ -181,8 +185,15 @@ export default function SettleScreen() {
       onLiveBoard={() => undefined}
       closed={closed}
       busy={flow.busy}
-      onClose={() => void flow.closeOut()}
-      onReopen={() => void flow.reopen()}
+      pendingAction={hostAction}
+      onClose={() => {
+        setHostAction("close");
+        void flow.closeOut();
+      }}
+      onReopen={() => {
+        setHostAction("reopen");
+        void flow.reopen();
+      }}
       onDelete={() => {
         Alert.alert(
           "Delete closed tab?",
@@ -193,6 +204,7 @@ export default function SettleScreen() {
               text: "Delete",
               style: "destructive",
               onPress: () => {
+                setHostAction("delete");
                 void flow.deleteClosed().then((ok) => {
                   if (ok) goHostDesk();
                 });
@@ -362,9 +374,11 @@ export default function SettleScreen() {
                           style={styles.payRow}
                         >
                           {body}
-                          <Text style={styles.payCta}>
-                            {paying === payment.method ? "Opening…" : "Pay"}
-                          </Text>
+                          {paying === payment.method ? (
+                            <ActivityIndicator color={colors.merlot} size="small" />
+                          ) : (
+                            <Text style={styles.payCta}>Pay</Text>
+                          )}
                         </PressScale>
                       );
                     }
