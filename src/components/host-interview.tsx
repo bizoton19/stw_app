@@ -1259,7 +1259,16 @@ export function HostInterview() {
           ? nearbyDetail.name
           : step === "pour" && candidates.some((row) => row.needsResolve)
             ? "Could this be a shared bottle?"
-            : COPY[step].title
+            : step === "capture"
+              ? (() => {
+                  const place = (venue?.name || restaurant).trim();
+                  const label =
+                    place.length > 36 ? `${place.slice(0, 34).trimEnd()}…` : place;
+                  return label
+                    ? `How should we add the ${label} tab?`
+                    : COPY.capture.title;
+                })()
+              : COPY[step].title
       }
       onBack={
         step === "ready"
