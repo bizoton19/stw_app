@@ -7,9 +7,9 @@ Living log of how fast this product came together. Update after major milestones
 | | |
 | --- | --- |
 | **Project start** | **2026-09-20 13:41:10 −04:00** (`Initialize project`) |
-| **This snapshot** | 2026-10-06 ~12:35 −04:00 |
-| **Elapsed** | **~16 days** |
-| **Commits on this branch** | **286** (latest: settle pay visuals) |
+| **This snapshot** | 2026-10-08 ~07:40 −04:00 |
+| **Elapsed** | **~18 days** |
+| **Commits on this branch** | **299** (latest: host location priming) |
 | **Surfaces** | Next.js API + web claim UI · Expo iOS/Android · marketing (Netlify) · Railway + Postgres |
 
 Refresh commit count anytime:
@@ -101,6 +101,9 @@ git log --reverse -1 --format='%aI %s'
 
 ### Day 16 — Tue 2026-10-06
 - RSVP confirmation is a ticket moment: map hero, venue name, date above time, **Get directions**, and optional **Contact host** (iMessage / text / WhatsApp / email / Signal) set when the host plans the outing.
+
+### Day 18 — Thu 2026-10-08
+- On the place step, hosts see a short location sheet before the phone asks. If location was already denied, that sheet opens Settings instead of asking again, and nearby places load when they come back. The note under the field is a tappable Turn on, and step 3 no longer says to swipe nearby places when those cards are not on screen.
 
 ## How to extend this file
 

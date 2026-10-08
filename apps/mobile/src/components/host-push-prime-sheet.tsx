@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -13,6 +13,13 @@ import { Bell } from "lucide-react-native";
 import { PrimaryButton } from "@/components/chrome";
 import { HOST_PUSH_PRIME_COPY } from "@/lib/host-push-prime-policy";
 import { colors } from "@/lib/theme";
+
+export type PrimeSheetCopy = {
+  title: string;
+  body: string;
+  primary: string;
+  secondary: string;
+};
 
 const DISMISS_Y = 120;
 
@@ -29,16 +36,22 @@ export function HostPushPrimeSheet({
   busy,
   onPrimary,
   onDismiss,
+  icon,
+  copy: copyOverride,
 }: {
   visible: boolean;
   variant: "undetermined" | "denied";
   busy: boolean;
   onPrimary: () => void;
   onDismiss: () => void;
+  /** Defaults to the notification Bell. Location passes MapPin. */
+  icon?: ReactNode;
+  /** Defaults to the notification copy for `variant`. */
+  copy?: PrimeSheetCopy;
 }) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(0);
-  const copy = HOST_PUSH_PRIME_COPY[variant];
+  const copy = copyOverride ?? HOST_PUSH_PRIME_COPY[variant];
 
   useEffect(() => {
     if (!visible) translateY.value = 0;
@@ -93,7 +106,7 @@ export function HostPushPrimeSheet({
           >
             <View style={styles.handle} accessibilityElementsHidden />
             <View style={styles.icon} accessibilityElementsHidden>
-              <Bell size={30} color={colors.inkSoft} strokeWidth={2} />
+              {icon ?? <Bell size={30} color={colors.inkSoft} strokeWidth={2} />}
             </View>
             <Text allowFontScaling style={styles.title}>
               {copy.title}
