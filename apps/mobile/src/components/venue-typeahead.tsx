@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Image,
   Pressable,
   StyleSheet,
@@ -9,10 +10,12 @@ import {
   View,
 } from "react-native";
 import * as Location from "expo-location";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Field } from "@/components/field";
+import { HostLocationPrime } from "@/components/host-location-prime";
 import { NearbyPlaceCards } from "@/components/nearby-place-cards";
 import { VenueKindIcon } from "@/components/venue-kind-icon";
+import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
 import { getApiUrl } from "@/lib/config";
 import {
   formatPlaceRating,
@@ -29,6 +32,11 @@ import {
   typedVenue,
   type PlacePrediction,
 } from "@/lib/places";
+import {
+  classifyHostLocationPermission,
+  type HostLocationPermission,
+} from "@/lib/host-location-prime-policy";
+import { nearbyCardsAreVisible } from "@/lib/place-step-footer";
 import { colors } from "@/lib/theme";
 import type { ReceiptVenue } from "@/lib/types";
 
@@ -38,6 +46,8 @@ type Props = {
   receiptDate?: string | null;
   onChangeName: (name: string) => void;
   onChangeVenue: (venue: ReceiptVenue | null) => void;
+  /** Step 3 uses this to drop "Swipe nearby places" when those cards are not on screen. */
+  onNearbyStateChange?: (visible: boolean) => void;
 };
 
 export function formatReceiptDateLabel(iso: string | null | undefined): string | null {
@@ -80,6 +90,7 @@ export function VenueTypeahead({
   receiptDate,
   onChangeName,
   onChangeVenue,
+  onNearbyStateChange,
 }: Props) {
   const { width, height } = useWindowDimensions();
   const mapW = Math.min(600, Math.max(280, Math.round(width - 48)));
@@ -91,9 +102,15 @@ export function VenueTypeahead({
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
-  const [locationHint, setLocationHint] = useState<string | null>(null);
+  const [permission, setPermission] = useState<HostLocationPermission | null>(null);
+  const [positionUnavailable, setPositionUnavailable] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationReady, setLocationReady] = useState(false);
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
+  const keyboardOpen = useKeyboardVisible();
+  const openLocationSheet = useRef<(() => void) | null>(null);
+  const refreshEpoch = useRef(0);
   const sessionRef = useRef(newSession());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nearbyRef = useRef<NearbyPlaceCard[]>([]);
@@ -114,33 +131,63 @@ export function VenueTypeahead({
     lockedRef.current = isPinned(venue);
   }, [venue]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (cancelled) return;
-        if (status !== "granted") {
-          setLocationHint("Location off — search by name only.");
-          setLocationReady(true);
-          return;
-        }
-        setLocationHint("Using nearby places to rank results.");
-        const pos = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        if (cancelled) return;
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      } catch {
-        if (!cancelled) setLocationHint("Location off — search by name only.");
-      } finally {
-        if (!cancelled) setLocationReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const refreshLocation = useCallback(async () => {
+    const token = ++refreshEpoch.current;
+    const stale = () => token !== refreshEpoch.current;
+    let next: HostLocationPermission;
+    try {
+      const current = await Location.getForegroundPermissionsAsync();
+      if (stale()) return;
+      next = classifyHostLocationPermission({
+        status: current.status,
+        canAskAgain: current.canAskAgain,
+      });
+      setPermission(next);
+    } catch {
+      if (stale()) return;
+      setPermission((prev) => prev ?? "undetermined");
+      setLocationReady(true);
+      return;
+    }
+    if (next !== "granted") {
+      setCoords(null);
+      setPositionUnavailable(false);
+      setSettledKey(null);
+      setLocationReady(true);
+      return;
+    }
+    try {
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      if (stale()) return;
+      const nextCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setCoords((prev) =>
+        prev && prev.lat === nextCoords.lat && prev.lng === nextCoords.lng ? prev : nextCoords,
+      );
+      setPositionUnavailable(false);
+    } catch {
+      if (stale()) return;
+      setCoords(null);
+      setPositionUnavailable(true);
+    } finally {
+      if (!stale()) setLocationReady(true);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      void refreshLocation();
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") void refreshLocation();
+      });
+      return () => {
+        setFocused(false);
+        sub.remove();
+      };
+    }, [refreshLocation]),
+  );
 
   useEffect(() => {
     if (!coords) return;
@@ -154,6 +201,7 @@ export function VenueTypeahead({
             if (!cancelled && stillPending) setNearbyLoading(true);
           })
         : 0;
+    const key = `${coords.lat},${coords.lng}`;
     void (async () => {
       const cards = await fetchNearbyPlaces(coords);
       stillPending = false;
@@ -161,6 +209,7 @@ export function VenueTypeahead({
       nearbyRef.current = cards;
       setNearby(cards);
       setNearbyLoading(false);
+      setSettledKey(key);
     })();
     return () => {
       cancelled = true;
@@ -168,6 +217,19 @@ export function VenueTypeahead({
       if (frame) cancelAnimationFrame(frame);
     };
   }, [coords]);
+
+  const coordKey = coords ? `${coords.lat},${coords.lng}` : null;
+  const nearbyPending = Boolean(coordKey && shouldShowNearbyCards(value) && settledKey !== coordKey);
+  const nearbyVisible = nearbyCardsAreVisible({
+    hasCoords: Boolean(coords),
+    query: value,
+    pending: nearbyPending || nearbyLoading,
+    count: nearby.length,
+  });
+
+  useEffect(() => {
+    onNearbyStateChange?.(nearbyVisible);
+  }, [nearbyVisible, onNearbyStateChange]);
 
   const runSearch = useCallback(
     (q: string) => {
@@ -290,8 +352,20 @@ export function VenueTypeahead({
     if (name.length >= 2) runSearch(name);
   };
 
+  const locationPrimeActive =
+    focused && !placeConfirmed && shouldShowNearbyCards(value) && !keyboardOpen;
+
   return (
     <View style={placeConfirmed ? { flexGrow: 1 } : undefined}>
+      <HostLocationPrime
+        active={locationPrimeActive}
+        permission={permission}
+        onPermission={setPermission}
+        onGranted={() => {
+          void refreshLocation();
+        }}
+        openerRef={openLocationSheet}
+      />
       {placeConfirmed ? (
         <View style={{ flexGrow: 1 }}>
           <View style={styles.selected}>
@@ -339,7 +413,23 @@ export function VenueTypeahead({
             autoCapitalize="words"
             autoComplete="organization"
           />
-          {locationHint ? <Text style={styles.hint}>{locationHint}</Text> : null}
+          {permission && permission !== "granted" ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Location is off. Turn on location."
+              onPress={() => openLocationSheet.current?.()}
+              hitSlop={8}
+              style={({ pressed }) => [styles.locationLink, pressed && { opacity: 0.6 }]}
+            >
+              <Text allowFontScaling style={styles.locationOff}>
+                Location off · <Text style={styles.locationOn}>Turn on</Text>
+              </Text>
+            </Pressable>
+          ) : positionUnavailable ? (
+            <Text allowFontScaling style={styles.locationUnavailable}>
+              Location unavailable — search by name.
+            </Text>
+          ) : null}
           {dateLabel ? (
             <Text style={styles.dateLoose}>Receipt date · {dateLabel}</Text>
           ) : null}
@@ -397,6 +487,19 @@ export function ensureVenueForPublish(
 
 const styles = StyleSheet.create({
   hint: { fontSize: 12, color: colors.muted, marginTop: -4, marginBottom: 8 },
+  locationLink: {
+    minHeight: 44,
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  locationOff: { fontSize: 12, lineHeight: 16, color: colors.muted },
+  locationOn: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: colors.merlot },
+  locationUnavailable: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.muted,
+    marginBottom: 8,
+  },
   searchError: {
     fontSize: 13,
     fontWeight: "600",

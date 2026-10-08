@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { enqueueHostPrime } from "@/lib/host-prime-queue";
 import {
   HOST_PUSH_PRIME_KEYS,
   localDayKey,
@@ -14,16 +15,12 @@ export type HostPushPrimeRecord = {
   status: HostPushPrimeStatus;
 };
 
-let tail: Promise<void> = Promise.resolve();
-
-/** Serialize cadence reads and writes so two host screens cannot double-present. */
+/**
+ * Same queue as location priming, so a notification sheet and a location
+ * sheet cannot present on top of each other.
+ */
 export function enqueueHostPushPrime<T>(task: () => Promise<T>): Promise<T> {
-  const run = tail.then(task, task);
-  tail = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
+  return enqueueHostPrime(task);
 }
 
 export async function loadHostPushPrime(): Promise<HostPushPrimeRecord> {

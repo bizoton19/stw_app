@@ -1,14 +1,20 @@
+import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { goHostDesk } from "@/lib/navigation";
 import { AppShell, FooterHint, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { VenueTypeahead } from "@/components/venue-typeahead";
 import { useHostDraft } from "@/context/host-draft";
+import { placeStepFooter } from "@/lib/place-step-footer";
 import { colors } from "@/lib/theme";
 
 export default function HostRestaurant() {
   const router = useRouter();
   const draft = useHostDraft();
+  const [nearbyVisible, setNearbyVisible] = useState(false);
+  const onNearbyStateChange = useCallback((visible: boolean) => {
+    setNearbyVisible((prev) => (prev === visible ? prev : visible));
+  }, []);
   // Require a Places pin with coords (map) — never continue on name/placeId alone.
   const placeLocked =
     draft.venue?.source === "places" &&
@@ -32,11 +38,11 @@ export default function HostRestaurant() {
         footer={
           <View>
             <FooterHint>
-              {placeLocked
-                ? "This place pins on the claim board for your guests."
-                : draft.restaurant.trim().length < 2
-                  ? "Swipe nearby places, or type at least two letters to search."
-                  : "Pick a match from the list — we won’t continue until you tap one."}
+              {placeStepFooter({
+                placeLocked,
+                query: draft.restaurant,
+                nearbyVisible,
+              })}
             </FooterHint>
             <PrimaryButton disabled={!placeLocked} onPress={() => router.push("/host/items")}>
               Continue
@@ -54,6 +60,7 @@ export default function HostRestaurant() {
           receiptDate={draft.receiptDate}
           onChangeName={draft.setRestaurant}
           onChangeVenue={draft.setVenue}
+          onNearbyStateChange={onNearbyStateChange}
         />
       </InterviewChrome>
     </AppShell>

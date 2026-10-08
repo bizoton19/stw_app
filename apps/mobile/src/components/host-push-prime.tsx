@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Linking } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { HostPushPrimeSheet } from "@/components/host-push-prime-sheet";
+import { loadHostPrimeShownAt } from "@/lib/host-prime-cooldown";
+import { hostPrimeCooldownActive } from "@/lib/host-prime-policy";
+import {
+  acquireHostPrimeSheet,
+  releaseHostPrimeSheet,
+  subscribeHostPrimeSheet,
+} from "@/lib/host-prime-queue";
 import {
   readHostPushPermission,
   registerHostClaimPush,
@@ -55,6 +62,7 @@ export function HostPushPrime({
   const [variant, setVariant] = useState<"undetermined" | "denied">("undetermined");
   const [busy, setBusy] = useState(false);
   const [hold, setHold] = useState(false);
+  const [gateTick, setGateTick] = useState(0);
   const blockedRef = useRef(blocked);
   blockedRef.current = blocked;
   const onRegisteredRef = useRef(onRegistered);
@@ -65,15 +73,40 @@ export function HostPushPrime({
   variantRef.current = variant;
   const epoch = useRef(0);
 
+  const hideSheet = useCallback(() => {
+    visibleRef.current = false;
+    holdRef.current = false;
+    releaseHostPrimeSheet("push");
+    setHold(false);
+    setVisible(false);
+  }, []);
+
   const present = useCallback(
     async (next: "undetermined" | "denied", token: number) => {
       if (token !== epoch.current || visibleRef.current) return;
-      if (!claimSession()) {
+      const shownAt = await loadHostPrimeShownAt();
+      if (token !== epoch.current || visibleRef.current) return;
+      if (hostPrimeCooldownActive(shownAt, new Date())) {
         holdRef.current = false;
         setHold(false);
         return;
       }
-      if (token !== epoch.current) return;
+      if (!acquireHostPrimeSheet("push")) {
+        setVariant(next);
+        holdRef.current = true;
+        setHold(true);
+        return;
+      }
+      if (!claimSession()) {
+        releaseHostPrimeSheet("push");
+        holdRef.current = false;
+        setHold(false);
+        return;
+      }
+      if (token !== epoch.current) {
+        releaseHostPrimeSheet("push");
+        return;
+      }
       visibleRef.current = true;
       holdRef.current = false;
       setHold(false);
@@ -138,6 +171,14 @@ export function HostPushPrime({
     }, [enabled, present, receiptId, trigger]),
   );
 
+  useEffect(() => subscribeHostPrimeSheet(() => setGateTick((n) => n + 1)), []);
+
+  useEffect(() => {
+    return () => {
+      if (visibleRef.current) releaseHostPrimeSheet("push");
+    };
+  }, []);
+
   useEffect(() => {
     if (!hold || blocked) return undefined;
     const token = epoch.current;
@@ -145,6 +186,7 @@ export function HostPushPrime({
     void enqueueHostPushPrime(async () => {
       try {
         if (cancelled || token !== epoch.current || blockedRef.current || visibleRef.current) return;
+        if (!holdRef.current) return;
         await present(variantRef.current, token);
       } catch {
         /* Priming is optional. */
@@ -153,7 +195,7 @@ export function HostPushPrime({
     return () => {
       cancelled = true;
     };
-  }, [blocked, hold, present]);
+  }, [blocked, gateTick, hold, present]);
 
   useEffect(() => {
     if (!visible || !receiptId) return undefined;
@@ -167,25 +209,21 @@ export function HostPushPrime({
           const result = await registerHostClaimPush(id);
           await markHostPushPrimeOutcome("granted", result === "ok");
           if (result === "ok") onRegisteredRef.current?.();
-          visibleRef.current = false;
-          setVisible(false);
+          hideSheet();
         } catch {
           /* Keep the sheet up so Not now still works. */
         }
       });
     });
     return () => sub.remove();
-  }, [receiptId, visible]);
+  }, [hideSheet, receiptId, visible]);
 
   async function dismiss() {
     if (busy) return;
     try {
       await markHostPushPrimeDismissed();
     } finally {
-      visibleRef.current = false;
-      holdRef.current = false;
-      setHold(false);
-      setVisible(false);
+      hideSheet();
     }
   }
 
@@ -205,14 +243,12 @@ export function HostPushPrime({
       if (result === "ok") {
         await markHostPushPrimeOutcome("granted", true);
         onRegisteredRef.current?.();
-        visibleRef.current = false;
-        setVisible(false);
+        hideSheet();
         return;
       }
       if (result === "denied") {
         await markHostPushPrimeOutcome("denied", false);
-        visibleRef.current = false;
-        setVisible(false);
+        hideSheet();
         return;
       }
       const again = await readHostPushPermission();
@@ -221,11 +257,9 @@ export function HostPushPrime({
       } else if (again === "denied") {
         await markHostPushPrimeOutcome("denied", false);
       }
-      visibleRef.current = false;
-      setVisible(false);
+      hideSheet();
     } catch {
-      visibleRef.current = false;
-      setVisible(false);
+      hideSheet();
     } finally {
       setBusy(false);
     }
