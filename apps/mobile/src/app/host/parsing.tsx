@@ -54,7 +54,9 @@ export default function HostParsing() {
 
       goNext();
     })();
-  }, [draft, router]);
+    // Intentionally once per mount — remounts share runParse's in-flight promise.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-parse when draft identity churns
+  }, []);
 
   return (
     <AppShell>
