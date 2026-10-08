@@ -331,7 +331,15 @@ export function HostInterview() {
         setStep("capture");
         return;
       }
-      applyReceipt(receipt);
+      const reason = parse?.reason ?? "ok";
+      const incomingEmpty = (receipt.items?.length ?? 0) === 0;
+      if (!incomingEmpty || reason === "ok") {
+        applyReceipt(receipt);
+      } else {
+        setItems((prev) => (prev.length > 0 ? prev : toDraftItems(receipt.items)));
+        setFees((prev) => (prev.length > 0 ? prev : toDraftFees(receipt.fees)));
+        setRestaurant(receipt.restaurant);
+      }
       // Leave venue unset — host confirms from suggestions on the restaurant step.
       if (parse?.reason === "empty") {
         setError("We couldn't find any drinks. Add them on the next screens.");

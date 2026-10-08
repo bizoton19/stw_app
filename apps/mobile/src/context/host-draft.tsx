@@ -108,6 +108,8 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const skipPersist = useRef(true);
   /** Bumped on clear / parse so a slow AsyncStorage hydrate cannot revive a stale pin. */
   const draftEpochRef = useRef(0);
+  /** Coalesce double Continue / remount so a late timeout cannot wipe a good parse. */
+  const parseInFlightRef = useRef<ReturnType<HostDraft["runParse"]> | null>(null);
   /** After a successful publish, keep in-memory fields for the share screen but never re-cache. */
   const [published, setPublished] = useState(false);
 
@@ -291,81 +293,101 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const runParse = useCallback(async (): Promise<{
-    reason: string;
-    skipRestaurant?: boolean;
-    placeMismatch?: { planned: string; scanned: string } | null;
-  } | null> => {
-    draftEpochRef.current += 1;
-    setError(null);
-    try {
-      const id = await ensureDraft();
-      const { getHostToken } = await import("@/lib/session");
-      const { venueNamesLikelyDifferent } = await import("@/lib/venue-match");
-      const plannedBefore = venue;
-      const { receipt, parse } = await parseReceiptWithImage(id, {
-        image,
-        hostToken: getHostToken(id),
-      });
-      const reason = parse?.reason ?? "ok";
-      if (reason === "not_receipt") {
-        setError("That doesn’t look like a receipt or tab. Please upload a photo of the check.");
-        return { reason };
+  const runParse = useCallback((): ReturnType<HostDraft["runParse"]> => {
+    if (parseInFlightRef.current) return parseInFlightRef.current;
+
+    const work = (async () => {
+      const epoch = ++draftEpochRef.current;
+      setError(null);
+      try {
+        const id = await ensureDraft();
+        const { getHostToken } = await import("@/lib/session");
+        const { venueNamesLikelyDifferent } = await import("@/lib/venue-match");
+        const plannedBefore = venue;
+        const { receipt, parse } = await parseReceiptWithImage(id, {
+          image,
+          hostToken: getHostToken(id),
+        });
+        if (epoch !== draftEpochRef.current) return null;
+        const reason = parse?.reason ?? "ok";
+        if (reason === "not_receipt") {
+          setError("That doesn’t look like a receipt or tab. Please upload a photo of the check.");
+          return { reason };
+        }
+        // Don't let a timed-out/failed empty body clear lines already on the draft.
+        const incomingEmpty = (receipt.items?.length ?? 0) === 0;
+        if (!incomingEmpty || reason === "ok") {
+          applyReceipt(receipt);
+        } else {
+          setItems((prev) => {
+            if (prev.length > 0) return prev;
+            return toDraftItems(receipt.items);
+          });
+          setFees((prev) => {
+            if (prev.length > 0) return prev;
+            return toDraftFees(receipt.fees);
+          });
+        }
+        const kept =
+          receipt.venue?.source === "places" &&
+          typeof receipt.venue.lat === "number" &&
+          typeof receipt.venue.lng === "number";
+        if (kept && receipt.venue) {
+          setVenue(receipt.venue);
+          setRestaurant(receipt.venue.name || receipt.restaurant || "");
+        } else if (plannedBefore?.source === "places") {
+          // Server should keep the pin; if it didn't, don't wipe the host's plan place.
+          setVenue(plannedBefore);
+          setRestaurant(plannedBefore.name || restaurant);
+        } else {
+          setVenue(null);
+        }
+        if (reason === "empty") {
+          setError("We couldn't find any drinks. Add them on the next screens.");
+        } else if (reason === "failed") {
+          setError("Couldn't read that photo. Add the lines on the next screens.");
+        } else if (reason === "timeout") {
+          setError("Reading timed out. Try a clearer photo, or add the lines yourself.");
+        } else if (reason === "no_key") {
+          setError("Scanning isn't configured here. Add the lines on the next screens.");
+        } else if (reason === "no_image") {
+          setError("No photo attached. Add the lines on the next screens.");
+        } else {
+          setError(null);
+        }
+        const plannedName =
+          (kept && receipt.venue?.name) || plannedBefore?.name || restaurant || "";
+        const scannedName = parse?.scannedRestaurant?.trim() || "";
+        const placeMismatch =
+          Boolean(plannedName && scannedName) &&
+          venueNamesLikelyDifferent(plannedName, scannedName)
+            ? { planned: plannedName.trim(), scanned: scannedName }
+            : null;
+        return {
+          reason,
+          skipRestaurant: Boolean(kept || plannedBefore?.source === "places"),
+          placeMismatch,
+        };
+      } catch (err) {
+        if (epoch !== draftEpochRef.current) return null;
+        const code =
+          (err as { code?: string; message?: string }).code ??
+          (err as { message?: string }).message;
+        if (code && code !== "Network request failed" && code !== "request_failed") {
+          setError(`Server said ${code}. You can still enter the lines yourself.`);
+        } else {
+          setError(
+            "Couldn't finish reading that photo (connection dropped). Try again, or add the lines yourself.",
+          );
+        }
+        return null;
+      } finally {
+        if (parseInFlightRef.current === work) parseInFlightRef.current = null;
       }
-      applyReceipt(receipt);
-      const kept =
-        receipt.venue?.source === "places" &&
-        typeof receipt.venue.lat === "number" &&
-        typeof receipt.venue.lng === "number";
-      if (kept && receipt.venue) {
-        setVenue(receipt.venue);
-        setRestaurant(receipt.venue.name || receipt.restaurant || "");
-      } else if (plannedBefore?.source === "places") {
-        // Server should keep the pin; if it didn't, don't wipe the host's plan place.
-        setVenue(plannedBefore);
-        setRestaurant(plannedBefore.name || restaurant);
-      } else {
-        setVenue(null);
-      }
-      if (reason === "empty") {
-        setError("We couldn't find any drinks. Add them on the next screens.");
-      } else if (reason === "failed") {
-        setError("Couldn't read that photo. Add the lines on the next screens.");
-      } else if (reason === "timeout") {
-        setError("Reading timed out. Try a clearer photo, or add the lines yourself.");
-      } else if (reason === "no_key") {
-        setError("Scanning isn't configured here. Add the lines on the next screens.");
-      } else if (reason === "no_image") {
-        setError("No photo attached. Add the lines on the next screens.");
-      } else {
-        setError(null);
-      }
-      const plannedName =
-        (kept && receipt.venue?.name) || plannedBefore?.name || restaurant || "";
-      const scannedName = parse?.scannedRestaurant?.trim() || "";
-      const placeMismatch =
-        Boolean(plannedName && scannedName) &&
-        venueNamesLikelyDifferent(plannedName, scannedName)
-          ? { planned: plannedName.trim(), scanned: scannedName }
-          : null;
-      return {
-        reason,
-        skipRestaurant: Boolean(kept || plannedBefore?.source === "places"),
-        placeMismatch,
-      };
-    } catch (err) {
-      const code =
-        (err as { code?: string; message?: string }).code ??
-        (err as { message?: string }).message;
-      if (code && code !== "Network request failed" && code !== "request_failed") {
-        setError(`Server said ${code}. You can still enter the lines yourself.`);
-      } else {
-        setError(
-          "Couldn't finish reading that photo (connection dropped). Try again, or add the lines yourself.",
-        );
-      }
-      return null;
-    }
+    })();
+
+    parseInFlightRef.current = work;
+    return work;
   }, [applyReceipt, ensureDraft, image, restaurant, venue]);
 
   const recordParseReview = useCallback(

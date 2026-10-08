@@ -379,14 +379,31 @@ export async function parseReceipt(
     receipt.restaurant = keepVenue?.name?.trim() || result.restaurant;
     receipt.venue = keepVenue;
     receipt.receiptDate = result.receiptDate ?? receipt.receiptDate ?? null;
-    receipt.items = itemsFromParse(result);
-    receipt.fees = feesFromParse(result);
+    const nextItems = itemsFromParse(result);
+    const nextFees = feesFromParse(result);
+    // A slow/timed-out concurrent parse must not wipe a successful earlier result.
+    const keepExistingLines =
+      nextItems.length === 0 && receipt.items.length > 0 && parse.reason !== "ok";
+    if (keepExistingLines) {
+      console.log(
+        JSON.stringify({
+          event: "parse.keep_existing",
+          ts: new Date().toISOString(),
+          receiptId: id,
+          reason: parse.reason,
+          keptItemCount: receipt.items.length,
+        }),
+      );
+    } else {
+      receipt.items = nextItems;
+      receipt.fees = nextFees;
+      receipt.parseFlag =
+        parse.reason === "ok" || parse.reason === "no_image" ? undefined : parse.reason;
+    }
     receipt.imageName = image?.name ?? receipt.imageName;
     if (image?.bytes?.length) {
       receipt.hasImage = true;
     }
-    receipt.parseFlag =
-      parse.reason === "ok" || parse.reason === "no_image" ? undefined : parse.reason;
     await upsertReceipt(client, receipt);
     emit(receipt, "updated");
     return {
