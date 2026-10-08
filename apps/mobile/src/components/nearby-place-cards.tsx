@@ -308,7 +308,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    top: CAPTION_RAMP,
+    // 1px into the 36px ramp so a fractional-density seam does not show.
+    top: CAPTION_RAMP - 1,
     bottom: 0,
   },
   captionPlain: { backgroundColor: "transparent" },

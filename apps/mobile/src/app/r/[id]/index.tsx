@@ -627,7 +627,7 @@ function History() {
                       </Text>
                       {mineToDrop ? (
                         <PressScale
-                          accessibilityLabel={`Unclaim ${itemName(claim.itemId)}`}
+                          accessibilityLabel={`Unclaim ${itemName(claim.itemId).trim() || "Item"}`}
                           disabled={flow.busy}
                           busy={controlShowsSpinner(pendingClaimId, claim.id)}
                           haptic="medium"
