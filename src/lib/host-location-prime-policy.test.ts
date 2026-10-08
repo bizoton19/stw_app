@@ -10,12 +10,16 @@ import {
   hostLocationPrimeResolvedToday,
   hostLocationPrimeVariant,
   hostLocationPrimeWaitMs,
+  hostLocationSheetEnabled,
   mayRequestHostLocationPermission,
   noteHostLocationPrimeResolved,
   parseHostLocationPrimeStatus,
   resetHostLocationPrimeSessionForTests,
   shouldAutoShowHostLocationPrime,
+  shouldCloseLocationPrimeForGrant,
   shouldPresentHostLocationPrime,
+  shouldRememberSystemLocationDenial,
+  shouldRevealDeniedLocationVariant,
 } from "../../apps/mobile/src/lib/host-location-prime-policy";
 import { nearbyCardsAreVisible, placeStepFooter } from "../../apps/mobile/src/lib/place-step-footer";
 
@@ -162,6 +166,48 @@ describe("host location prime permission and copy", () => {
     assert.equal(hostLocationPrimeWaitMs(400), 0);
     assert.equal(hostLocationPrimeWaitMs(-5), 350);
   });
+
+  it("does not swap to the Settings copy while the prompt is in flight or the sheet is closing", () => {
+    const open = {
+      visible: true,
+      permission: "denied" as const,
+      variant: "undetermined" as const,
+      busy: false,
+      closing: false,
+    };
+    assert.equal(shouldRevealDeniedLocationVariant(open), true);
+    assert.equal(shouldRevealDeniedLocationVariant({ ...open, busy: true }), false);
+    assert.equal(shouldRevealDeniedLocationVariant({ ...open, closing: true }), false);
+    assert.equal(shouldRevealDeniedLocationVariant({ ...open, visible: false }), false);
+    assert.equal(
+      shouldRevealDeniedLocationVariant({ ...open, variant: "denied" }),
+      false,
+    );
+  });
+
+  it("still closes on grant when the host comes back from Settings", () => {
+    assert.equal(
+      shouldCloseLocationPrimeForGrant({ visible: true, permission: "granted" }),
+      true,
+    );
+    assert.equal(
+      shouldCloseLocationPrimeForGrant({ visible: true, permission: "denied" }),
+      false,
+    );
+    assert.equal(
+      shouldCloseLocationPrimeForGrant({ visible: false, permission: "granted" }),
+      false,
+    );
+  });
+
+  it("remembers a system deny, and skips the sheet on web", () => {
+    assert.equal(shouldRememberSystemLocationDenial("denied"), true);
+    assert.equal(shouldRememberSystemLocationDenial("granted"), false);
+    assert.equal(shouldRememberSystemLocationDenial("undetermined"), false);
+    assert.equal(hostLocationSheetEnabled("ios"), true);
+    assert.equal(hostLocationSheetEnabled("android"), true);
+    assert.equal(hostLocationSheetEnabled("web"), false);
+  });
 });
 
 describe("place step footer and nearby cards", () => {
@@ -185,25 +231,44 @@ describe("place step footer and nearby cards", () => {
   });
 
   it("treats an in-flight fetch as visible and an empty result as not", () => {
+    const base = {
+      permission: "granted" as const,
+      positionUnavailable: false,
+      hasCoords: true,
+      query: "",
+      pending: false,
+      count: 0,
+    };
+    assert.equal(nearbyCardsAreVisible({ ...base, pending: true }), true);
+    assert.equal(nearbyCardsAreVisible({ ...base, count: 3 }), true);
+    assert.equal(nearbyCardsAreVisible(base), false);
     assert.equal(
-      nearbyCardsAreVisible({ hasCoords: true, query: "", pending: true, count: 0 }),
-      true,
-    );
-    assert.equal(
-      nearbyCardsAreVisible({ hasCoords: true, query: "", pending: false, count: 3 }),
-      true,
-    );
-    assert.equal(
-      nearbyCardsAreVisible({ hasCoords: true, query: "", pending: false, count: 0 }),
+      nearbyCardsAreVisible({ ...base, permission: "denied", hasCoords: false, pending: true }),
       false,
     );
+    assert.equal(nearbyCardsAreVisible({ ...base, query: "Cafe", pending: true, count: 3 }), false);
+  });
+
+  it("keeps the nearby footer while a granted fix is still pending", () => {
+    const waiting = {
+      permission: "granted" as const,
+      positionUnavailable: false,
+      hasCoords: false,
+      query: "",
+      pending: false,
+      count: 0,
+    };
+    assert.equal(nearbyCardsAreVisible(waiting), true);
+    assert.equal(nearbyCardsAreVisible({ ...waiting, permission: null }), true);
+    assert.equal(nearbyCardsAreVisible({ ...waiting, positionUnavailable: true }), false);
+    assert.equal(nearbyCardsAreVisible({ ...waiting, permission: "undetermined" }), false);
     assert.equal(
-      nearbyCardsAreVisible({ hasCoords: false, query: "", pending: true, count: 0 }),
-      false,
+      placeStepFooter({ placeLocked: false, query: "", nearbyVisible: true }),
+      "Swipe nearby places, or type at least two letters to search.",
     );
     assert.equal(
-      nearbyCardsAreVisible({ hasCoords: true, query: "Cafe", pending: true, count: 3 }),
-      false,
+      placeStepFooter({ placeLocked: false, query: "", nearbyVisible: false }),
+      "Type at least two letters to search by name.",
     );
   });
 });
@@ -294,5 +359,13 @@ describe("location priming wiring", () => {
     const restaurant = read("apps/mobile/src/app/host/restaurant.tsx");
     assert.match(restaurant, /placeStepFooter/);
     assert.match(restaurant, /onNearbyStateChange/);
+    assert.match(restaurant, /useState\(true\)/);
+    const venue = read("apps/mobile/src/components/venue-typeahead.tsx");
+    assert.match(venue, /Platform\.OS === "web"/);
+    const prime = read("apps/mobile/src/components/host-location-prime.tsx");
+    assert.match(prime, /shouldRevealDeniedLocationVariant/);
+    assert.match(prime, /shouldCloseLocationPrimeForGrant/);
+    assert.match(prime, /shouldRememberSystemLocationDenial/);
+    assert.match(prime, /hostLocationSheetEnabled/);
   });
 });

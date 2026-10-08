@@ -11,7 +11,9 @@ import { colors } from "@/lib/theme";
 export default function HostRestaurant() {
   const router = useRouter();
   const draft = useHostDraft();
-  const [nearbyVisible, setNearbyVisible] = useState(false);
+  // Start on the nearby footer. Fall back to type-to-search only once we know
+  // location is off or the position fix failed.
+  const [nearbyVisible, setNearbyVisible] = useState(true);
   const onNearbyStateChange = useCallback((visible: boolean) => {
     setNearbyVisible((prev) => (prev === visible ? prev : visible));
   }, []);

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   AppState,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -221,6 +222,8 @@ export function VenueTypeahead({
   const coordKey = coords ? `${coords.lat},${coords.lng}` : null;
   const nearbyPending = Boolean(coordKey && shouldShowNearbyCards(value) && settledKey !== coordKey);
   const nearbyVisible = nearbyCardsAreVisible({
+    permission,
+    positionUnavailable,
     hasCoords: Boolean(coords),
     query: value,
     pending: nearbyPending || nearbyLoading,
@@ -414,17 +417,23 @@ export function VenueTypeahead({
             autoComplete="organization"
           />
           {permission && permission !== "granted" ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Location is off. Turn on location."
-              onPress={() => openLocationSheet.current?.()}
-              hitSlop={8}
-              style={({ pressed }) => [styles.locationLink, pressed && { opacity: 0.6 }]}
-            >
-              <Text allowFontScaling style={styles.locationOff}>
-                Location off · <Text style={styles.locationOn}>Turn on</Text>
+            Platform.OS === "web" ? (
+              <Text allowFontScaling style={styles.locationUnavailable}>
+                Location off · Turn on
               </Text>
-            </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Location is off. Turn on location."
+                onPress={() => openLocationSheet.current?.()}
+                hitSlop={8}
+                style={({ pressed }) => [styles.locationLink, pressed && { opacity: 0.6 }]}
+              >
+                <Text allowFontScaling style={styles.locationOff}>
+                  Location off · <Text style={styles.locationOn}>Turn on</Text>
+                </Text>
+              </Pressable>
+            )
           ) : positionUnavailable ? (
             <Text allowFontScaling style={styles.locationUnavailable}>
               Location unavailable — search by name.

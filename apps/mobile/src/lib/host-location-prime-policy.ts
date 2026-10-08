@@ -114,6 +114,42 @@ export function shouldPresentHostLocationPrime(input: {
 }
 
 /**
+ * AppState can report a deny while the system prompt is still up, or while
+ * the sheet is already sliding closed. Swapping to "Location is off" then
+ * flashes the Settings copy on the way out. A later open still uses the
+ * denied variant from storage. Grant-on-return is a separate check.
+ */
+export function shouldRevealDeniedLocationVariant(input: {
+  visible: boolean;
+  permission: HostLocationPermission | null;
+  variant: "undetermined" | "denied";
+  busy: boolean;
+  closing: boolean;
+}): boolean {
+  if (!input.visible || input.permission !== "denied" || input.variant === "denied") return false;
+  if (input.busy || input.closing) return false;
+  return true;
+}
+
+/** Settings return: close as soon as the live permission is granted. */
+export function shouldCloseLocationPrimeForGrant(input: {
+  visible: boolean;
+  permission: HostLocationPermission | null;
+}): boolean {
+  return input.visible && input.permission === "granted";
+}
+
+/** A system-prompt deny should survive a cold restart the same day. */
+export function shouldRememberSystemLocationDenial(permission: HostLocationPermission): boolean {
+  return permission === "denied";
+}
+
+/** Expo web has no app Settings page for this sheet. */
+export function hostLocationSheetEnabled(os: string): boolean {
+  return os !== "web";
+}
+
+/**
  * Auto-show only. The quiet line ignores cadence and this cooldown.
  */
 export function shouldAutoShowHostLocationPrime(input: {

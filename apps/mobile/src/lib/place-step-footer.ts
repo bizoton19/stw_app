@@ -17,16 +17,24 @@ export function placeStepFooter(input: {
 }
 
 /**
- * Nearby cards count as on screen while the first fetch is in flight
- * (`pending`), the row is loading, or at least one card came back.
- * An empty settled response is not "on screen".
+ * Step 3 treats nearby as on screen while we might still show cards:
+ * permission not read yet, a granted fix still in flight, a fetch in flight,
+ * or at least one card back.
+ * Fall back only when permission is not granted, the fix failed, or the
+ * settled list is empty.
  */
 export function nearbyCardsAreVisible(input: {
+  permission: "granted" | "denied" | "undetermined" | null;
+  positionUnavailable: boolean;
   hasCoords: boolean;
   query: string;
   pending: boolean;
   count: number;
 }): boolean {
-  if (!input.hasCoords || !shouldShowNearbyCards(input.query)) return false;
+  if (!shouldShowNearbyCards(input.query)) return false;
+  if (input.permission == null) return true;
+  if (input.permission !== "granted") return false;
+  if (input.positionUnavailable) return false;
+  if (!input.hasCoords) return true;
   return input.pending || input.count > 0;
 }
