@@ -1,8 +1,8 @@
 /**
- * Tonight's tab chip. Open is the green chip with the live dot.
- * Planning and draft share the merlot tint and never show that dot.
- * A draft used to fall through to Open because the chip only checked
- * finalized and planning.
+ * Hosted-tab tone for Tonight's card and the recent list.
+ * Open is select green (the card also shows the live dot).
+ * Planning and draft share merlot and never show that dot.
+ * Closed is the darker ink. A draft used to fall through to Open.
  */
 export type HostedStatusTone = "open" | "draft" | "closed";
 

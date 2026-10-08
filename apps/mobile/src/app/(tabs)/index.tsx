@@ -403,7 +403,7 @@ export default function HomeScreen() {
             </View>
           }
           renderItem={({ item }) => {
-            const closed = item.status === "finalized";
+            const tone = hostedStatusTone(item.status);
             const label = hostedStatusLabel(item.status);
             return (
               <View style={styles.row}>
@@ -426,7 +426,13 @@ export default function HomeScreen() {
                       <Text style={styles.rowDate}>
                         {receiptDate(item.receiptDay, item.updatedAt)}
                       </Text>
-                      <Text style={[styles.rowStatus, closed && styles.rowStatusClosed]}>
+                      <Text
+                        style={[
+                          styles.rowStatus,
+                          tone === "closed" && styles.rowStatusClosed,
+                          tone === "draft" && styles.rowStatusDraft,
+                        ]}
+                      >
                         ({label})
                       </Text>
                     </View>
@@ -636,6 +642,7 @@ const styles = StyleSheet.create({
     color: colors.select,
   },
   rowStatusClosed: { color: colors.inkFirm },
+  rowStatusDraft: { color: colors.merlot },
   rowPlace: { marginTop: 2, fontSize: 14, fontWeight: "500", color: colors.inkSoft },
   rowAction: { fontSize: 14, fontWeight: "700", color: colors.merlot },
   hint: {

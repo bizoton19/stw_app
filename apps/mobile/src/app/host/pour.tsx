@@ -140,7 +140,7 @@ function PourCard({
               accessibilityLabel="Fewer glasses"
               disabled={glasses <= MIN_GLASSES_PER_UNIT}
               onPress={() => onGlasses(Math.max(MIN_GLASSES_PER_UNIT, glasses - 1))}
-              style={styles.stepBtn}
+              style={[styles.stepBtn, glasses <= MIN_GLASSES_PER_UNIT && styles.stepBtnOff]}
             >
               <Text style={[styles.stepBtnText, glasses <= MIN_GLASSES_PER_UNIT && styles.stepBtnTextOff]}>
                 −
@@ -151,7 +151,7 @@ function PourCard({
               accessibilityLabel="More glasses"
               disabled={glasses >= MAX_GLASSES_PER_UNIT}
               onPress={() => onGlasses(Math.min(MAX_GLASSES_PER_UNIT, glasses + 1))}
-              style={styles.stepBtn}
+              style={[styles.stepBtn, glasses >= MAX_GLASSES_PER_UNIT && styles.stepBtnOff]}
             >
               <Text style={[styles.stepBtnText, glasses >= MAX_GLASSES_PER_UNIT && styles.stepBtnTextOff]}>
                 +
@@ -225,7 +225,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepBtnText: { fontSize: 18, fontWeight: "700", color: colors.ink },
-  stepBtnTextOff: { color: colors.muted },
+  stepBtnOff: { borderColor: colors.chromeBorder },
+  stepBtnTextOff: { color: colors.inkFirm },
   stepVal: { width: 24, textAlign: "center", fontSize: 15, fontWeight: "700" },
   modeRow: { marginTop: 12, flexDirection: "row", gap: 8 },
   modeBtn: {

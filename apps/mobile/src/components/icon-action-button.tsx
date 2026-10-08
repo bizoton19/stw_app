@@ -24,10 +24,10 @@ export function IconActionButton({
       onPress={onPress}
       disabled={off}
       haptic="light"
-      style={styles.btn}
+      style={[styles.btn, off && styles.btnOff]}
       accessibilityLabel={accessibilityLabel ?? label}
     >
-      <Icon size={18} color={off ? colors.muted : colors.ink} strokeWidth={2.25} />
+      <Icon size={18} color={off ? colors.inkFirm : colors.ink} strokeWidth={2.25} />
       <Text style={[styles.label, off && styles.labelOff]} numberOfLines={1}>
         {label}
       </Text>
@@ -48,6 +48,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFcf8",
     paddingHorizontal: 10,
   },
+  btnOff: {
+    backgroundColor: "transparent",
+    borderColor: colors.chromeBorder,
+  },
   label: { fontSize: 15, fontWeight: "600", color: colors.ink },
-  labelOff: { color: colors.muted },
+  labelOff: { color: colors.inkFirm },
 });

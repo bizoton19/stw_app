@@ -186,7 +186,7 @@ export default function HostPlanBoard() {
                 <PrimaryButton onPress={() => void shareLink()}>Share invite link</PrimaryButton>
               </>
             )}
-            <QuietButton disabled={busy} onPress={confirmDelete}>
+            <QuietButton busy={busy} onPress={confirmDelete}>
               Delete outing
             </QuietButton>
           </View>

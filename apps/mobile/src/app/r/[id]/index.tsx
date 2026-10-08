@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Platform,
@@ -180,10 +181,10 @@ function RsvpScreen() {
             <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
               Going
             </PrimaryButton>
-            <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
+            <QuietButton busy={busy} onPress={() => void submit("maybe")}>
               Maybe
             </QuietButton>
-            <QuietButton disabled={busy} onPress={() => void submit("cant")}>
+            <QuietButton busy={busy} onPress={() => void submit("cant")}>
               Can’t
             </QuietButton>
           </View>
@@ -608,7 +609,11 @@ function History() {
                           }}
                           style={styles.unclaimHit}
                         >
-                          <Text style={styles.unclaimText}>Unclaim</Text>
+                          {flow.busy ? (
+                            <ActivityIndicator color={colors.merlot} size="small" />
+                          ) : (
+                            <Text style={styles.unclaimText}>Unclaim</Text>
+                          )}
                         </PressScale>
                       ) : null}
                     </View>

@@ -147,7 +147,7 @@ export function RsvpConfirmation({ receipt, response, busy, onChangeRsvp }: Prop
             </PrimaryButton>
           )
         ) : null}
-        <QuietButton disabled={busy} onPress={onChangeRsvp}>
+        <QuietButton busy={busy} onPress={onChangeRsvp}>
           Change RSVP
         </QuietButton>
       </View>

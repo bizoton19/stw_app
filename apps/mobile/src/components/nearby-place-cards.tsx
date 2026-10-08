@@ -15,8 +15,10 @@ import { colors } from "@/lib/theme";
 
 const CARD_HEIGHT = 220;
 const CARD_GAP = 12;
-/** The scrim covers about the bottom 45% of the card. */
+/** Minimum caption band: about the bottom 45% of the card. It grows with the type. */
 const CAPTION_HEIGHT = Math.round(CARD_HEIGHT * 0.45);
+/** Fixed ramp. The 0.78 plateau starts here and covers every line below it. */
+const CAPTION_RAMP = 36;
 
 function withAlpha(hex: string, alpha: number): string {
   const n = Number.parseInt(hex.slice(1), 16);
@@ -27,12 +29,12 @@ function withAlpha(hex: string, alpha: number): string {
 }
 
 /**
- * Warm ink from alpha 0 at the top of the caption to 0.78 behind the type.
- * The plateau starts above the name so the name and the meta both clear 4.5:1
- * on a white photo. React Native 0.86 still exposes this as
- * `experimental_backgroundImage` (the unprefixed name landed in 0.87).
+ * A fixed 36px ramp at the top of the caption, from alpha 0 to a 0.78 plateau.
+ * The rest of the band — however tall Dynamic Type or a three-line name makes
+ * it — stays on that plateau, so every line sits on the scrim. React Native
+ * 0.86 still exposes this as `experimental_backgroundImage` (unprefixed in 0.87).
  */
-const CAPTION_SCRIM = `linear-gradient(to bottom, ${withAlpha(colors.photoScrim, 0)} 0%, ${withAlpha(colors.photoScrim, 0.78)} 36%, ${withAlpha(colors.photoScrim, 0.78)} 100%)`;
+const CAPTION_SCRIM = `linear-gradient(to bottom, ${withAlpha(colors.photoScrim, 0)} 0px, ${withAlpha(colors.photoScrim, 0.78)} ${CAPTION_RAMP}px, ${withAlpha(colors.photoScrim, 0.78)} 100%)`;
 
 function CardPhoto({
   url,
@@ -141,7 +143,7 @@ function PlaceCard({
         </View>
       )}
       <View style={[styles.caption, showPhoto ? styles.captionPhoto : styles.captionPlain]}>
-        <Text numberOfLines={1} style={[styles.name, !showPhoto && styles.namePlain]}>
+        <Text numberOfLines={3} style={[styles.name, !showPhoto && styles.namePlain]}>
           {card.name}
         </Text>
         {card.formattedAddress ? (
@@ -235,7 +237,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: CAPTION_HEIGHT,
+    minHeight: CAPTION_HEIGHT,
+    paddingTop: CAPTION_RAMP,
     paddingHorizontal: 12,
     paddingBottom: 12,
     justifyContent: "flex-end",

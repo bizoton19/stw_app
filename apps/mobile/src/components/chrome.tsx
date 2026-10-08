@@ -325,16 +325,23 @@ export function QuietButton({
   children,
   onPress,
   disabled,
+  busy,
 }: {
   children: string;
   onPress?: () => void;
   disabled?: boolean;
+  busy?: boolean;
 }) {
+  const locked = Boolean(disabled) || Boolean(busy);
   return (
-    <PressScale onPress={onPress} disabled={disabled} haptic={false} style={styles.quiet}>
-      <Text allowFontScaling style={[styles.quietText, disabled && styles.quietTextDisabled]}>
-        {children}
-      </Text>
+    <PressScale onPress={onPress} disabled={locked} haptic={false} style={styles.quiet}>
+      {busy ? (
+        <ActivityIndicator color={colors.ink} />
+      ) : (
+        <Text allowFontScaling style={[styles.quietText, disabled && styles.quietTextDisabled]}>
+          {children}
+        </Text>
+      )}
     </PressScale>
   );
 }

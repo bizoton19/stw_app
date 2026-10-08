@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
@@ -362,9 +362,11 @@ export default function SettleScreen() {
                           style={styles.payRow}
                         >
                           {body}
-                          <Text style={styles.payCta}>
-                            {paying === payment.method ? "Opening…" : "Pay"}
-                          </Text>
+                          {paying === payment.method ? (
+                            <ActivityIndicator color={colors.merlot} size="small" />
+                          ) : (
+                            <Text style={styles.payCta}>Pay</Text>
+                          )}
                         </PressScale>
                       );
                     }
@@ -543,7 +545,7 @@ export default function SettleScreen() {
                   Save handles
                 </PrimaryButton>
                 <QuietButton
-                  disabled={payBusy}
+                  busy={payBusy}
                   onPress={() => {
                     setEditingPay(false);
                     setPayError(null);
