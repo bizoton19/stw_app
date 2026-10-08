@@ -1262,9 +1262,15 @@ export function HostInterview() {
                   const place = (venue?.name || restaurant).trim();
                   const label =
                     place.length > 36 ? `${place.slice(0, 34).trimEnd()}…` : place;
-                  return label
-                    ? `How should we add the ${label} tab?`
-                    : COPY.capture.title;
+                  return label ? (
+                    <>
+                      How should we add the{" "}
+                      <em className="font-bold italic text-primary">{label}</em>{" "}
+                      tab?
+                    </>
+                  ) : (
+                    COPY.capture.title
+                  );
                 })()
               : COPY[step].title
       }

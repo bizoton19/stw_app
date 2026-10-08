@@ -80,7 +80,7 @@ export function InterviewChrome({
   kicker?: string;
   /** Atmosphere beside the kicker. Carries no meaning the kicker doesn't. */
   motif?: MotifName;
-  title: string;
+  title: ReactNode;
   onBack?: () => void;
   /** Jump to host desk without stacking Back through every step. */
   onHome?: () => void;

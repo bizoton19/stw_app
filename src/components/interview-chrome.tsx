@@ -24,7 +24,7 @@ export function InterviewChrome({
 }: {
   step: number;
   total: number;
-  title: string;
+  title: React.ReactNode;
   kicker?: string;
   /** Atmosphere beside the kicker. Carries no meaning the kicker doesn't. */
   motif?: MotifName;
