@@ -9,9 +9,9 @@ import {
   PrimaryButton,
   QuietButton,
 } from "@/components/chrome";
+import { HostPushPrime } from "@/components/host-push-prime";
 import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
-import { registerHostClaimPush } from "@/lib/host-push";
 import { shareLink as shareClaimLink } from "@/lib/share-link";
 import { clearHostedReceipt, patchHostedReceipt } from "@/lib/host-tabs";
 import { getHostToken, hydrateSession } from "@/lib/session";
@@ -40,6 +40,7 @@ export default function HostPlanBoard() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hostToken, setHostToken] = useState<string | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
   const [pushHint, setPushHint] = useState<string | null>(null);
 
   const claimUrl = id ? publicClaimUrl(id) : "";
@@ -50,13 +51,6 @@ export default function HostPlanBoard() {
       await hydrateSession();
       if (cancelled || !id) return;
       setHostToken(getHostToken(id));
-      const result = await registerHostClaimPush(id);
-      if (cancelled) return;
-      if (result === "ok") {
-        setPushHint("You’ll get a ping when someone RSVPs.");
-      } else if (result === "denied") {
-        setPushHint("Notifications are off — you can still watch the roster here.");
-      }
     })();
     return () => {
       cancelled = true;
@@ -100,10 +94,15 @@ export default function HostPlanBoard() {
   const canUpload = Boolean(day && day <= localTodayKey());
 
   async function shareLink() {
-    await shareClaimLink({
-      message: "Join my outing on Split the Wine — RSVP here:",
-      url: claimUrl,
-    });
+    setShareBusy(true);
+    try {
+      await shareClaimLink({
+        message: "Join my outing on Split the Wine — RSVP here:",
+        url: claimUrl,
+      });
+    } finally {
+      setShareBusy(false);
+    }
   }
 
   function uploadCheck() {
@@ -212,6 +211,18 @@ export default function HostPlanBoard() {
         <Roster title="Maybe" people={groups.maybe} />
         <Roster title="Can't" people={groups.cant} />
       </InterviewChrome>
+      <HostPushPrime
+        receiptId={id}
+        trigger="create-outing"
+        enabled={Boolean(
+          id &&
+            hostToken &&
+            receipt &&
+            (receipt.status === "planning" || receipt.status === "draft"),
+        )}
+        blocked={shareBusy}
+        onRegistered={() => setPushHint("You’ll get a ping when someone RSVPs.")}
+      />
     </AppShell>
   );
 }

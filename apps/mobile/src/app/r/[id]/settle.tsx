@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -9,6 +9,7 @@ import { Field } from "@/components/field";
 import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { IconActionButton } from "@/components/icon-action-button";
 import { ClaimQrSheet } from "@/components/claim-qr-sheet";
+import { HostPushPrime } from "@/components/host-push-prime";
 import { PayMethodIcon } from "@/components/pay-method-icon";
 import { PressScale } from "@/components/press-scale";
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
@@ -17,7 +18,6 @@ import { Motif } from "@/components/motifs";
 import { useClaimFlow } from "@/context/claim-flow";
 import { api } from "@/lib/api";
 import { publicClaimUrl } from "@/lib/config";
-import { registerHostClaimPush } from "@/lib/host-push";
 import { hostPayments, validateHostPayments } from "@/lib/host-pay";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
@@ -39,6 +39,8 @@ export default function SettleScreen() {
   const [paying, setPaying] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const [showTotalDetails, setShowTotalDetails] = useState(false);
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
   const [editingPay, setEditingPay] = useState(false);
@@ -46,10 +48,14 @@ export default function SettleScreen() {
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!flow.isHost || !receipt?.id || receipt.status === "finalized") return;
-    void registerHostClaimPush(receipt.id);
-  }, [flow.isHost, receipt?.id, receipt?.status]);
+  const prime = (
+    <HostPushPrime
+      receiptId={receipt?.id}
+      trigger="live-board"
+      enabled={Boolean(flow.isHost && receipt && receipt.status !== "finalized")}
+      blocked={qrOpen || photoOpen || shareBusy}
+    />
+  );
 
   if (!receipt || !totals) {
     return (
@@ -87,6 +93,7 @@ export default function SettleScreen() {
   }
 
   async function shareInvite() {
+    setShareBusy(true);
     try {
       await shareLink({
         message: `Claim what you ordered on ${place}:`,
@@ -94,6 +101,8 @@ export default function SettleScreen() {
       });
     } catch {
       await copyLink();
+    } finally {
+      setShareBusy(false);
     }
   }
 
@@ -230,7 +239,11 @@ export default function SettleScreen() {
             ? "Guests claim on their phones. Watch balances fill in here — tax and tip follow what people ordered."
             : "Drinks plus a share of tax and tip."}
         </Text>
-        <ReceiptImageButton receiptId={receiptId} hasImage={receipt.hasImage} />
+        <ReceiptImageButton
+          receiptId={receiptId}
+          hasImage={receipt.hasImage}
+          onOpenChange={setPhotoOpen}
+        />
         {flow.message ? <Text style={styles.err}>{flow.message}</Text> : null}
 
         {flow.isHost && !closed ? (
@@ -563,6 +576,7 @@ export default function SettleScreen() {
         place={place}
         onClose={() => setQrOpen(false)}
       />
+      {prime}
     </AppShell>
   );
 }
