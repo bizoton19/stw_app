@@ -15,7 +15,7 @@ export type ApiError = Error & {
 
 type ParseResponse = {
   receipt: PublicReceipt;
-  parse?: { source: string; reason: string };
+  parse?: { source: string; reason: string; scannedRestaurant?: string | null };
 };
 
 export async function api<T>(

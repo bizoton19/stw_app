@@ -76,7 +76,12 @@ type HostDraft = {
   setNote: (v: string) => void;
   /** Bind host draft to an existing planning outing (same id for attach-receipt). */
   adoptOuting: (receiptId: string) => Promise<void>;
-  runParse: () => Promise<{ reason: string; skipRestaurant?: boolean } | null>;
+  runParse: () => Promise<{
+    reason: string;
+    skipRestaurant?: boolean;
+    /** Planned pin kept; OCR place name looks different — host should confirm. */
+    placeMismatch?: { planned: string; scanned: string } | null;
+  } | null>;
   recordParseReview: (choice: ParseReviewChoice) => Promise<void>;
   publish: () => Promise<void>;
   clearSavedDraft: () => Promise<void>;
@@ -289,12 +294,15 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
   const runParse = useCallback(async (): Promise<{
     reason: string;
     skipRestaurant?: boolean;
+    placeMismatch?: { planned: string; scanned: string } | null;
   } | null> => {
     draftEpochRef.current += 1;
     setError(null);
     try {
       const id = await ensureDraft();
       const { getHostToken } = await import("@/lib/session");
+      const { venueNamesLikelyDifferent } = await import("@/lib/venue-match");
+      const plannedBefore = venue;
       const { receipt, parse } = await parseReceiptWithImage(id, {
         image,
         hostToken: getHostToken(id),
@@ -305,10 +313,17 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
         return { reason };
       }
       applyReceipt(receipt);
-      const keepVenue = receipt.status === "planning" && receipt.venue;
-      if (keepVenue && receipt.venue) {
+      const kept =
+        receipt.venue?.source === "places" &&
+        typeof receipt.venue.lat === "number" &&
+        typeof receipt.venue.lng === "number";
+      if (kept && receipt.venue) {
         setVenue(receipt.venue);
         setRestaurant(receipt.venue.name || receipt.restaurant || "");
+      } else if (plannedBefore?.source === "places") {
+        // Server should keep the pin; if it didn't, don't wipe the host's plan place.
+        setVenue(plannedBefore);
+        setRestaurant(plannedBefore.name || restaurant);
       } else {
         setVenue(null);
       }
@@ -325,7 +340,19 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       } else {
         setError(null);
       }
-      return { reason, skipRestaurant: Boolean(keepVenue) };
+      const plannedName =
+        (kept && receipt.venue?.name) || plannedBefore?.name || restaurant || "";
+      const scannedName = parse?.scannedRestaurant?.trim() || "";
+      const placeMismatch =
+        Boolean(plannedName && scannedName) &&
+        venueNamesLikelyDifferent(plannedName, scannedName)
+          ? { planned: plannedName.trim(), scanned: scannedName }
+          : null;
+      return {
+        reason,
+        skipRestaurant: Boolean(kept || plannedBefore?.source === "places"),
+        placeMismatch,
+      };
     } catch (err) {
       const code =
         (err as { code?: string; message?: string }).code ??
@@ -339,7 +366,7 @@ export function HostDraftProvider({ children }: { children: React.ReactNode }) {
       }
       return null;
     }
-  }, [applyReceipt, ensureDraft, image]);
+  }, [applyReceipt, ensureDraft, image, restaurant, venue]);
 
   const recordParseReview = useCallback(
     async (choice: ParseReviewChoice) => {

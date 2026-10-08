@@ -10,7 +10,12 @@ export type ParseReason =
   | "timeout"
   | "not_receipt";
 export type ParseSource = "vision" | "stub";
-export type ParseMeta = { source: ParseSource; reason: ParseReason };
+export type ParseMeta = {
+  source: ParseSource;
+  reason: ParseReason;
+  /** Restaurant string from vision/OCR before plan venue overwrite — for mismatch UX. */
+  scannedRestaurant?: string | null;
+};
 
 export type ReceiptImage = {
   name: string;

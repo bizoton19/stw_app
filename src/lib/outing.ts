@@ -254,6 +254,29 @@ export function canParseStatus(status: Receipt["status"]): boolean {
   return status === "draft" || status === "planning";
 }
 
+/**
+ * Keep a Places-confirmed pin across parse.
+ * Planned outings promote to `draft` on the outing day — without this, parse
+ * wiped the plan venue and treated the tab like a cold draft.
+ */
+export function venueToKeepThroughParse(
+  receipt: Pick<Receipt, "status" | "venue">,
+): ReceiptVenue | null {
+  const v = receipt.venue;
+  if (!v) return null;
+  if (
+    v.source === "places" &&
+    typeof v.lat === "number" &&
+    typeof v.lng === "number" &&
+    Number.isFinite(v.lat) &&
+    Number.isFinite(v.lng)
+  ) {
+    return v;
+  }
+  if (receipt.status === "planning") return v;
+  return null;
+}
+
 /** Planning + open + finalized compete for venue-day; drafts do not. */
 export function assertNoVenueDayConflict(
   candidates: Receipt[],
