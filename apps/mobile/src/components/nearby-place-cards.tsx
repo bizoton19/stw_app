@@ -8,14 +8,17 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { Motif } from "@/components/motifs";
 import { getApiUrl } from "@/lib/config";
 import { formatPlaceCategory, placePhotos, type NearbyPlaceCard } from "@/lib/nearby-places";
 import {
   CAPTION_FONT_SCALE_MAX,
+  CAPTION_RAMP_PX,
   PLACE_CAPTION_MIN_HEIGHT,
   PLACE_CARD_HEIGHT,
   STEM_MOTIF_SIZE,
+  captionScrimOverlay,
   stemClearsCaption,
 } from "@/lib/place-card-caption";
 import { colors } from "@/lib/theme";
@@ -24,23 +27,34 @@ const CARD_HEIGHT = PLACE_CARD_HEIGHT;
 const CARD_GAP = 12;
 const CAPTION_HEIGHT = PLACE_CAPTION_MIN_HEIGHT;
 /** Fixed ramp. The 0.78 plateau starts here and covers every line below it. */
-const CAPTION_RAMP = 36;
-
-function withAlpha(hex: string, alpha: number): string {
-  const n = Number.parseInt(hex.slice(1), 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+const CAPTION_RAMP = CAPTION_RAMP_PX;
 
 /**
- * A fixed 36px ramp at the top of the caption, from alpha 0 to a 0.78 plateau.
- * The rest of the band — however tall Dynamic Type or a three-line name makes
- * it — stays on that plateau, so every line sits on the scrim. React Native
- * 0.86 still exposes this as `experimental_backgroundImage` (unprefixed in 0.87).
+ * A 36px svg ramp from alpha 0 to 0.78, then a solid plateau for the rest of
+ * the band. The plateau is a View, so it grows with the caption's minHeight.
  */
-const CAPTION_SCRIM = `linear-gradient(to bottom, ${withAlpha(colors.photoScrim, 0)} 0px, ${withAlpha(colors.photoScrim, 0.78)} ${CAPTION_RAMP}px, ${withAlpha(colors.photoScrim, 0.78)} 100%)`;
+function CaptionScrim({ width, rampId }: { width: number; rampId: string }) {
+  const overlay = captionScrimOverlay(colors.photoScrim);
+  return (
+    <View
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={styles.scrim}
+    >
+      <Svg width={width} height={overlay.ramp.height} style={styles.scrimRamp} pointerEvents="none">
+        <Defs>
+          <LinearGradient id={rampId} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={overlay.ramp.color} stopOpacity={overlay.ramp.fromAlpha} />
+            <Stop offset="1" stopColor={overlay.ramp.color} stopOpacity={overlay.ramp.toAlpha} />
+          </LinearGradient>
+        </Defs>
+        <Rect width={width} height={overlay.ramp.height} fill={`url(#${rampId})`} />
+      </Svg>
+      <View style={[styles.scrimPlateau, { backgroundColor: overlay.plateau.color }]} />
+    </View>
+  );
+}
 
 function CardPhoto({
   url,
@@ -157,8 +171,14 @@ function PlaceCard({
           const next = Math.round(event.nativeEvent.layout.height);
           setCaptionHeight((prev) => (prev === next ? prev : next));
         }}
-        style={[styles.caption, showPhoto ? styles.captionPhoto : styles.captionPlain]}
+        style={[styles.caption, showPhoto ? null : styles.captionPlain]}
       >
+        {showPhoto ? (
+          <CaptionScrim
+            width={cardWidth}
+            rampId={`captionRamp${card.placeId.replace(/[^A-Za-z0-9]/g, "")}`}
+          />
+        ) : null}
         <Text
           maxFontSizeMultiplier={CAPTION_FONT_SCALE_MAX}
           numberOfLines={3}
@@ -272,8 +292,24 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     justifyContent: "flex-end",
   },
-  captionPhoto: {
-    experimental_backgroundImage: CAPTION_SCRIM,
+  scrim: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  scrimRamp: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+  },
+  scrimPlateau: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: CAPTION_RAMP,
+    bottom: 0,
   },
   captionPlain: { backgroundColor: "transparent" },
   name: {

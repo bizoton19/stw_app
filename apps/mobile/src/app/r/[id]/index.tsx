@@ -627,7 +627,7 @@ function History() {
                       </Text>
                       {mineToDrop ? (
                         <PressScale
-                          accessibilityLabel="Unclaim"
+                          accessibilityLabel={`Unclaim ${itemName(claim.itemId)}`}
                           disabled={flow.busy}
                           busy={controlShowsSpinner(pendingClaimId, claim.id)}
                           haptic="medium"
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
   },
   unclaimHit: {
     minWidth: 64,
-    minHeight: 20,
+    minHeight: 24,
     paddingVertical: 2,
     paddingHorizontal: 2,
     alignItems: "center",

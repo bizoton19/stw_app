@@ -119,6 +119,7 @@ export function HostLiveTabBar({
     >
       {tabs.map((tab) => {
         const spinning = Boolean(tab.disabled) && controlShowsSpinner(pendingAction, tab.key);
+        const quiet = Boolean(tab.disabled) && !spinning;
         return (
           <PressScale
             key={tab.key}
@@ -130,7 +131,7 @@ export function HostLiveTabBar({
             accessibilityLabel={tab.accessibilityLabel ?? tab.label}
             accessibilityRole="button"
           >
-            <TabIcon name={tab.icon} danger={tab.danger} />
+            <TabIcon name={tab.icon} danger={tab.danger} muted={quiet} />
             {spinning ? (
               <ActivityIndicator
                 accessible={false}
@@ -138,7 +139,14 @@ export function HostLiveTabBar({
                 size="small"
               />
             ) : (
-              <Text style={[styles.label, tab.danger && styles.labelDanger]} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.label,
+                  tab.danger && styles.labelDanger,
+                  quiet && styles.labelMuted,
+                ]}
+                numberOfLines={1}
+              >
                 {tab.label}
               </Text>
             )}
@@ -152,11 +160,13 @@ export function HostLiveTabBar({
 function TabIcon({
   name,
   danger,
+  muted,
 }: {
   name: Tab["icon"];
   danger?: boolean;
+  muted?: boolean;
 }) {
-  const color = danger ? colors.merlot : colors.ink;
+  const color = muted ? colors.muted : danger ? colors.merlot : colors.ink;
   const size = 22;
   const stroke = 2.1;
   if (name === "home") return <Home size={size} color={color} strokeWidth={stroke} />;
@@ -208,4 +218,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   labelDanger: { color: colors.merlot },
+  labelMuted: { color: colors.muted },
 });
