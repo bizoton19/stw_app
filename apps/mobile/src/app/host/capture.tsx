@@ -142,6 +142,19 @@ export default function HostCapture() {
 
   const iconSize = hasImage ? 20 : 28;
   const iconColor = colors.ink;
+  const place =
+    draft.venue?.name?.trim() ||
+    draft.restaurant?.trim() ||
+    "";
+  const placeLabel = place.length > 36 ? `${place.slice(0, 34).trimEnd()}…` : place;
+  const title =
+    autoLaunch && !hasImage && !autoTried
+      ? placeLabel
+        ? `Add the ${placeLabel} tab…`
+        : "Add the tab…"
+      : placeLabel
+        ? `How should we add the ${placeLabel} tab?`
+        : "How should we add the tab?";
 
   return (
     <AppShell>
@@ -150,11 +163,7 @@ export default function HostCapture() {
         total={8}
         kicker="The receipt"
         motif="check-stub"
-        title={
-          autoLaunch && !hasImage && !autoTried
-            ? "Add the tab…"
-            : "How should we add the tab?"
-        }
+        title={title}
         onBack={() => router.back()}
         onHome={goHostDesk}
         sparse={!hasImage}
