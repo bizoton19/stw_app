@@ -147,13 +147,16 @@ export default function HostCapture() {
     draft.restaurant?.trim() ||
     "";
   const placeLabel = place.length > 36 ? `${place.slice(0, 34).trimEnd()}…` : place;
+  const venueMark = placeLabel ? (
+    <Text style={styles.venueInTitle}>{placeLabel}</Text>
+  ) : null;
   const title =
     autoLaunch && !hasImage && !autoTried
-      ? placeLabel
-        ? `Add the ${placeLabel} tab…`
+      ? venueMark
+        ? <>Add the {venueMark} tab…</>
         : "Add the tab…"
-      : placeLabel
-        ? `How should we add the ${placeLabel} tab?`
+      : venueMark
+        ? <>How should we add the {venueMark} tab?</>
         : "How should we add the tab?";
 
   return (
@@ -276,6 +279,11 @@ const styles = StyleSheet.create({
   previewHint: {
     color: "#F6F4F1",
     fontSize: 13,
+    fontWeight: "700",
+  },
+  venueInTitle: {
+    color: colors.merlot,
+    fontStyle: "italic",
     fontWeight: "700",
   },
 });

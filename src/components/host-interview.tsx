@@ -7,7 +7,6 @@ import { ClaimQrSheet } from "@/components/claim-qr-sheet";
 import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
 import type { MotifName } from "@/components/motifs";
 import { PayMethodIcon } from "@/components/pay-method-icon";
-import { HOST_LINE_QTY_MAX, HOST_LINE_QTY_MIN, QtyStepper } from "@/components/qty-stepper";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NearbyPlaceDetail } from "@/components/nearby-place-detail";
@@ -626,21 +625,20 @@ export function HostInterview() {
                   placeholder="Item name"
                 />
               </label>
-              <div className="shrink-0">
-                <span id={`item-qty-${item.id}`} className={denseLabelClass}>
-                  qty
-                </span>
-                <QtyStepper
-                  variant="field"
+              <label className="w-10 shrink-0">
+                <span className={denseLabelClass}>qty</span>
+                <Input
+                  id={`item-qty-${item.id}`}
+                  inputMode="numeric"
+                  aria-label="Quantity"
                   value={item.qty}
-                  min={HOST_LINE_QTY_MIN}
-                  max={HOST_LINE_QTY_MAX}
-                  labelledBy={`item-qty-${item.id}`}
-                  onChange={(qty) =>
-                    setItems(items.map((row) => (row.id === item.id ? { ...row, qty } : row)))
-                  }
+                  onChange={(e) => {
+                    const qty = Math.max(1, Math.floor(Number(e.target.value) || 0));
+                    setItems(items.map((row) => (row.id === item.id ? { ...row, qty } : row)));
+                  }}
+                  className={`${denseFieldClass} text-left tabular-nums`}
                 />
-              </div>
+              </label>
               <label className="w-[3.6rem] shrink-0">
                 <span className={denseLabelClass}>amt</span>
                 <Input
@@ -1264,9 +1262,15 @@ export function HostInterview() {
                   const place = (venue?.name || restaurant).trim();
                   const label =
                     place.length > 36 ? `${place.slice(0, 34).trimEnd()}…` : place;
-                  return label
-                    ? `How should we add the ${label} tab?`
-                    : COPY.capture.title;
+                  return label ? (
+                    <>
+                      How should we add the{" "}
+                      <em className="font-bold italic text-primary">{label}</em>{" "}
+                      tab?
+                    </>
+                  ) : (
+                    COPY.capture.title
+                  );
                 })()
               : COPY[step].title
       }
