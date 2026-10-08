@@ -421,13 +421,15 @@ export default function HostItems() {
                 onPress={() => void applyChoice("looks_good", { continue: true })}
                 style={[
                   styles.halfBtn,
-                  choice === "looks_good" ? styles.halfBtnSelected : null,
-                  (busy || !canContinue) && styles.halfBtnDisabled,
+                  choice === "looks_good" && canContinue ? styles.halfBtnSelected : null,
+                  !canContinue && styles.halfBtnDisabled,
                 ]}
                 accessibilityLabel={t("items.yes")}
                 accessibilityRole="button"
               >
-                <Text style={styles.halfText}>{t("items.yes")}</Text>
+                <Text style={[styles.halfText, !canContinue && styles.halfTextDisabled]}>
+                  {t("items.yes")}
+                </Text>
               </PressScale>
               <PressScale
                 disabled={busy}
@@ -449,9 +451,11 @@ export default function HostItems() {
                   stopEditing();
                   goAfterItems();
                 }}
-                style={[styles.continueBtn, (!canContinue || busy) && styles.continueDisabled]}
+                style={[styles.continueBtn, !canContinue && styles.continueDisabled]}
               >
-                <Text style={styles.continueText}>{t("items.continueAfterEdit")}</Text>
+                <Text style={[styles.continueText, !canContinue && styles.continueTextDisabled]}>
+                  {t("items.continueAfterEdit")}
+                </Text>
               </PressScale>
             ) : null}
           </View>
@@ -694,8 +698,12 @@ const styles = StyleSheet.create({
     borderColor: colors.merlot,
     backgroundColor: "rgba(110, 46, 53, 0.06)",
   },
-  halfBtnDisabled: { opacity: 0.4 },
+  halfBtnDisabled: {
+    backgroundColor: colors.chromeBorder,
+    borderColor: colors.chromeBorder,
+  },
   halfText: { color: colors.ink, fontSize: 15, fontWeight: "700" },
+  halfTextDisabled: { color: colors.inkFirm },
   continueBtn: {
     marginTop: 8,
     height: 48,
@@ -704,6 +712,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  continueDisabled: { opacity: 0.4 },
+  continueDisabled: { backgroundColor: colors.chromeBorder },
   continueText: { color: colors.merlotFg, fontSize: 15, fontWeight: "700" },
+  continueTextDisabled: { color: colors.inkFirm },
 });

@@ -142,7 +142,9 @@ function PourCard({
               onPress={() => onGlasses(Math.max(MIN_GLASSES_PER_UNIT, glasses - 1))}
               style={styles.stepBtn}
             >
-              <Text style={styles.stepBtnText}>−</Text>
+              <Text style={[styles.stepBtnText, glasses <= MIN_GLASSES_PER_UNIT && styles.stepBtnTextOff]}>
+                −
+              </Text>
             </PressScale>
             <Text style={styles.stepVal}>{glasses}</Text>
             <PressScale
@@ -151,7 +153,9 @@ function PourCard({
               onPress={() => onGlasses(Math.min(MAX_GLASSES_PER_UNIT, glasses + 1))}
               style={styles.stepBtn}
             >
-              <Text style={styles.stepBtnText}>+</Text>
+              <Text style={[styles.stepBtnText, glasses >= MAX_GLASSES_PER_UNIT && styles.stepBtnTextOff]}>
+                +
+              </Text>
             </PressScale>
           </View>
         </View>
@@ -221,6 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepBtnText: { fontSize: 18, fontWeight: "700", color: colors.ink },
+  stepBtnTextOff: { color: colors.muted },
   stepVal: { width: 24, textAlign: "center", fontSize: 15, fontWeight: "700" },
   modeRow: { marginTop: 12, flexDirection: "row", gap: 8 },
   modeBtn: {

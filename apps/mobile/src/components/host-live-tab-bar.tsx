@@ -123,9 +123,13 @@ export function HostLiveTabBar({
           accessibilityLabel={tab.accessibilityLabel ?? tab.label}
           accessibilityRole="button"
         >
-          <TabIcon name={tab.icon} danger={tab.danger} />
+          <TabIcon name={tab.icon} danger={tab.danger} muted={tab.disabled} />
           <Text
-            style={[styles.label, tab.danger && styles.labelDanger]}
+            style={[
+              styles.label,
+              tab.danger && !tab.disabled && styles.labelDanger,
+              tab.disabled && styles.labelMuted,
+            ]}
             numberOfLines={1}
           >
             {tab.label}
@@ -139,11 +143,13 @@ export function HostLiveTabBar({
 function TabIcon({
   name,
   danger,
+  muted,
 }: {
   name: Tab["icon"];
   danger?: boolean;
+  muted?: boolean;
 }) {
-  const color = danger ? colors.merlot : colors.ink;
+  const color = muted ? colors.muted : danger ? colors.merlot : colors.ink;
   const size = 22;
   const stroke = 2.1;
   if (name === "home") return <Home size={size} color={color} strokeWidth={stroke} />;
@@ -195,4 +201,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   labelDanger: { color: colors.merlot },
+  labelMuted: { color: colors.muted },
 });

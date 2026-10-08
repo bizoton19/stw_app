@@ -8,18 +8,43 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { Motif } from "@/components/motifs";
 import { getApiUrl } from "@/lib/config";
 import { formatPlaceCategory, placePhotos, type NearbyPlaceCard } from "@/lib/nearby-places";
 import { colors } from "@/lib/theme";
 
 const CARD_HEIGHT = 220;
 const CARD_GAP = 12;
+/** The scrim covers about the bottom 45% of the card. */
+const CAPTION_HEIGHT = Math.round(CARD_HEIGHT * 0.45);
 
-function CardPhoto({ url, width, height }: { url: string; width: number; height: number }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return <View style={{ width, height, backgroundColor: colors.chrome }} />;
-  }
+function withAlpha(hex: string, alpha: number): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
+ * Warm ink from alpha 0 at the top of the caption to 0.78 behind the type.
+ * The plateau starts above the name so the name and the meta both clear 4.5:1
+ * on a white photo. React Native 0.86 still exposes this as
+ * `experimental_backgroundImage` (the unprefixed name landed in 0.87).
+ */
+const CAPTION_SCRIM = `linear-gradient(to bottom, ${withAlpha(colors.photoScrim, 0)} 0%, ${withAlpha(colors.photoScrim, 0.78)} 36%, ${withAlpha(colors.photoScrim, 0.78)} 100%)`;
+
+function CardPhoto({
+  url,
+  width,
+  height,
+  onError,
+}: {
+  url: string;
+  width: number;
+  height: number;
+  onError: () => void;
+}) {
   return (
     // Decorative. The place name is the button label.
     // eslint-disable-next-line jsx-a11y/alt-text
@@ -28,7 +53,7 @@ function CardPhoto({ url, width, height }: { url: string; width: number; height:
       style={{ width, height }}
       resizeMode="cover"
       accessible={false}
-      onError={() => setFailed(true)}
+      onError={onError}
     />
   );
 }
@@ -73,6 +98,67 @@ function NearbyLoading({ cardWidth }: { cardWidth: number }) {
   );
 }
 
+function PlaceCard({
+  card,
+  cardWidth,
+  onSelect,
+}: {
+  card: NearbyPlaceCard;
+  cardWidth: number;
+  onSelect: (card: NearbyPlaceCard) => void;
+}) {
+  const [failed, setFailed] = useState(false);
+  const photo = placePhotos(card, getApiUrl())[0] ?? null;
+  const showPhoto = Boolean(photo) && !failed;
+  const category = formatPlaceCategory(card.category);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={card.name}
+      onPress={() => onSelect(card)}
+      style={({ pressed }) => [
+        styles.card,
+        { width: cardWidth },
+        pressed && { opacity: 0.86 },
+      ]}
+    >
+      {showPhoto && photo ? (
+        <CardPhoto
+          url={photo}
+          width={cardWidth}
+          height={CARD_HEIGHT}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <View style={{ width: cardWidth, height: CARD_HEIGHT, backgroundColor: colors.chrome }}>
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={styles.fallbackMotif}
+          >
+            <Motif name="stem" size={72} color={colors.merlot} opacity={0.8} />
+          </View>
+        </View>
+      )}
+      <View style={[styles.caption, showPhoto ? styles.captionPhoto : styles.captionPlain]}>
+        <Text numberOfLines={1} style={[styles.name, !showPhoto && styles.namePlain]}>
+          {card.name}
+        </Text>
+        {card.formattedAddress ? (
+          <Text numberOfLines={1} style={[styles.meta, !showPhoto && styles.metaPlain]}>
+            {card.formattedAddress}
+          </Text>
+        ) : null}
+        {category ? (
+          <Text numberOfLines={1} style={[styles.meta, !showPhoto && styles.metaPlain]}>
+            {category}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
 /** Short horizontal swipe. A tap opens the place screen; it does not select. */
 export function NearbyPlaceCards({
   places,
@@ -104,44 +190,9 @@ export function NearbyPlaceCards({
         nestedScrollEnabled
         contentContainerStyle={styles.row}
       >
-        {places.map((card) => {
-          const photo = placePhotos(card, getApiUrl())[0] ?? null;
-          const category = formatPlaceCategory(card.category);
-          return (
-            <Pressable
-              key={card.placeId}
-              accessibilityRole="button"
-              accessibilityLabel={card.name}
-              onPress={() => onSelect(card)}
-              style={({ pressed }) => [
-                styles.card,
-                { width: cardWidth },
-                pressed && { opacity: 0.86 },
-              ]}
-            >
-              {photo ? (
-                <CardPhoto url={photo} width={cardWidth} height={CARD_HEIGHT} />
-              ) : (
-                <View style={{ width: cardWidth, height: CARD_HEIGHT, backgroundColor: colors.chrome }} />
-              )}
-              <View style={[styles.caption, !photo && styles.captionPlain]}>
-                <Text numberOfLines={1} style={[styles.name, !photo && styles.namePlain]}>
-                  {card.name}
-                </Text>
-                {card.formattedAddress ? (
-                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
-                    {card.formattedAddress}
-                  </Text>
-                ) : null}
-                {category ? (
-                  <Text numberOfLines={1} style={[styles.meta, !photo && styles.metaPlain]}>
-                    {category}
-                  </Text>
-                ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
+        {places.map((card) => (
+          <PlaceCard key={card.placeId} card={card} cardWidth={cardWidth} onSelect={onSelect} />
+        ))}
       </ScrollView>
       <Text style={styles.attribution}>Powered by Google</Text>
     </View>
@@ -170,15 +221,27 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.chromeBorder,
   },
+  fallbackMotif: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: CAPTION_HEIGHT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   caption: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
+    height: CAPTION_HEIGHT,
     paddingHorizontal: 12,
-    paddingTop: 28,
     paddingBottom: 12,
-    backgroundColor: "rgba(36, 28, 20, 0.55)",
+    justifyContent: "flex-end",
+  },
+  captionPhoto: {
+    experimental_backgroundImage: CAPTION_SCRIM,
   },
   captionPlain: { backgroundColor: "transparent" },
   name: {
@@ -193,8 +256,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: colors.paper,
-    opacity: 0.9,
   },
-  metaPlain: { color: colors.inkSoft },
+  metaPlain: { color: colors.inkFirm },
   attribution: { fontSize: 11, color: colors.muted, marginTop: 8 },
 });

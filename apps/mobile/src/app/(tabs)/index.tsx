@@ -21,6 +21,7 @@ import {
   resumePathForDraft,
   type PersistedHostDraft,
 } from "@/lib/host-draft-store";
+import { hostedStatusTone } from "@/lib/hosted-status";
 import {
   clearHostedReceipt,
   getActiveHostReceiptId,
@@ -51,6 +52,33 @@ function isToday(isoDay?: string, updatedAt?: string): boolean {
   const raw = isoDay && /^\d{4}-\d{2}-\d{2}$/.test(isoDay) ? isoDay : updatedAt?.slice(0, 10);
   if (!raw) return false;
   return raw === new Date().toISOString().slice(0, 10);
+}
+
+function StatusChip({ status }: { status?: HostedReceiptSummary["status"] }) {
+  const tone = hostedStatusTone(status);
+  return (
+    <View
+      style={[
+        styles.statusPill,
+        tone === "closed"
+          ? styles.statusPillClosed
+          : tone === "draft"
+            ? styles.statusPillDraft
+            : styles.statusPillOpen,
+      ]}
+    >
+      {tone === "open" ? <View style={styles.liveDot} /> : null}
+      <Text
+        style={[
+          styles.statusPillText,
+          tone === "closed" && styles.statusPillTextClosed,
+          tone === "draft" && styles.statusPillTextDraft,
+        ]}
+      >
+        {hostedStatusLabel(status)}
+      </Text>
+    </View>
+  );
 }
 
 function draftPlaceLabel(draft: PersistedHostDraft): string {
@@ -302,29 +330,7 @@ export default function HomeScreen() {
                           ? "Tonight’s tab"
                           : "Recent tab"}
                       </Text>
-                      <View
-                        style={[
-                          styles.statusPill,
-                          active.status === "finalized"
-                            ? styles.statusPillClosed
-                            : active.status === "planning"
-                              ? styles.statusPillDraft
-                              : styles.statusPillOpen,
-                        ]}
-                      >
-                        {active.status !== "finalized" && active.status !== "planning" ? (
-                          <View style={styles.liveDot} />
-                        ) : null}
-                        <Text
-                          style={[
-                            styles.statusPillText,
-                            active.status === "finalized" && styles.statusPillTextClosed,
-                            active.status === "planning" && styles.statusPillTextDraft,
-                          ]}
-                        >
-                          {hostedStatusLabel(active.status)}
-                        </Text>
-                      </View>
+                      <StatusChip status={active.status} />
                     </View>
                     <View style={styles.heroBody}>
                       <VenueMapThumb
@@ -566,7 +572,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.select,
   },
   statusPillText: { fontSize: 12, fontWeight: "700", color: colors.select },
-  statusPillTextClosed: { color: colors.inkSoft },
+  statusPillTextClosed: { color: colors.inkFirm },
   statusPillTextDraft: { color: colors.merlot },
   heroCta: { marginTop: 8, fontSize: 13, fontWeight: "600", color: colors.inkSoft },
   emptyCard: {
@@ -629,7 +635,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.select,
   },
-  rowStatusClosed: { color: colors.inkSoft },
+  rowStatusClosed: { color: colors.inkFirm },
   rowPlace: { marginTop: 2, fontSize: 14, fontWeight: "500", color: colors.inkSoft },
   rowAction: { fontSize: 14, fontWeight: "700", color: colors.merlot },
   hint: {

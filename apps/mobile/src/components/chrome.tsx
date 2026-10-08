@@ -297,17 +297,23 @@ export function PrimaryButton({
   disabled?: boolean;
   busy?: boolean;
 }) {
+  const locked = Boolean(disabled) || busy || !onPress;
+  // Busy keeps the merlot fill and spinner. Disabled is a flat chrome button.
+  const showDisabled = !busy && locked;
   return (
     <PressScale
       onPress={onPress}
-      disabled={disabled || busy || !onPress}
+      disabled={locked}
       haptic="light"
-      style={styles.primary}
+      style={[styles.primary, showDisabled && styles.primaryDisabled]}
     >
       {busy ? (
         <ActivityIndicator color={colors.merlotFg} />
       ) : (
-        <Text allowFontScaling style={styles.primaryText}>
+        <Text
+          allowFontScaling
+          style={[styles.primaryText, showDisabled && styles.primaryTextDisabled]}
+        >
           {children}
         </Text>
       )}
@@ -326,7 +332,7 @@ export function QuietButton({
 }) {
   return (
     <PressScale onPress={onPress} disabled={disabled} haptic={false} style={styles.quiet}>
-      <Text allowFontScaling style={styles.quietText}>
+      <Text allowFontScaling style={[styles.quietText, disabled && styles.quietTextDisabled]}>
         {children}
       </Text>
     </PressScale>
@@ -431,7 +437,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  primaryDisabled: { backgroundColor: colors.chromeBorder },
   primaryText: { color: colors.merlotFg, fontSize: 16, fontWeight: "700" },
+  primaryTextDisabled: { color: colors.inkFirm },
   quiet: {
     height: 48,
     borderRadius: 999,
@@ -439,4 +447,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   quietText: { color: colors.ink, fontSize: 15, fontWeight: "600" },
+  quietTextDisabled: { color: colors.muted },
 });

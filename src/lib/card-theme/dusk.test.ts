@@ -67,6 +67,10 @@ test("every theme defines every token, and linen holds the shipped palette", () 
   assert.equal(cardThemes.linen.merlot, "#6e2e35");
   assert.equal(cardThemes.linen.chrome, "#ede8e1");
   assert.equal(cardThemes.linen.chromeBorder, "#d4cdc3");
+  assert.equal(cardThemes.linen.inkFirm, "#5a5248");
+  assert.equal(cardThemes.linen.photoScrim, "#241c14");
+  assert.equal(cardThemes.candlelight.inkFirm, "#56483b");
+  assert.equal(cardThemes.candlelight.photoScrim, cardThemes.linen.photoScrim);
   // "Claimed" and "destructive" must mean the same thing at every hour.
   assert.equal(cardThemes.candlelight.select, cardThemes.linen.select);
   assert.equal(cardThemes.candlelight.danger, cardThemes.linen.danger);

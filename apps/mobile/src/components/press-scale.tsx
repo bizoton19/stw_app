@@ -10,6 +10,7 @@ export function PressScale({
   haptic = false,
   style,
   onPress,
+  accessibilityState,
   ...props
 }: PressableProps & {
   haptic?: HapticKind;
@@ -18,6 +19,7 @@ export function PressScale({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ ...accessibilityState, disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={(event) => {
         if (haptic && !disabled) {
@@ -30,7 +32,6 @@ export function PressScale({
       }}
       style={({ pressed }) => [
         { transform: [{ scale: pressed && !disabled ? 0.98 : 1 }] },
-        disabled ? { opacity: 0.35 } : null,
         style,
       ]}
       {...props}

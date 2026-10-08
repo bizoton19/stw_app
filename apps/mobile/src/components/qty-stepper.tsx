@@ -25,6 +25,8 @@ export function QtyStepper({
   const field = variant === "field";
   const icon = field ? 14 : 16;
   const glyph = field ? colors.inkSoft : colors.ink;
+  const atMin = value <= min;
+  const atMax = value >= max;
 
   function step(delta: number) {
     if (delta < 0) {
@@ -43,24 +45,24 @@ export function QtyStepper({
     >
       <PressScale
         accessibilityLabel="Decrease quantity"
-        disabled={value <= min}
+        disabled={atMin}
         haptic="select"
         onPress={() => step(-1)}
         hitSlop={field ? { top: 6, bottom: 6, left: 6, right: 2 } : undefined}
         style={field ? styles.fieldHit : styles.hit}
       >
-        <Minus size={icon} color={glyph} />
+        <Minus size={icon} color={atMin ? colors.muted : glyph} />
       </PressScale>
       <Text style={field ? styles.fieldValue : styles.value}>{value}</Text>
       <PressScale
         accessibilityLabel="Increase quantity"
-        disabled={value >= max}
+        disabled={atMax}
         haptic="select"
         onPress={() => step(1)}
         hitSlop={field ? { top: 6, bottom: 6, left: 2, right: 6 } : undefined}
         style={field ? styles.fieldHit : styles.hit}
       >
-        <Plus size={icon} color={glyph} />
+        <Plus size={icon} color={atMax ? colors.muted : glyph} />
       </PressScale>
     </View>
   );
