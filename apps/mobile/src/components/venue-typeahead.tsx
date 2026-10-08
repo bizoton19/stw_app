@@ -38,6 +38,7 @@ import {
   type HostLocationPermission,
 } from "@/lib/host-location-prime-policy";
 import { nearbyCardsAreVisible } from "@/lib/place-step-footer";
+import { HOST_LOCATION_FIX_TIMEOUT_MS, withPositionDeadline } from "@/lib/position-fix";
 import { colors } from "@/lib/theme";
 import type { ReceiptVenue } from "@/lib/types";
 
@@ -158,9 +159,12 @@ export function VenueTypeahead({
       return;
     }
     try {
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const pos = await withPositionDeadline(
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }),
+        HOST_LOCATION_FIX_TIMEOUT_MS,
+      );
       if (stale()) return;
       const nextCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       setCoords((prev) =>
@@ -419,7 +423,7 @@ export function VenueTypeahead({
           {permission && permission !== "granted" ? (
             Platform.OS === "web" ? (
               <Text allowFontScaling style={styles.locationUnavailable}>
-                Location off · Turn on
+                Location off — search by name.
               </Text>
             ) : (
               <Pressable

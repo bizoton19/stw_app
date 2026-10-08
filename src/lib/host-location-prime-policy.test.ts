@@ -22,6 +22,10 @@ import {
   shouldRevealDeniedLocationVariant,
 } from "../../apps/mobile/src/lib/host-location-prime-policy";
 import { nearbyCardsAreVisible, placeStepFooter } from "../../apps/mobile/src/lib/place-step-footer";
+import {
+  HOST_LOCATION_FIX_TIMEOUT_MS,
+  withPositionDeadline,
+} from "../../apps/mobile/src/lib/position-fix";
 
 const today = new Date(2026, 9, 8, 15, 0, 0);
 const yesterdayIso = new Date(2026, 9, 7, 18, 0, 0).toISOString();
@@ -273,6 +277,40 @@ describe("place step footer and nearby cards", () => {
   });
 });
 
+describe("position fix deadline", () => {
+  it("uses a ten second deadline", () => {
+    assert.equal(HOST_LOCATION_FIX_TIMEOUT_MS, 10_000);
+  });
+
+  it("returns a fix that lands before the deadline", async () => {
+    assert.equal(await withPositionDeadline(Promise.resolve("ok"), 50), "ok");
+  });
+
+  it("rejects a failed fix before the deadline", async () => {
+    await assert.rejects(withPositionDeadline(Promise.reject(new Error("gps")), 50), /gps/);
+  });
+
+  it("rejects a stuck fix and ignores the late resolution", async () => {
+    let release: (value: string) => void = () => {};
+    const hung = new Promise<string>((resolve) => {
+      release = resolve;
+    });
+    const seen: string[] = [];
+    const settled = withPositionDeadline(hung, 30).then(
+      (value) => {
+        seen.push(value);
+      },
+      () => {
+        seen.push("timeout");
+      },
+    );
+    await settled;
+    release("late");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(seen, ["timeout"]);
+  });
+});
+
 describe("location priming wiring", () => {
   const root = process.cwd();
 
@@ -317,10 +355,19 @@ describe("location priming wiring", () => {
     assert.equal(venue.includes("requestForegroundPermissionsAsync"), false);
     assert.match(venue, /getForegroundPermissionsAsync\(/);
     assert.match(venue, /AppState/);
+    assert.match(venue, /withPositionDeadline\(/);
+    assert.match(venue, /HOST_LOCATION_FIX_TIMEOUT_MS/);
+    assert.match(venue, /getCurrentPositionAsync\(/);
     assert.match(venue, /Location off · /);
     assert.match(venue, /Turn on/);
     assert.match(venue, /Location is off\. Turn on location\./);
     assert.match(venue, /Location unavailable — search by name\./);
+    const webQuiet = venue.slice(
+      venue.indexOf('Platform.OS === "web"'),
+      venue.indexOf(") : (", venue.indexOf('Platform.OS === "web"')),
+    );
+    assert.match(webQuiet, /Location off — search by name\./);
+    assert.equal(webQuiet.includes("Turn on"), false);
     assert.equal(venue.includes("Location off — search by name only."), false);
     assert.equal(venue.includes("Using nearby places to rank results."), false);
   });
