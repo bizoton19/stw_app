@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Users } from "lucide-react-native";
-import { AppShell, InterviewChrome, PrimaryButton, QuietButton } from "@/components/chrome";
+import { AppShell, InterviewChrome, PrimaryButton } from "@/components/chrome";
 import { ClaimerAvatar } from "@/components/claimer-avatar";
 import { ClaimLineRow } from "@/components/claim-line-row";
 import { Field } from "@/components/field";
@@ -17,6 +17,7 @@ import { HostLiveTabBar } from "@/components/host-live-tab-bar";
 import { HostMessage } from "@/components/host-message";
 import { RsvpConfirmation } from "@/components/rsvp-confirmation";
 import { PressScale } from "@/components/press-scale";
+
 import { ReceiptImageButton } from "@/components/receipt-image-viewer";
 import { useClaimFlow } from "@/context/claim-flow";
 import { hapticNotify } from "@/lib/haptics";
@@ -104,6 +105,7 @@ function RsvpScreen() {
     already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
       ? already.response
       : null;
+  const [response, setResponse] = useState<"going" | "maybe" | "cant" | null>(initialDone);
   const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(initialDone);
   const [showForm, setShowForm] = useState(!initialDone);
   const [err, setErr] = useState<string | null>(null);
@@ -121,18 +123,19 @@ function RsvpScreen() {
   const goingCount =
     receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
 
-  async function submit(response: "going" | "maybe" | "cant") {
+  async function save() {
     if (!name.trim()) {
       setErr("Add your name so the host knows who’s in.");
       return;
     }
+    if (!response) {
+      setErr("Pick Going, Maybe, or Can’t.");
+      return;
+    }
     setBusy(true);
     setErr(null);
-    // Land on the ticket immediately — don't wait on refresh (that was leaving
-    // people on the form with only the button label flipping to "Still going").
-    setDone(response);
-    setShowForm(false);
     try {
+      // Host push fires server-side only after this POST succeeds.
       await postRsvp(receipt.id, {
         response,
         personName: name.trim(),
@@ -141,9 +144,10 @@ function RsvpScreen() {
       });
       await flow.join({ name: name.trim(), contact: contact.trim() });
       void flow.refresh();
+      setDone(response);
+      setShowForm(false);
       void hapticNotify("success");
     } catch (e) {
-      setShowForm(true);
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
       void hapticNotify("error");
     } finally {
@@ -152,6 +156,8 @@ function RsvpScreen() {
   }
 
   const place = receipt.restaurant?.trim() || "the outing";
+  const canSave = Boolean(name.trim() && response) && !busy;
+
   if (done && !showForm) {
     return (
       <AppShell meta="RSVP">
@@ -159,7 +165,10 @@ function RsvpScreen() {
           receipt={receipt}
           response={done}
           busy={busy}
-          onChangeRsvp={() => setShowForm(true)}
+          onChangeRsvp={() => {
+            setResponse(done);
+            setShowForm(true);
+          }}
         />
       </AppShell>
     );
@@ -176,17 +185,9 @@ function RsvpScreen() {
         title={place}
         keyboard
         footer={
-          <View style={styles.rsvpActions}>
-            <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
-              Going
-            </PrimaryButton>
-            <QuietButton disabled={busy} onPress={() => void submit("maybe")}>
-              Maybe
-            </QuietButton>
-            <QuietButton disabled={busy} onPress={() => void submit("cant")}>
-              Can’t
-            </QuietButton>
-          </View>
+          <PrimaryButton busy={busy} disabled={!canSave} onPress={() => void save()}>
+            Save RSVP
+          </PrimaryButton>
         }
       >
         <HostMessage note={hostNoteText(receipt.hostInfo)} />
@@ -197,6 +198,36 @@ function RsvpScreen() {
           <Text style={styles.rsvpMeta}>{goingCount} going so far</Text>
         ) : null}
         {err ? <Text style={styles.err}>{err}</Text> : null}
+        <Text style={styles.rsvpChoiceLabel}>Your answer</Text>
+        <View style={styles.rsvpChoices}>
+          {(
+            [
+              { value: "going" as const, label: "Going" },
+              { value: "maybe" as const, label: "Maybe" },
+              { value: "cant" as const, label: "Can’t" },
+            ] as const
+          ).map((choice) => {
+            const on = response === choice.value;
+            return (
+              <PressScale
+                key={choice.value}
+                haptic="select"
+                disabled={busy}
+                onPress={() => {
+                  setResponse(choice.value);
+                  setErr(null);
+                }}
+                style={[styles.rsvpChoice, on && styles.rsvpChoiceOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={[styles.rsvpChoiceText, on && styles.rsvpChoiceTextOn]}>
+                  {choice.label}
+                </Text>
+              </PressScale>
+            );
+          })}
+        </View>
         <Field
           label="Name"
           value={name}
@@ -682,13 +713,28 @@ const styles = StyleSheet.create({
   },
   unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
   unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
-  rsvpActions: { gap: 4 },
-  rsvpThanks: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.inkSoft,
-    textAlign: "center",
-    paddingVertical: 8,
-  },
   rsvpMeta: { fontSize: 13, color: colors.muted, marginBottom: 12 },
+  rsvpChoiceLabel: {
+    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.inkSoft,
+  },
+  rsvpChoices: { flexDirection: "row", gap: 8, marginBottom: 16 },
+  rsvpChoice: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.paper,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rsvpChoiceOn: {
+    borderColor: colors.merlot,
+    backgroundColor: "rgba(110, 46, 53, 0.08)",
+  },
+  rsvpChoiceText: { fontSize: 15, fontWeight: "700", color: colors.muted },
+  rsvpChoiceTextOn: { color: colors.merlot },
 });

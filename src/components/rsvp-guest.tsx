@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ContinueButton, InterviewChrome, QuietButton } from "@/components/interview-chrome";
+import { ContinueButton, InterviewChrome } from "@/components/interview-chrome";
 import { HostMessage } from "@/components/host-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { RsvpConfirmation } from "@/components/rsvp-confirmation";
 import { api, getGuest, saveGuest } from "@/lib/session";
 import type { PublicReceipt } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+type RsvpResponse = "going" | "maybe" | "cant";
+
+const CHOICES: { value: RsvpResponse; label: string }[] = [
+  { value: "going", label: "Going" },
+  { value: "maybe", label: "Maybe" },
+  { value: "cant", label: "Can’t" },
+];
 
 export function RsvpGuest({
   receipt,
@@ -35,12 +44,17 @@ export function RsvpGuest({
     already?.personContact || saved?.contact || "",
   );
   const [note, setNote] = useState(already?.note ?? "");
+  const [response, setResponse] = useState<RsvpResponse | null>(
+    already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
+      ? already.response
+      : null,
+  );
   const [busy, setBusy] = useState(false);
   const initialDone =
     already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
       ? already.response
       : null;
-  const [done, setDone] = useState<"going" | "maybe" | "cant" | null>(initialDone);
+  const [done, setDone] = useState<RsvpResponse | null>(initialDone);
   const [showForm, setShowForm] = useState(!initialDone);
   const [err, setErr] = useState<string | null>(null);
 
@@ -59,15 +73,19 @@ export function RsvpGuest({
   const goingCount =
     receipt.invitees?.filter((row) => row.response === "going").length ?? 0;
 
-  async function submit(response: "going" | "maybe" | "cant") {
+  const canSave = Boolean(name.trim() && response) && !busy;
+
+  async function save() {
     if (!name.trim()) {
       setErr("Add your name so the host knows who’s in.");
       return;
     }
+    if (!response) {
+      setErr("Pick Going, Maybe, or Can’t.");
+      return;
+    }
     setBusy(true);
     setErr(null);
-    setDone(response);
-    setShowForm(false);
     try {
       const { receipt: next } = await api<{ receipt: PublicReceipt }>(
         `/api/receipts/${receipt.id}/rsvp`,
@@ -86,9 +104,11 @@ export function RsvpGuest({
         name: name.trim(),
         contact: contact.trim(),
       });
+      // Host push fires server-side only after this POST succeeds.
+      setDone(response);
+      setShowForm(false);
       onDone(next);
     } catch (e) {
-      setShowForm(true);
       setErr(e instanceof Error ? e.message : "Couldn’t send RSVP");
     } finally {
       setBusy(false);
@@ -101,7 +121,10 @@ export function RsvpGuest({
         receipt={receipt}
         response={done}
         busy={busy}
-        onChangeRsvp={() => setShowForm(true)}
+        onChangeRsvp={() => {
+          setResponse(done);
+          setShowForm(true);
+        }}
       />
     );
   }
@@ -116,17 +139,9 @@ export function RsvpGuest({
       title={place}
       stepKey="rsvp"
       footer={
-        <div className="flex flex-col gap-1">
-          <ContinueButton disabled={busy} onClick={() => void submit("going")}>
-            Going
-          </ContinueButton>
-          <QuietButton disabled={busy} onClick={() => void submit("maybe")}>
-            Maybe
-          </QuietButton>
-          <QuietButton disabled={busy} onClick={() => void submit("cant")}>
-            Can’t
-          </QuietButton>
-        </div>
+        <ContinueButton disabled={!canSave} onClick={() => void save()}>
+          {busy ? "Saving…" : "Save RSVP"}
+        </ContinueButton>
       }
     >
       <HostMessage note={receipt.hostInfo?.note} />
@@ -137,6 +152,35 @@ export function RsvpGuest({
         <p className="mb-3 text-[13px] text-muted-foreground">{goingCount} going so far</p>
       ) : null}
       {err ? <p className="mb-3 text-[14px] text-destructive">{err}</p> : null}
+
+      <Label className="mb-2 text-[13px] font-medium">Your answer</Label>
+      <div className="mb-4 flex gap-2" role="radiogroup" aria-label="RSVP answer">
+        {CHOICES.map((choice) => {
+          const on = response === choice.value;
+          return (
+            <button
+              key={choice.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              disabled={busy}
+              onClick={() => {
+                setResponse(choice.value);
+                setErr(null);
+              }}
+              className={cn(
+                "h-12 flex-1 rounded-xl border text-[15px] font-semibold transition-colors",
+                on
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-transparent text-ink-soft",
+              )}
+            >
+              {choice.label}
+            </button>
+          );
+        })}
+      </div>
+
       <Label htmlFor="rsvp-name" className="mb-2 text-[13px] font-medium">
         Name
       </Label>
