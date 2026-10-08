@@ -302,13 +302,15 @@ export function PrimaryButton({
   const showDisabled = !busy && locked;
   return (
     <PressScale
+      accessibilityLabel={children}
       onPress={onPress}
       disabled={locked}
+      busy={Boolean(busy)}
       haptic="light"
       style={[styles.primary, showDisabled && styles.primaryDisabled]}
     >
       {busy ? (
-        <ActivityIndicator color={colors.merlotFg} />
+        <ActivityIndicator accessible={false} color={colors.merlotFg} />
       ) : (
         <Text
           allowFontScaling
@@ -334,9 +336,16 @@ export function QuietButton({
 }) {
   const locked = Boolean(disabled) || Boolean(busy);
   return (
-    <PressScale onPress={onPress} disabled={locked} haptic={false} style={styles.quiet}>
+    <PressScale
+      accessibilityLabel={children}
+      onPress={onPress}
+      disabled={locked}
+      busy={Boolean(busy)}
+      haptic={false}
+      style={styles.quiet}
+    >
       {busy ? (
-        <ActivityIndicator color={colors.ink} />
+        <ActivityIndicator accessible={false} color={colors.ink} />
       ) : (
         <Text allowFontScaling style={[styles.quietText, disabled && styles.quietTextDisabled]}>
           {children}

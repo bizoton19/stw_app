@@ -32,6 +32,7 @@ import { centsToLabel, unitPriceCents } from "@/lib/money";
 import { pourCandidates } from "@/lib/pour";
 import { revealScrollDelta } from "@/lib/reveal-in-scroll";
 import type { ParseReviewChoice } from "@/lib/types";
+import { controlShowsSpinner } from "@/lib/pending-control";
 import { colors } from "@/lib/theme";
 
 /** Footer padding outside this screen's footer slot once the keyboard is open. */
@@ -326,6 +327,7 @@ export default function HostItems() {
   const [hint, setHint] = useState<string | null>(null);
   const [choice, setChoice] = useState<ParseReviewChoice | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingChoice, setPendingChoice] = useState<null | "yes" | "no">(null);
   const [toast, setToast] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -372,6 +374,7 @@ export default function HostItems() {
   async function applyChoice(next: ParseReviewChoice, opts?: { continue?: boolean }) {
     stopEditing();
     setChoice(next);
+    setPendingChoice(opts?.continue || next === "looks_good" ? "yes" : "no");
     setBusy(true);
     try {
       await draft.recordParseReview(next);
@@ -380,6 +383,7 @@ export default function HostItems() {
       if (opts?.continue) goAfterItems();
     } finally {
       setBusy(false);
+      setPendingChoice(null);
     }
   }
 
@@ -419,37 +423,47 @@ export default function HostItems() {
             <View style={styles.footerRow}>
               <PressScale
                 disabled={busy || !canContinue}
+                busy={controlShowsSpinner(pendingChoice, "yes")}
                 onPress={() => void applyChoice("looks_good", { continue: true })}
                 style={[
                   styles.halfBtn,
-                  choice === "looks_good" && (busy || canContinue) ? styles.halfBtnSelected : null,
-                  !busy && !canContinue && styles.halfBtnDisabled,
+                  choice === "looks_good" && canContinue && !busy ? styles.halfBtnSelected : null,
+                  (busy || !canContinue) && !controlShowsSpinner(pendingChoice, "yes")
+                    ? styles.halfBtnDisabled
+                    : null,
                 ]}
                 accessibilityLabel={t("items.yes")}
                 accessibilityRole="button"
               >
-                {busy ? (
-                  <ActivityIndicator color={colors.ink} />
+                {controlShowsSpinner(pendingChoice, "yes") ? (
+                  <ActivityIndicator accessible={false} color={colors.ink} />
                 ) : (
-                  <Text style={[styles.halfText, !canContinue && styles.halfTextDisabled]}>
+                  <Text
+                    style={[
+                      styles.halfText,
+                      (busy || !canContinue) && styles.halfTextDisabled,
+                    ]}
+                  >
                     {t("items.yes")}
                   </Text>
                 )}
               </PressScale>
               <PressScale
                 disabled={busy}
+                busy={controlShowsSpinner(pendingChoice, "no")}
                 onPress={() => void applyChoice("needs_edits")}
                 style={[
                   styles.halfBtn,
-                  choice === "needs_edits" ? styles.halfBtnSelected : null,
+                  choice === "needs_edits" && !busy ? styles.halfBtnSelected : null,
+                  busy && !controlShowsSpinner(pendingChoice, "no") ? styles.halfBtnDisabled : null,
                 ]}
                 accessibilityLabel={t("items.no")}
                 accessibilityRole="button"
               >
-                {busy ? (
-                  <ActivityIndicator color={colors.ink} />
+                {controlShowsSpinner(pendingChoice, "no") ? (
+                  <ActivityIndicator accessible={false} color={colors.ink} />
                 ) : (
-                  <Text style={styles.halfText}>{t("items.no")}</Text>
+                  <Text style={[styles.halfText, busy && styles.halfTextDisabled]}>{t("items.no")}</Text>
                 )}
               </PressScale>
             </View>
@@ -460,15 +474,17 @@ export default function HostItems() {
                   stopEditing();
                   goAfterItems();
                 }}
-                style={[styles.continueBtn, !busy && !canContinue && styles.continueDisabled]}
+                style={[styles.continueBtn, (busy || !canContinue) && styles.continueDisabled]}
+                accessibilityLabel={t("items.continueAfterEdit")}
               >
-                {busy ? (
-                  <ActivityIndicator color={colors.merlotFg} />
-                ) : (
-                  <Text style={[styles.continueText, !canContinue && styles.continueTextDisabled]}>
-                    {t("items.continueAfterEdit")}
-                  </Text>
-                )}
+                <Text
+                  style={[
+                    styles.continueText,
+                    (busy || !canContinue) && styles.continueTextDisabled,
+                  ]}
+                >
+                  {t("items.continueAfterEdit")}
+                </Text>
               </PressScale>
             ) : null}
           </View>

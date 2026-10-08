@@ -11,12 +11,18 @@ import {
 import { Motif } from "@/components/motifs";
 import { getApiUrl } from "@/lib/config";
 import { formatPlaceCategory, placePhotos, type NearbyPlaceCard } from "@/lib/nearby-places";
+import {
+  CAPTION_FONT_SCALE_MAX,
+  PLACE_CAPTION_MIN_HEIGHT,
+  PLACE_CARD_HEIGHT,
+  STEM_MOTIF_SIZE,
+  stemClearsCaption,
+} from "@/lib/place-card-caption";
 import { colors } from "@/lib/theme";
 
-const CARD_HEIGHT = 220;
+const CARD_HEIGHT = PLACE_CARD_HEIGHT;
 const CARD_GAP = 12;
-/** Minimum caption band: about the bottom 45% of the card. It grows with the type. */
-const CAPTION_HEIGHT = Math.round(CARD_HEIGHT * 0.45);
+const CAPTION_HEIGHT = PLACE_CAPTION_MIN_HEIGHT;
 /** Fixed ramp. The 0.78 plateau starts here and covers every line below it. */
 const CAPTION_RAMP = 36;
 
@@ -110,8 +116,10 @@ function PlaceCard({
   onSelect: (card: NearbyPlaceCard) => void;
 }) {
   const [failed, setFailed] = useState(false);
+  const [captionHeight, setCaptionHeight] = useState(CAPTION_HEIGHT);
   const photo = placePhotos(card, getApiUrl())[0] ?? null;
   const showPhoto = Boolean(photo) && !failed;
+  const showMotif = !showPhoto && stemClearsCaption(captionHeight);
   const category = formatPlaceCategory(card.category);
   return (
     <Pressable
@@ -133,26 +141,46 @@ function PlaceCard({
         />
       ) : (
         <View style={{ width: cardWidth, height: CARD_HEIGHT, backgroundColor: colors.chrome }}>
-          <View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            style={styles.fallbackMotif}
-          >
-            <Motif name="stem" size={72} color={colors.merlot} opacity={0.8} />
-          </View>
+          {showMotif ? (
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[styles.fallbackMotif, { bottom: captionHeight }]}
+            >
+              <Motif name="stem" size={STEM_MOTIF_SIZE} color={colors.merlot} opacity={0.8} />
+            </View>
+          ) : null}
         </View>
       )}
-      <View style={[styles.caption, showPhoto ? styles.captionPhoto : styles.captionPlain]}>
-        <Text numberOfLines={3} style={[styles.name, !showPhoto && styles.namePlain]}>
+      <View
+        onLayout={(event) => {
+          const next = Math.round(event.nativeEvent.layout.height);
+          setCaptionHeight((prev) => (prev === next ? prev : next));
+        }}
+        style={[styles.caption, showPhoto ? styles.captionPhoto : styles.captionPlain]}
+      >
+        <Text
+          maxFontSizeMultiplier={CAPTION_FONT_SCALE_MAX}
+          numberOfLines={3}
+          style={[styles.name, !showPhoto && styles.namePlain]}
+        >
           {card.name}
         </Text>
         {card.formattedAddress ? (
-          <Text numberOfLines={1} style={[styles.meta, !showPhoto && styles.metaPlain]}>
+          <Text
+            maxFontSizeMultiplier={CAPTION_FONT_SCALE_MAX}
+            numberOfLines={1}
+            style={[styles.meta, !showPhoto && styles.metaPlain]}
+          >
             {card.formattedAddress}
           </Text>
         ) : null}
         {category ? (
-          <Text numberOfLines={1} style={[styles.meta, !showPhoto && styles.metaPlain]}>
+          <Text
+            maxFontSizeMultiplier={CAPTION_FONT_SCALE_MAX}
+            numberOfLines={1}
+            style={[styles.meta, !showPhoto && styles.metaPlain]}
+          >
             {category}
           </Text>
         ) : null}
@@ -231,6 +259,7 @@ const styles = StyleSheet.create({
     bottom: CAPTION_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   caption: {
     position: "absolute",

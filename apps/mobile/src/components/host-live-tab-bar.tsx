@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { DoorOpen, Home, LayoutList, RotateCcw, Trash2, Utensils } from "lucide-react-native";
 import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
+import { controlShowsSpinner } from "@/lib/pending-control";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
@@ -27,6 +28,7 @@ export function HostLiveTabBar({
   mode = "live",
   closed,
   busy,
+  pendingAction,
   onClose,
   onReopen,
   onDelete,
@@ -40,6 +42,8 @@ export function HostLiveTabBar({
   mode?: "live" | "claims";
   closed: boolean;
   busy?: boolean;
+  /** Which of close / reopen / delete was tapped. Only that tab spins. */
+  pendingAction?: "close" | "reopen" | "delete" | null;
   onClose: () => void;
   onReopen: () => void;
   /** Shown next to Reopen when the tab is closed. */
@@ -113,29 +117,34 @@ export function HostLiveTabBar({
       style={[styles.bar, stacked && styles.barStacked]}
       accessibilityRole="tablist"
     >
-      {tabs.map((tab) => (
-        <PressScale
-          key={tab.key}
-          onPress={tab.onPress}
-          disabled={tab.disabled}
-          haptic="light"
-          style={styles.tab}
-          accessibilityLabel={tab.accessibilityLabel ?? tab.label}
-          accessibilityRole="button"
-        >
-          <TabIcon name={tab.icon} danger={tab.danger} />
-          {tab.disabled ? (
-            <ActivityIndicator
-              color={tab.danger ? colors.merlot : colors.ink}
-              size="small"
-            />
-          ) : (
-            <Text style={[styles.label, tab.danger && styles.labelDanger]} numberOfLines={1}>
-              {tab.label}
-            </Text>
-          )}
-        </PressScale>
-      ))}
+      {tabs.map((tab) => {
+        const spinning = Boolean(tab.disabled) && controlShowsSpinner(pendingAction, tab.key);
+        return (
+          <PressScale
+            key={tab.key}
+            onPress={tab.onPress}
+            disabled={tab.disabled}
+            busy={spinning}
+            haptic="light"
+            style={styles.tab}
+            accessibilityLabel={tab.accessibilityLabel ?? tab.label}
+            accessibilityRole="button"
+          >
+            <TabIcon name={tab.icon} danger={tab.danger} />
+            {spinning ? (
+              <ActivityIndicator
+                accessible={false}
+                color={tab.danger ? colors.merlot : colors.ink}
+                size="small"
+              />
+            ) : (
+              <Text style={[styles.label, tab.danger && styles.labelDanger]} numberOfLines={1}>
+                {tab.label}
+              </Text>
+            )}
+          </PressScale>
+        );
+      })}
     </View>
   );
 }

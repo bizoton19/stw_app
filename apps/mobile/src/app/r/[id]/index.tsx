@@ -28,8 +28,9 @@ import { personRowKey, sameGuest } from "@/lib/guest-id";
 import { computeTotals } from "@/lib/totals";
 import { getClaimToken } from "@/lib/session";
 import { goHostDesk } from "@/lib/navigation";
+import { controlShowsSpinner } from "@/lib/pending-control";
 import { colors } from "@/lib/theme";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Claim, Item } from "@/lib/types";
 
 export default function ClaimScreen() {
@@ -101,6 +102,7 @@ function RsvpScreen() {
   );
   const [note, setNote] = useState(() => already?.note || "");
   const [busy, setBusy] = useState(false);
+  const [pendingRsvp, setPendingRsvp] = useState<null | "going" | "maybe" | "cant">(null);
   const initialDone =
     already?.response === "going" || already?.response === "maybe" || already?.response === "cant"
       ? already.response
@@ -127,6 +129,7 @@ function RsvpScreen() {
       setErr("Add your name so the host knows who’s in.");
       return;
     }
+    setPendingRsvp(response);
     setBusy(true);
     setErr(null);
     // Land on the ticket immediately — don't wait on refresh (that was leaving
@@ -149,6 +152,7 @@ function RsvpScreen() {
       void hapticNotify("error");
     } finally {
       setBusy(false);
+      setPendingRsvp(null);
     }
   }
 
@@ -178,13 +182,25 @@ function RsvpScreen() {
         keyboard
         footer={
           <View style={styles.rsvpActions}>
-            <PrimaryButton busy={busy} disabled={busy} onPress={() => void submit("going")}>
+            <PrimaryButton
+              busy={controlShowsSpinner(pendingRsvp, "going")}
+              disabled={busy}
+              onPress={() => void submit("going")}
+            >
               Going
             </PrimaryButton>
-            <QuietButton busy={busy} onPress={() => void submit("maybe")}>
+            <QuietButton
+              busy={controlShowsSpinner(pendingRsvp, "maybe")}
+              disabled={busy}
+              onPress={() => void submit("maybe")}
+            >
               Maybe
             </QuietButton>
-            <QuietButton busy={busy} onPress={() => void submit("cant")}>
+            <QuietButton
+              busy={controlShowsSpinner(pendingRsvp, "cant")}
+              disabled={busy}
+              onPress={() => void submit("cant")}
+            >
               Can’t
             </QuietButton>
           </View>
@@ -281,6 +297,10 @@ function PickBoard() {
   const router = useRouter();
   const flow = useClaimFlow();
   const receipt = flow.receipt!;
+  const [hostAction, setHostAction] = useState<null | "close" | "reopen" | "delete">(null);
+  useEffect(() => {
+    if (!flow.busy) setHostAction(null);
+  }, [flow.busy]);
   const remainingItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) > 0);
   const goneItems = receipt.items.filter((item) => (receipt.remaining[item.id] ?? 0) <= 0);
   const closed = receipt.status === "finalized";
@@ -317,12 +337,17 @@ function PickBoard() {
       onLiveBoard={goLiveBoard}
       closed={closed}
       busy={flow.busy}
-      onClose={() =>
+      pendingAction={hostAction}
+      onClose={() => {
+        setHostAction("close");
         void flow.closeOut().then((ok) => {
           if (ok) goLiveBoard();
-        })
-      }
-      onReopen={() => void flow.reopen()}
+        });
+      }}
+      onReopen={() => {
+        setHostAction("reopen");
+        void flow.reopen();
+      }}
       onDelete={() => {
         Alert.alert(
           "Delete closed tab?",
@@ -333,6 +358,7 @@ function PickBoard() {
               text: "Delete",
               style: "destructive",
               onPress: () => {
+                setHostAction("delete");
                 void flow.deleteClosed().then((ok) => {
                   if (ok) goHostDesk();
                 });
@@ -518,6 +544,7 @@ function History() {
   const flow = useClaimFlow();
   const receipt = flow.receipt!;
   const closed = receipt.status === "finalized";
+  const [pendingClaimId, setPendingClaimId] = useState<string | null>(null);
 
   const claimants = useMemo(() => {
     const map = new Map<
@@ -600,19 +627,26 @@ function History() {
                       </Text>
                       {mineToDrop ? (
                         <PressScale
+                          accessibilityLabel="Unclaim"
                           disabled={flow.busy}
+                          busy={controlShowsSpinner(pendingClaimId, claim.id)}
                           haptic="medium"
                           onPress={() => {
                             if (flow.busy) return;
+                            setPendingClaimId(claim.id);
                             void hapticNotify("warning");
-                            void flow.unclaim(claim.id);
+                            void flow.unclaim(claim.id).finally(() => {
+                              setPendingClaimId((current) => (current === claim.id ? null : current));
+                            });
                           }}
                           style={styles.unclaimHit}
                         >
-                          {flow.busy ? (
-                            <ActivityIndicator color={colors.merlot} size="small" />
+                          {controlShowsSpinner(pendingClaimId, claim.id) ? (
+                            <ActivityIndicator accessible={false} color={colors.merlot} size="small" />
                           ) : (
-                            <Text style={styles.unclaimText}>Unclaim</Text>
+                            <Text style={[styles.unclaimText, flow.busy && styles.unclaimTextQuiet]}>
+                              Unclaim
+                            </Text>
                           )}
                         </PressScale>
                       ) : null}
@@ -685,8 +719,16 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: colors.inkSoft,
   },
-  unclaimHit: { paddingVertical: 2, paddingHorizontal: 2 },
+  unclaimHit: {
+    minWidth: 64,
+    minHeight: 20,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   unclaimText: { fontSize: 12, fontWeight: "700", color: colors.merlot },
+  unclaimTextQuiet: { color: colors.muted },
   rsvpActions: { gap: 4 },
   rsvpThanks: {
     fontSize: 15,

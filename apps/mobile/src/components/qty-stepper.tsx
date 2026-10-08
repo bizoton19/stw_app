@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Minus, Plus } from "lucide-react-native";
+import { stepperLimitPaint } from "@/lib/stepper-limit";
 import { colors } from "@/lib/theme";
 import { PressScale } from "./press-scale";
 
@@ -27,6 +28,8 @@ export function QtyStepper({
   const glyph = field ? colors.inkSoft : colors.ink;
   const atMin = value <= min;
   const atMax = value >= max;
+  const fewer = stepperLimitPaint(atMin);
+  const more = stepperLimitPaint(atMax);
 
   function step(delta: number) {
     if (delta < 0) {
@@ -49,9 +52,16 @@ export function QtyStepper({
         haptic="select"
         onPress={() => step(-1)}
         hitSlop={field ? { top: 6, bottom: 6, left: 6, right: 2 } : undefined}
-        style={field ? styles.fieldHit : styles.hit}
+        style={[
+          field ? styles.fieldHit : styles.hit,
+          fewer.hairline && {
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors[fewer.outline],
+            borderRadius: field ? 8 : 22,
+          },
+        ]}
       >
-        <Minus size={icon} color={atMin ? colors.muted : glyph} />
+        <Minus size={icon} color={fewer.glyph === "inkFirm" ? colors.inkFirm : glyph} />
       </PressScale>
       <Text style={field ? styles.fieldValue : styles.value}>{value}</Text>
       <PressScale
@@ -60,9 +70,16 @@ export function QtyStepper({
         haptic="select"
         onPress={() => step(1)}
         hitSlop={field ? { top: 6, bottom: 6, left: 2, right: 6 } : undefined}
-        style={field ? styles.fieldHit : styles.hit}
+        style={[
+          field ? styles.fieldHit : styles.hit,
+          more.hairline && {
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors[more.outline],
+            borderRadius: field ? 8 : 22,
+          },
+        ]}
       >
-        <Plus size={icon} color={atMax ? colors.muted : glyph} />
+        <Plus size={icon} color={more.glyph === "inkFirm" ? colors.inkFirm : glyph} />
       </PressScale>
     </View>
   );
