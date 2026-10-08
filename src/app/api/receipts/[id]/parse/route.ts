@@ -47,9 +47,27 @@ export async function POST(
       };
       forceStub = body.sample === true || body.sample === "1" || body.sample === "true";
     }
+    console.log(
+      JSON.stringify({
+        event: "parse.request",
+        ts: new Date().toISOString(),
+        receiptId: id,
+        hasImage: Boolean(image?.bytes?.length),
+        imageBytes: image?.bytes?.length ?? 0,
+        contentType: contentType.slice(0, 80),
+        forceStub,
+      }),
+    );
     const result = await parseReceipt(id, hostToken, image, { forceStub });
     return Response.json(result);
   } catch (err) {
+    console.log(
+      JSON.stringify({
+        event: "parse.request_failed",
+        ts: new Date().toISOString(),
+        detail: err instanceof Error ? err.message.slice(0, 240) : String(err),
+      }),
+    );
     return jsonError(err);
   }
 }

@@ -14,6 +14,7 @@ import {
   hostInvitees,
   normalizePlanInput,
   promotePlanningToDraftIfDue,
+  venueToKeepThroughParse,
   publicInvitees,
   type PlanCreateInput,
 } from "./outing";
@@ -373,7 +374,8 @@ export async function parseReceipt(
     if (!canParseStatus(receipt.status)) {
       throw Object.assign(new Error("already_published"), { code: "conflict" });
     }
-    const keepVenue = receipt.status === "planning" ? receipt.venue : null;
+    const keepVenue = venueToKeepThroughParse(receipt);
+    const scannedRestaurant = result.restaurant?.trim() || null;
     receipt.restaurant = keepVenue?.name?.trim() || result.restaurant;
     receipt.venue = keepVenue;
     receipt.receiptDate = result.receiptDate ?? receipt.receiptDate ?? null;
@@ -387,7 +389,10 @@ export async function parseReceipt(
       parse.reason === "ok" || parse.reason === "no_image" ? undefined : parse.reason;
     await upsertReceipt(client, receipt);
     emit(receipt, "updated");
-    return { receipt: toPublic(receipt), parse };
+    return {
+      receipt: toPublic(receipt),
+      parse: { ...parse, scannedRestaurant },
+    };
   });
   console.log(
     JSON.stringify({
@@ -397,6 +402,8 @@ export async function parseReceipt(
       ms: Date.now() - persistStarted,
       reason: parse.reason,
       itemCount: out.receipt.items.length,
+      keptVenue: Boolean(out.receipt.venue),
+      scannedRestaurant: out.parse.scannedRestaurant ?? null,
     }),
   );
   return out;
