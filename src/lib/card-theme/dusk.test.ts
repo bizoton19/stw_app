@@ -63,13 +63,48 @@ test("every theme defines every token, and linen holds the shipped palette", () 
   }
   // Load-bearing per plan §6: while these hold, the theme work stays one-line reversible.
   assert.equal(cardThemes.linen.paper, "#f6f4f1");
+  assert.equal(cardThemes.linen.sheet, "#fffcf8");
   assert.equal(cardThemes.linen.ink, "#2a241c");
   assert.equal(cardThemes.linen.merlot, "#6e2e35");
   assert.equal(cardThemes.linen.chrome, "#ede8e1");
   assert.equal(cardThemes.linen.chromeBorder, "#d4cdc3");
+  // v2 contrast: secondary/tertiary shared so candlelight doesn't drop AA.
+  assert.equal(cardThemes.linen.inkSoft, "#6e6253");
+  assert.equal(cardThemes.linen.muted, "#71675d");
+  assert.equal(cardThemes.candlelight.inkSoft, cardThemes.linen.inkSoft);
+  assert.equal(cardThemes.candlelight.muted, cardThemes.linen.muted);
   // "Claimed" and "destructive" must mean the same thing at every hour.
   assert.equal(cardThemes.candlelight.select, cardThemes.linen.select);
   assert.equal(cardThemes.candlelight.danger, cardThemes.linen.danger);
+});
+
+/** Relative luminance + contrast ratio (sRGB hex, WCAG). */
+function contrastRatio(fgHex: string, bgHex: string): number {
+  const lum = (hex: string) => {
+    const n = hex.replace("#", "");
+    const rgb = [0, 2, 4].map((i) => {
+      const c = parseInt(n.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  };
+  const a = lum(fgHex);
+  const b = lum(bgHex);
+  const lighter = Math.max(a, b);
+  const darker = Math.min(a, b);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+test("linen and candlelight text roles meet AA contrast on their paper", () => {
+  for (const id of CARD_THEME_IDS) {
+    const t = cardThemes[id];
+    assert.ok(contrastRatio(t.ink, t.paper) >= 4.5, `${id} ink on paper`);
+    assert.ok(contrastRatio(t.inkSoft, t.paper) >= 4.5, `${id} inkSoft on paper`);
+    assert.ok(contrastRatio(t.muted, t.paper) >= 4.5, `${id} muted on paper`);
+    assert.ok(contrastRatio(t.merlotFg, t.merlot) >= 4.5, `${id} merlotFg on merlot`);
+    assert.ok(contrastRatio(t.select, t.paper) >= 3, `${id} select on paper`);
+    assert.ok(contrastRatio(t.danger, t.paper) >= 4.5, `${id} danger on paper`);
+  }
 });
 
 test("globals.css declares the same token values as themes.ts", () => {

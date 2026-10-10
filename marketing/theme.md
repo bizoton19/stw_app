@@ -1,234 +1,214 @@
 # Split the Wine — theme spec (one file)
 
-Brand identity for **marketing (`www`)**, **mobile (Expo)**, and **web claim UI**. Use this for second opinions, video end cards, and AI generators.
+Brand system for **marketing (`www`)**, **Expo mobile**, and **web claim UI**.
 
-Sources (canonical code):
-- Marketing: [`marketing/index.html`](index.html)
-- Mobile tokens: [`apps/mobile/src/lib/card-theme/themes.ts`](../apps/mobile/src/lib/card-theme/themes.ts) · [`apps/mobile/src/lib/theme.ts`](../apps/mobile/src/lib/theme.ts) · dusk: [`apps/mobile/src/lib/card-theme/dusk.ts`](../apps/mobile/src/lib/card-theme/dusk.ts)
-- Web tokens (must match mobile byte-for-byte): [`src/lib/card-theme/themes.ts`](../src/lib/card-theme/themes.ts)
-- Plan: [`plans/card-design-themes.md`](../plans/card-design-themes.md) · strategy: [`marketing/strategy.md`](strategy.md)
+**Status:** v2 refinements adopted for Phase 1 (contrast + sheet accuracy). Brand mark and route names unchanged.
 
----
-
-## Positioning (drives visual choices)
-
-- Built for the table, not the ledger.
-- Low-friction utility at the end of dinner — not fintech purple, not social-expense chrome.
-- Host puts the card down; guests claim via link/QR without an app.
+Sources:
+- Marketing: [`index.html`](index.html)
+- Mobile: [`apps/mobile/src/lib/card-theme/themes.ts`](../apps/mobile/src/lib/card-theme/themes.ts) · [`theme.ts`](../apps/mobile/src/lib/theme.ts) · [`dusk.ts`](../apps/mobile/src/lib/card-theme/dusk.ts)
+- Web (parity-tested against mobile): [`src/lib/card-theme/themes.ts`](../src/lib/card-theme/themes.ts) · [`src/app/globals.css`](../src/app/globals.css)
+- Plan: [`plans/card-design-themes.md`](../plans/card-design-themes.md)
 
 ---
 
-## Core palette (ships everywhere)
+## Design intent
 
-| Role | Token | Hex | Use |
-|------|--------|-----|-----|
-| Canvas | `paper` | `#F6F4F1` | Page / app background |
-| Raised surface | `sheet` | `#fffcf8` | Cards, “You owe”, link boxes (app; marketing often uses pure white — see gaps) |
-| Body text | `ink` | `#2A241C` | Headlines, primary copy |
-| Secondary text | `inkSoft` | `#7A7268` | Supporting lines |
-| Tertiary | `muted` | `#8A847C` | Hints, placeholders |
-| Hairline | `border` | `#E6E0D8` | Dividers, chips, section rules |
-| Sticky chrome | `chrome` | `#EDE8E1` | Interview / tab footers (app) |
-| Chrome edge | `chromeBorder` | `#D4CDC3` | Footer top border (app) |
-| Brand / CTA | `merlot` | `#6E2E35` | Buttons, mark fill, kickers |
-| On merlot | `merlotFg` | `#FBF8F5` | Text/icons on CTAs (app; marketing often uses `paper`) |
-| Claimed / select | `select` | `#2F5D50` | Selected claim lines (bottle green — **not** CTA) |
-| Select wash | `selectWash` | `rgba(47, 93, 80, 0.14)` | Selected row tint |
-| Danger | `danger` | `#A33B32` | Errors, destructive |
-| Kind · drink | `kindDrink` | `#9C1F3D` | Drink chip |
-| Kind · food | `kindFood` | `#C9892A` | Food chip |
-| Watermark | `wash` | `rgba(110, 46, 53, 0.05)` | Jagged split wash (~3–5%) |
-| Grain | `grain` | `0.035` | Paper tooth opacity (2–4% cap) |
+Built for the table, not the ledger. Warm paper, brown-black ink, merlot CTAs, quiet bottle-green selection, small hand-drawn motifs. Not fintech purple, SaaS blue, glossy crypto, or dark-mode-first.
 
-**Marketing site Tailwind subset** (what `index.html` declares today):
-
-```
-merlot   #6E2E35
-paper    #F6F4F1
-ink      #2A241C
-inkSoft  #7A7268
-muted    #8A847C
-border   #E6E0D8   (hardcoded, not always a token)
-```
+**Fixed:**
+- Merlot is the only decorative brand accent; green = claimed/selected, never the primary CTA
+- Filled merlot bottle + jagged split = signature mark
+- Payment tiles keep official Venmo / Cash App / PayPal colors
+- Marketing is always `linen`; product may resolve to `candlelight`
+- No theme picker; no Three.js on native v1
 
 ---
 
-## Mobile app theme (Expo)
+## Color tokens (canonical)
 
-Same palette as web product. Native keeps a **copy** of the token map under `apps/mobile` (Metro root); a test fails if it drifts from web.
+Sizes below for spacing/type are **logical points / dp** on native and CSS px equivalents on web — not physical device pixels.
 
-### How color is applied
+| Role | Token | Value | Rules |
+|------|--------|------:|-------|
+| Page canvas | `paper` | `#F6F4F1` | Default linen background |
+| Raised surface | `sheet` | `#FFFCF8` | Cards, claim sheets; prefer over pure `#FFFFFF` for product-feeling surfaces |
+| Primary text | `ink` | `#2A241C` | Headlines, amounts |
+| Secondary text | `inkSoft` | `#6E6253` | Supporting body; **shared across linen + candlelight** (AA) |
+| Tertiary text | `muted` | `#71675D` | Captions, placeholders; **shared across variants** |
+| Hairline | `border` | `#E6E0D8` | Dividers; not alone for focus/selection |
+| Sticky chrome | `chrome` | `#EDE8E1` | Interview footer, host tab bar |
+| Chrome edge | `chromeBorder` | `#D4CDC3` | Footer top edge |
+| Brand / CTA | `merlot` | `#6E2E35` | Primary button, logo, kickers |
+| On merlot | `merlotFg` | `#FBF8F5` | Foreground on merlot only |
+| Selection | `select` | `#2F5D50` | Claimed rows — never CTA |
+| Selection wash | `selectWash` | `rgba(47, 93, 80, 0.14)` | Background wash |
+| Danger | `danger` | `#A33B32` | Errors + label/icon, not color alone |
+| Drink kind | `kindDrink` | `#9C1F3D` | On pale `kindDrinkWash` |
+| Food kind | `kindFood` | `#C9892A` | Accent/fill; not small text on paper |
+| Brand wash | `wash` | `rgba(110, 46, 53, 0.05)` | Decorative only |
+| Grain | `grain` | `0.035` | ≤ 0.05 |
+
+### Candlelight (product only, local 19:00–05:59)
+
+| Token | linen | candlelight |
+|-------|-------|-------------|
+| paper | `#F6F4F1` | `#EFE7DC` |
+| sheet | `#FFFCF8` | `#F8F2E8` |
+| ink | `#2A241C` | `#241C14` |
+| inkSoft | `#6E6253` | `#6E6253` |
+| muted | `#71675D` | `#71675D` |
+| border | `#E6E0D8` | `#DCD0BE` |
+| chrome | `#EDE8E1` | `#E5DACB` |
+| chromeBorder | `#D4CDC3` | `#CDBFA9` |
+| merlot | `#6E2E35` | `#7A2630` |
+| merlotFg | `#FBF8F5` | `#FBF5EC` |
+| select / danger / kinds | unchanged | unchanged |
+| wash | merlot ~5% | amber wash ~9% |
+| grain | `0.035` | `0.05` |
+
+Marketing/www never switches to candlelight.
+
+### Contrast (WCAG AA baseline)
+
+| Pairing | Target |
+|---------|--------|
+| Ordinary text | ≥ 4.5:1 |
+| Large text | ≥ 3:1 |
+| `ink` on `paper` | Pass (~14:1) |
+| `inkSoft` / `muted` on `paper` | Pass after v2 darken |
+| `merlotFg` on `merlot` | Pass |
+| `kindFood` on `paper` | Do **not** use as small text |
+
+### Kind chips
+
+- Drink: `kindDrink` on pale `kindDrinkWash`
+- Food: `ink` on pale `kindFoodWash`; `kindFood` for icon/border
+- Never communicate kind by color alone — keep word/icon label
+
+---
+
+## Mobile (Expo)
 
 | Mechanism | Behavior |
 |-----------|----------|
-| `colors` from `@/lib/theme` | Always **`cardThemes.linen`**. Used by ~250 `StyleSheet.create` call sites evaluated at import — **cannot** follow the clock. |
-| `useCardTheme()` | Opt-in at render time. Returns linen by day, **candlelight** after local 19:00 (until 06:00). Re-checks on `AppState` → `active` only — no timer mid-dinner. |
-| Theme picker | **None.** Clock decides dusk; no setting, no receipt column. |
+| `colors` from `@/lib/theme` | Legacy alias = **`cardThemes.linen` only**. Module-scope `StyleSheet.create` cannot follow the clock. |
+| `useCardTheme()` | Runtime palette: linen by day, candlelight after 19:00 local. Re-check on `AppState` → `active` only — **no mid-session switch while foregrounded** (intentional). |
+| New components | `createStyles(theme)` from `useCardTheme()` at render time |
 
-So: most of the app is linen forever unless a screen explicitly reads `useCardTheme()`. Marketing screenshots of the product are linen.
+### Spacing (`space`) — logical units
 
-### Spacing (`space` in `theme.ts`)
-
-| Token | px |
-|-------|-----|
-| hairline | 1 |
+| Token | Value |
+|-------|------:|
+| hairline | 1 (`StyleSheet.hairlineWidth` when appropriate) |
 | xs | 4 |
 | sm | 8 |
 | md | 12 |
 | lg | 16 |
 | xl | 20 |
 | xxl | 24 |
+| section *(new use)* | 32 |
+| screenGutter *(new use)* | 20 |
 
-### Type scale (`type` in `theme.ts`)
+### Type (`type`) — logical units
 
-| Token | Size | Typical use |
-|-------|------|-------------|
-| step | 12 | “N of M” progress |
-| small | 12 | Captions |
-| kicker | 13 | Section kicker + motif |
-| body | 15 | Rows, buttons, hints |
-| title | 28 | Interview H1 (sparse titles go ~30 in chrome) |
+| Token | Size | Use |
+|-------|-----:|-----|
+| step / small | 12 | Progress, non-essential captions |
+| kicker | 13 | Uppercase section label |
+| body | 15 today; **16** default for new body copy |
+| button | 15–16 | CTA |
+| titleDense | 22 | Dense interview title |
+| title | 28 | Default interview H1 |
+| titleSparse | 30 | Sparse chrome title |
 
-Interview chrome also uses dense (~22) and sparse (~30) title variants. Motifs beside kickers: merlot at ~0.8 opacity.
+Preserve Dynamic Type / font scaling. Do not globally disable `allowFontScaling`.
 
-### Mobile UI roles (same hexes as core table)
+### Radius
 
-| UI | Token |
-|----|--------|
-| Screen background | `paper` |
-| Claim / settle cards | `sheet` |
-| Primary button | `merlot` + `merlotFg` |
-| Footer / host tab bar | `chrome` + `chromeBorder` |
-| Tapped claim line | `select` + `selectWash` |
-| Food / drink chips | `kindFood` / `kindDrink` (+ washes) |
-| Errors | `danger` |
-| Venue name emphasis (capture title) | `merlot` + italic bold |
-
-### Native-only notes
-
-- Payment method tiles stay **official brand colors** (Venmo/Cash App/PayPal), not merlot-tinted.
-- No Three.js / WebGL on native for v1.
-- Light `userInterfaceStyle` in app config — identity is warm paper, not system dark mode.
-
----
-
-## Dusk variant (product apps only — not www)
-
-**`candlelight`** after local 19:00 until 06:00. Same identity, warmer/dimmer. No picker; clock only.
-
-| Token | linen | candlelight |
-|-------|-------|-------------|
-| paper | `#F6F4F1` | `#EFE7DC` |
-| sheet | `#FFFC8` | `#F8F2E8` |
-| ink | `#2A241C` | `#241C14` |
-| inkSoft | `#7A7268` | `#6E6253` |
-| muted | `#8A847C` | `#857A6A` |
-| border | `#E6E0D8` | `#DCD0BE` |
-| chrome | `#EDE8E1` | `#E5DACB` |
-| chromeBorder | `#D4CDC3` | `#CDBFA9` |
-| merlot | `#6E2E35` | `#7A2630` |
-| merlotFg | `#FBF8F5` | `#FBF5EC` |
-| select / danger / kinds | unchanged | unchanged (meaning stays) |
-| wash | merlot ~5% | amber-tinted ~9% |
-| grain | `0.035` | `0.05` |
-
-**Marketing stays linen always** — public site should not flip at dusk.
-
-Deferred / cut (not shipping): `cellar` (dark), `patio` (green CTA — conflicts with select).
-
----
-
-## Typography
-
-| Surface | Spec |
-|---------|------|
-| Marketing | System UI stack only: `-apple-system`, BlinkMacSystemFont, `Segoe UI`, Roboto, Helvetica Neue, Arial, sans-serif |
-| Headlines | Bold / semibold, `tracking-tight` |
-| Kickers | ~12px, bold, uppercase, letter-spacing ~0.08em, merlot |
-| Body | ~15–16px, ink / inkSoft |
-| App interview titles | ~28–30px sparse / ~22 dense (native `type.title`) |
-
-No custom webfont on marketing today. Product UI also leans system/native defaults.
+| Token | Value | Use |
+|-------|------:|-----|
+| radiusChip | 999 | Pills / primary CTA |
+| radiusCard | 16 | Cards / panels |
+| radiusPhone | 32 | Marketing phone frame only |
 
 ---
 
 ## Mark & motifs
 
-**Wine mark:** filled merlot bottle, four jagged horizontal splits, rotated about **−15° to −18°**. Primary brand illustration.
+Filled merlot bottle, four jagged splits, rotated **−15° to −18°**.
 
-**Motif kit** (stroke, `currentColor`, atmosphere — not lucide affordances): split-bottle, stem, pour, check-stub, coupe-pair, carafe, cork, label-band, grapes (use sparingly), perforation, split-wash, paper-grain.
+Kit: `split-bottle`, `stem`, `pour`, `check-stub`, `coupe-pair`, `carafe`, `cork`, `label-band`, `grapes` (spare), `perforation`, `split-wash`, `paper-grain`.
 
-**Rules:** motifs inherit color; don’t invent a second brand accent for decoration; payment tiles keep official Venmo / Cash App / PayPal colors in every theme.
-
----
-
-## Shape, type scale on site, motion
-
-| Element | Spec |
-|---------|------|
-| Primary CTA | `rounded-full`, `bg-merlot`, text paper/merlotFg, ~15px bold, generous px/py |
-| Cards / panels | `rounded-2xl` common; phone frame ~`2rem` |
-| Borders | `#E6E0D8` hairlines |
-| Phone frame shadow | soft ink: `0 18px 40px -18px rgba(42, 36, 28, 0.35)` |
-| Entrance | fade-up ~0.8s, ease `cubic-bezier(0.16, 1, 0.3, 1)` |
-| Receipt float | slow 6s ease-in-out |
-| Wine mark hover | segments translate/rotate apart |
-| Privacy band | full merlot field, light text, glass cards `white/10` |
-| Selection | `selection:bg-merlot selection:text-white` |
+Motifs inherit `currentColor`. Decorative = hide from screen readers. Grain never behind essential amounts.
 
 ---
 
-## What marketing uses vs full linen
+## Motion
 
-| Token | Marketing www | App linen |
-|-------|---------------|-----------|
-| paper / ink / inkSoft / muted / merlot / border | Yes | Yes |
-| sheet / chrome / select / kind* / wash / grain | Mostly no (white bands instead of sheet) | Yes |
-| candlelight | No | Yes (clock) |
+- Entrance ~0.8s, ease `(0.16, 1, 0.3, 1)` on web
+- Receipt float 6s — marketing/decorative only
+- Wine-mark split on hover (web); native = press feedback only if it doesn’t fight the control
+- Respect reduced motion: kill perpetual float; shorten entrances
 
 ---
 
-## Messaging that matches the look
+## Marketing vs product
 
-| Say | Don’t say |
-|-----|-----------|
+| Behavior | www | Mobile + web claim |
+|----------|-----|---------------------|
+| Linen | Always | Day default |
+| Candlelight | Never | After 19:00 local |
+| Sheet vs white | Prefer `#FFFCF8` for product-feeling bands | `sheet` |
+| Font | System; optional licensed H1 display | System/native |
+| CTA | Merlot pill | Merlot pill |
+
+---
+
+## Messaging
+
+| Say | Don’t |
+|-----|-------|
 | Card points / put the card down | Miles-hacking jargon |
-| Path of least resistance / low friction | “Disruptive expense platform” |
+| Path of least resistance | “Disruptive expense platform” |
 | Fair, not equal | Equal split as the hero |
 | Show the QR / drop the link | “Onboard your party” |
 | No guest app · no host subscription | Naming competitors on camera |
 
 ---
 
-## Second opinion (design read)
+## v2 backlog (not Phase 1)
 
-**Keep:** Merlot + warm paper + brown ink = dinner-check, not SaaS. Matching marketing to linen is correct. Bottle mark + jagged split is a real signature.
+| Phase | Work |
+|------:|------|
+| 2 | Single JSON/source → generate mobile + web themes; CI parity |
+| 3 | Migrate high-visibility screens to `useCardTheme` + `createStyles` |
+| 4 | Explicit pressed/disabled/focus tokens; a11y + reduced-motion audit |
+| 5 | Marketing sheet continuity; visual regression for both variants |
 
-**Watch:**
-1. System-only type puts almost all identity on color + mark — a display face on marketing headlines would help differentiation.
-2. Cream + wine is a busy lifestyle lane; stay merlot (not orange terracotta) and let photography / mark carry uniqueness.
-3. Marketing `bg-white` sections read colder than app `sheet` `#fffcf8` — aligning those would tighten continuity.
-4. Don’t put candlelight on www.
-
-**Practical sharpen:** keep palette; optional one display font for marketing H1s; warm white sections toward sheet; leave merlot pill CTAs.
+Deferred: semantic aliases (`surfacePage`…), mid-session clock freeze, mass StyleSheet rewrite.
 
 ---
 
-## Quick copy-paste (generators / Figma)
+## Quick copy-paste
 
 ```
-paper     #F6F4F1
-sheet     #fffcf8
-ink       #2A241C
-inkSoft   #7A7268
-muted     #8A847C
-border    #E6E0D8
-chrome    #EDE8E1
-merlot    #6E2E35
-merlotFg  #FBF8F5
-select    #2F5D50
+paper        #F6F4F1
+sheet        #FFFCF8
+ink          #2A241C
+inkSoft      #6E6253
+muted        #71675D
+border       #E6E0D8
+chrome       #EDE8E1
+chromeBorder #D4CDC3
+merlot       #6E2E35
+merlotFg     #FBF8F5
+select       #2F5D50
+selectWash   rgba(47, 93, 80, 0.14)
+danger       #A33B32
+kindDrink    #9C1F3D
+kindFood     #C9892A
+grain        0.035
 ```
 
-(Mobile: `colors` = linen; dusk via `useCardTheme()` only.)
-
-Negative vibes to avoid: purple gradients, cold fintech blue UI, glossy crypto, inventing a green brand CTA, dark-mode marketing.
+**Avoid:** purple gradients, cold fintech blue, glossy crypto, green brand CTA, dark-mode marketing, high-opacity grain, color-only state.

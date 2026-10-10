@@ -50,8 +50,9 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     paper: "#f6f4f1",
     sheet: "#fffcf8",
     ink: "#2a241c",
-    inkSoft: "#7a7268",
-    muted: "#8a847c",
+    // v2 contrast: shared secondary/tertiary across variants (AA on paper).
+    inkSoft: "#6e6253",
+    muted: "#71675d",
     border: "#e6e0d8",
     chrome: "#ede8e1",
     chromeBorder: "#d4cdc3",
@@ -72,13 +73,14 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
    * clock only (§3.3). Washes lift slightly because the warmer paper swallows them;
    * `select`, `danger`, and the kind hues are deliberately unchanged so "claimed",
    * "destructive", and food/drink keep meaning exactly what they mean by day.
+   * `inkSoft` / `muted` match linen so secondary copy stays AA when the paper warms.
    */
   candlelight: {
     paper: "#efe7dc",
     sheet: "#f8f2e8",
     ink: "#241c14",
     inkSoft: "#6e6253",
-    muted: "#857a6a",
+    muted: "#71675d",
     border: "#dcd0be",
     chrome: "#e5dacb",
     chromeBorder: "#cdbfa9",
