@@ -121,4 +121,5 @@ Skip [`05-landscape.png`](screenshots/app-store/05-landscape.png) for this verti
 
 ## Related
 
-Positioning and the original 15s sketch: [`strategy.md`](strategy.md).
+- Labeled pack for AI generators (stills + recordings + prompts): [`video-artifacts/README.md`](video-artifacts/README.md) · [`video-artifacts/prompts-ai.md`](video-artifacts/prompts-ai.md)
+- Positioning and the original 15s sketch: [`strategy.md`](strategy.md).
