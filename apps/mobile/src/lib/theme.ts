@@ -1,13 +1,11 @@
 import { cardThemes } from "@/lib/card-theme/themes";
 
 /**
- * The day palette, and the only palette most of the app sees.
+ * Legacy linen-only palette for module-scope `StyleSheet.create` call sites.
  *
- * Roughly 250 of these references are baked into module-scope `StyleSheet.create`
- * objects, which are evaluated once at import — so this export cannot follow the
- * clock. Dusk on native is therefore opt-in per component via `useCardTheme()`
- * (see `card-theme/dusk.ts`); screens that want it must read tokens at render
- * time. `linen` holds the shipped values, so nothing moved by pointing here.
+ * This export does **not** follow dusk. New and migrated components must use
+ * `useCardTheme()` + render-time styles (see `card-theme/dusk.ts`).
+ * Token source of truth: `design-tokens/card-theme.json` → `npm run theme:generate`.
  */
 export const colors = cardThemes.linen;
 

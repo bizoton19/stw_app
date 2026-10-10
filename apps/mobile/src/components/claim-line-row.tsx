@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   interpolateColor,
@@ -9,14 +9,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { LineKindIcon } from "@/components/line-kind-icon";
 import { PressScale } from "@/components/press-scale";
+import { useCardTheme } from "@/lib/card-theme/dusk";
+import type { CardTheme } from "@/lib/card-theme/themes";
 import { centsToLabel } from "@/lib/money";
 import { claimMoneySlice } from "@/lib/pour";
-import { colors } from "@/lib/theme";
 import type { Item } from "@/lib/types";
 
-const PAPER = colors.paper;
-const SELECTED_BG = colors.selectWash;
-const SELECTED_BORDER = colors.select;
 const IDLE_BORDER = "transparent";
 
 export function ClaimLineRow({
@@ -30,6 +28,8 @@ export function ClaimLineRow({
   selected: boolean;
   onToggle: () => void;
 }) {
+  const theme = useCardTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const on = useSharedValue(selected ? 1 : 0);
   const bump = useSharedValue(1);
   const money = claimMoneySlice(item, left);
@@ -45,8 +45,8 @@ export function ClaimLineRow({
   }, [bump, on, selected]);
 
   const shell = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(on.value, [0, 1], [PAPER, SELECTED_BG]),
-    borderColor: interpolateColor(on.value, [0, 1], [IDLE_BORDER, SELECTED_BORDER]),
+    backgroundColor: interpolateColor(on.value, [0, 1], [theme.paper, theme.selectWash]),
+    borderColor: interpolateColor(on.value, [0, 1], [IDLE_BORDER, theme.select]),
     transform: [{ scale: bump.value }],
   }));
 
@@ -88,36 +88,38 @@ export function ClaimLineRow({
   );
 }
 
-const styles = StyleSheet.create({
-  hit: { marginBottom: 8 },
-  row: {
-    minHeight: 64,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    overflow: "hidden",
-  },
-  copy: { flex: 1, minWidth: 0 },
-  name: { fontSize: 16, fontWeight: "600", color: colors.ink, letterSpacing: -0.2 },
-  nameOn: { color: colors.select, fontWeight: "700" },
-  meta: { marginTop: 3, fontSize: 13, color: colors.muted },
-  tabular: { fontVariant: ["tabular-nums"] },
-  right: { alignItems: "flex-end", gap: 2 },
-  left: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.inkSoft,
-    fontVariant: ["tabular-nums"],
-  },
-  remainTotal: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: colors.ink,
-    fontVariant: ["tabular-nums"],
-  },
-  leftOn: { color: colors.select, fontWeight: "700" },
-});
+function createStyles(theme: CardTheme) {
+  return StyleSheet.create({
+    hit: { marginBottom: 8 },
+    row: {
+      minHeight: 64,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      overflow: "hidden",
+    },
+    copy: { flex: 1, minWidth: 0 },
+    name: { fontSize: 16, fontWeight: "600", color: theme.ink, letterSpacing: -0.2 },
+    nameOn: { color: theme.select, fontWeight: "700" },
+    meta: { marginTop: 3, fontSize: 13, color: theme.muted },
+    tabular: { fontVariant: ["tabular-nums"] },
+    right: { alignItems: "flex-end", gap: 2 },
+    left: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: theme.inkSoft,
+      fontVariant: ["tabular-nums"],
+    },
+    remainTotal: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: theme.ink,
+      fontVariant: ["tabular-nums"],
+    },
+    leftOn: { color: theme.select, fontWeight: "700" },
+  });
+}

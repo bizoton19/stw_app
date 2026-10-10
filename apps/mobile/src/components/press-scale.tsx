@@ -1,19 +1,31 @@
-import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import {
+  Pressable,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { hapticImpact, hapticSelect } from "@/lib/haptics";
 
 type HapticKind = false | "select" | "light" | "medium" | "heavy";
+
+type StyleArg =
+  | StyleProp<ViewStyle>
+  | ((state: { pressed: boolean }) => StyleProp<ViewStyle>);
 
 export function PressScale({
   children,
   disabled,
   /** Default off — enable only for meaningful actions. */
   haptic = false,
+  /** When set, replaces the default opacity fade for disabled controls. */
+  disabledStyle,
   style,
   onPress,
   ...props
 }: PressableProps & {
   haptic?: HapticKind;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleArg;
+  disabledStyle?: StyleProp<ViewStyle>;
 }) {
   return (
     <Pressable
@@ -30,8 +42,8 @@ export function PressScale({
       }}
       style={({ pressed }) => [
         { transform: [{ scale: pressed && !disabled ? 0.98 : 1 }] },
-        disabled ? { opacity: 0.35 } : null,
-        style,
+        disabled ? (disabledStyle ?? { opacity: 0.35 }) : null,
+        typeof style === "function" ? style({ pressed }) : style,
       ]}
       {...props}
     >

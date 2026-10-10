@@ -71,8 +71,11 @@ test("every theme defines every token, and linen holds the shipped palette", () 
   // v2 contrast: secondary/tertiary shared so candlelight doesn't drop AA.
   assert.equal(cardThemes.linen.inkSoft, "#6e6253");
   assert.equal(cardThemes.linen.muted, "#71675d");
+  assert.equal(cardThemes.linen.merlotPressed, "#5a252c");
   assert.equal(cardThemes.candlelight.inkSoft, cardThemes.linen.inkSoft);
   assert.equal(cardThemes.candlelight.muted, cardThemes.linen.muted);
+  assert.ok(cardThemes.linen.focusRing);
+  assert.ok(cardThemes.linen.disabledSurface);
   // "Claimed" and "destructive" must mean the same thing at every hour.
   assert.equal(cardThemes.candlelight.select, cardThemes.linen.select);
   assert.equal(cardThemes.candlelight.danger, cardThemes.linen.danger);

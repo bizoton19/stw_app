@@ -11,6 +11,7 @@ import { ChoiceRow } from "@/components/choice-row";
 import { PressScale } from "@/components/press-scale";
 import { useHostDraft } from "@/context/host-draft";
 import { showActionMenu } from "@/lib/action-menu";
+import { useCardTheme } from "@/lib/card-theme/dusk";
 import { colors } from "@/lib/theme";
 
 export default function HostCapture() {
@@ -140,6 +141,7 @@ export default function HostCapture() {
     });
   }
 
+  const theme = useCardTheme();
   const iconSize = hasImage ? 20 : 28;
   const iconColor = colors.ink;
   const place =
@@ -148,7 +150,15 @@ export default function HostCapture() {
     "";
   const placeLabel = place.length > 36 ? `${place.slice(0, 34).trimEnd()}…` : place;
   const venueMark = placeLabel ? (
-    <Text style={styles.venueInTitle}>{placeLabel}</Text>
+    <Text
+      style={{
+        color: theme.merlot,
+        fontStyle: "italic",
+        fontWeight: "700",
+      }}
+    >
+      {placeLabel}
+    </Text>
   ) : null;
   const title =
     autoLaunch && !hasImage && !autoTried
@@ -279,11 +289,6 @@ const styles = StyleSheet.create({
   previewHint: {
     color: "#F6F4F1",
     fontSize: 13,
-    fontWeight: "700",
-  },
-  venueInTitle: {
-    color: colors.merlot,
-    fontStyle: "italic",
     fontWeight: "700",
   },
 });

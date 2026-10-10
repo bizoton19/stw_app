@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Home } from "lucide-react-native";
 import { useKeyboardVisible } from "@/hooks/use-keyboard-visible";
 import { Motif, type MotifName } from "@/components/motifs";
+import { useCardTheme } from "@/lib/card-theme/dusk";
 import { colors, type } from "@/lib/theme";
 import { HostSupportTip } from "./host-support-tip";
 import { PressScale } from "./press-scale";
@@ -272,17 +273,36 @@ export function PrimaryButton({
   disabled?: boolean;
   busy?: boolean;
 }) {
+  const theme = useCardTheme();
+  const inactive = disabled || busy || !onPress;
   return (
     <PressScale
       onPress={onPress}
-      disabled={disabled || busy || !onPress}
+      disabled={inactive}
       haptic="light"
-      style={styles.primary}
+      disabledStyle={{ backgroundColor: theme.disabledSurface }}
+      style={({ pressed }) => [
+        {
+          height: 52,
+          borderRadius: 999,
+          backgroundColor: pressed && !inactive ? theme.merlotPressed : theme.merlot,
+          alignItems: "center",
+          justifyContent: "center",
+          minWidth: 44,
+        },
+      ]}
     >
       {busy ? (
-        <ActivityIndicator color={colors.merlotFg} />
+        <ActivityIndicator color={theme.merlotFg} />
       ) : (
-        <Text allowFontScaling style={styles.primaryText}>
+        <Text
+          allowFontScaling
+          style={{
+            color: inactive ? theme.disabledFg : theme.merlotFg,
+            fontSize: 16,
+            fontWeight: "700",
+          }}
+        >
           {children}
         </Text>
       )}
@@ -398,15 +418,6 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     marginBottom: 4,
   },
-  primary: {
-    height: Platform.OS === "android" ? 52 : 50,
-    width: "100%",
-    borderRadius: 999,
-    backgroundColor: colors.merlot,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryText: { color: colors.merlotFg, fontSize: 16, fontWeight: "700" },
   quiet: {
     height: 48,
     borderRadius: 999,

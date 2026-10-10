@@ -1,11 +1,8 @@
 /**
- * Card theme tokens for native — see `plans/card-design-themes.md` §3.
+ * Card theme tokens for native — GENERATED from design-tokens/card-theme.json.
+ * Do not edit by hand. Run: npm run theme:generate
  *
- * Deliberately a copy of `src/lib/card-theme/themes.ts`, not an import: Metro's
- * project root is `apps/mobile`, so reaching into the web `src/` tree would mean
- * watch-folder plumbing for two small objects. The copy is held honest by
- * `src/lib/card-theme/dusk.test.ts`, which parses this file and fails if a single
- * token drifts from web.
+ * Copy of web tokens (Metro root is apps/mobile). Parity enforced by dusk.test.ts.
  */
 
 export const CARD_THEME_IDS = ["linen", "candlelight"] as const;
@@ -16,29 +13,27 @@ export const DEFAULT_CARD_THEME: CardThemeId = "linen";
 
 export type CardTheme = {
   paper: string;
-  /** Raised surfaces: the "You owe" box, pay rows, link boxes. */
   sheet: string;
   ink: string;
   inkSoft: string;
   muted: string;
   border: string;
-  /** Sticky bottom chrome (interview footer + host tab bar) — warmer than paper. */
   chrome: string;
   chromeBorder: string;
   merlot: string;
   merlotFg: string;
-  /** Selected claim lines — bottle green, contrasts merlot CTAs on warm paper. */
+  merlotPressed: string;
+  disabledSurface: string;
+  disabledFg: string;
+  focusRing: string;
   select: string;
   selectWash: string;
   danger: string;
-  /** Line-kind chips — distinct from CTA merlot + select green. */
   kindDrink: string;
   kindDrinkWash: string;
   kindFood: string;
   kindFoodWash: string;
-  /** Watermark tint for the `split-wash` motif. Carries its own alpha. */
   wash: string;
-  /** Paper-grain opacity, capped at 2–4% per `ui-enhance.guide.md` §4. */
   grain: string;
 };
 
@@ -54,6 +49,10 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     chromeBorder: "#d4cdc3",
     merlot: "#6e2e35",
     merlotFg: "#fbf8f5",
+    merlotPressed: "#5a252c",
+    disabledSurface: "#e6e0d8",
+    disabledFg: "#71675d",
+    focusRing: "#6e2e35",
     select: "#2f5d50",
     selectWash: "rgba(47, 93, 80, 0.14)",
     danger: "#a33b32",
@@ -75,6 +74,10 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     chromeBorder: "#cdbfa9",
     merlot: "#7a2630",
     merlotFg: "#fbf5ec",
+    merlotPressed: "#642028",
+    disabledSurface: "#dcd0be",
+    disabledFg: "#71675d",
+    focusRing: "#7a2630",
     select: "#2f5d50",
     selectWash: "rgba(47, 93, 80, 0.16)",
     danger: "#a33b32",

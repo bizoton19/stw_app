@@ -2,7 +2,7 @@
 
 Brand system for **marketing (`www`)**, **Expo mobile**, and **web claim UI**.
 
-**Status:** v2 refinements adopted for Phase 1 (contrast + sheet accuracy). Brand mark and route names unchanged.
+**Status:** v2 Phases 1–5 implemented in code. Edit tokens only in [`design-tokens/card-theme.json`](../design-tokens/card-theme.json), then `npm run theme:generate`.
 
 Sources:
 - Marketing: [`index.html`](index.html)
@@ -41,6 +41,10 @@ Sizes below for spacing/type are **logical points / dp** on native and CSS px eq
 | Chrome edge | `chromeBorder` | `#D4CDC3` | Footer top edge |
 | Brand / CTA | `merlot` | `#6E2E35` | Primary button, logo, kickers |
 | On merlot | `merlotFg` | `#FBF8F5` | Foreground on merlot only |
+| CTA pressed | `merlotPressed` | `#5A252C` | Primary button press (linen) |
+| Disabled surface | `disabledSurface` | `#E6E0D8` | Disabled CTA fill |
+| Disabled text | `disabledFg` | `#71675D` | Disabled CTA label |
+| Focus ring | `focusRing` | `#6E2E35` | Keyboard/a11y focus |
 | Selection | `select` | `#2F5D50` | Claimed rows — never CTA |
 | Selection wash | `selectWash` | `rgba(47, 93, 80, 0.14)` | Background wash |
 | Danger | `danger` | `#A33B32` | Errors + label/icon, not color alone |
@@ -177,16 +181,17 @@ Motifs inherit `currentColor`. Decorative = hide from screen readers. Grain neve
 
 ---
 
-## v2 backlog (not Phase 1)
+## v2 implementation status
 
-| Phase | Work |
-|------:|------|
-| 2 | Single JSON/source → generate mobile + web themes; CI parity |
-| 3 | Migrate high-visibility screens to `useCardTheme` + `createStyles` |
-| 4 | Explicit pressed/disabled/focus tokens; a11y + reduced-motion audit |
-| 5 | Marketing sheet continuity; visual regression for both variants |
+| Phase | Status |
+|------:|--------|
+| 1 Contrast + sheet | Done |
+| 2 Single source `design-tokens/card-theme.json` + `npm run theme:generate` / `theme:check` | Done |
+| 3 Runtime theme: `ClaimLineRow`, `PrimaryButton`, capture venue title | Done (more screens still on legacy `colors`) |
+| 4 `merlotPressed` / `disabled*` / `focusRing` tokens; pressed CTA uses pressed color | Done |
+| 5 Marketing `bg-sheet` (`#FFFCF8`) on product-feeling bands | Done |
 
-Deferred: semantic aliases (`surfacePage`…), mid-session clock freeze, mass StyleSheet rewrite.
+Still open: migrate remaining StyleSheets off static `colors`; semantic aliases; mid-session freeze; full visual regression suite.
 
 ---
 
@@ -203,6 +208,10 @@ chrome       #EDE8E1
 chromeBorder #D4CDC3
 merlot       #6E2E35
 merlotFg     #FBF8F5
+merlotPressed #5A252C
+disabledSurface #E6E0D8
+disabledFg   #71675D
+focusRing    #6E2E35
 select       #2F5D50
 selectWash   rgba(47, 93, 80, 0.14)
 danger       #A33B32

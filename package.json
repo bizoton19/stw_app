@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "node scripts/start.cjs",
     "lint": "eslint",
+    "theme:generate": "tsx scripts/generate-card-theme.ts",
+    "theme:check": "npm run theme:generate && git diff --exit-code -- design-tokens/card-theme.json src/lib/card-theme/themes.ts apps/mobile/src/lib/card-theme/themes.ts src/app/globals.css",
     "test": "tsx --test src/lib/guest-id.test.ts src/lib/money.test.ts src/lib/pour.test.ts src/lib/store.test.ts src/lib/delete-receipt.test.ts src/lib/vision-stub.test.ts src/lib/vision-classify.test.ts src/lib/vision/resolve-select.test.ts src/lib/line-kind.test.ts src/lib/screen-money-contract.test.ts src/lib/card-theme/dusk.test.ts src/lib/google-places.test.ts src/lib/nearby-place-card.test.tsx src/lib/nearby-list-loading.test.tsx src/lib/cors.test.ts src/lib/rate-limit.test.ts src/lib/waitlist.test.ts src/lib/host-push.test.ts src/lib/host-reach.test.ts src/lib/venue-match.test.ts src/components/motifs/motifs.test.tsx && node --test marketing/inject-api-base.test.mjs"
   },
   "dependencies": {

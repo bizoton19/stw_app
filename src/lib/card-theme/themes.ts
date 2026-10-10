@@ -1,12 +1,8 @@
 /**
- * Card theme tokens — see `plans/card-design-themes.md` §3.
+ * Card theme tokens — GENERATED from design-tokens/card-theme.json.
+ * Do not edit by hand. Run: npm run theme:generate
  *
- * `linen` is the day theme and holds the shipped palette exactly, so deleting
- * `candlelight` from this map leaves the app pixel-identical to before the theme work
- * (plan §6). Web paints these as CSS custom properties on `<html data-card-theme>`;
- * no component branches on the theme id at runtime.
- *
- * Token names mirror `apps/mobile/src/lib/theme.ts` so web and native speak one language.
+ * See plans/card-design-themes.md §3 and marketing/theme.md.
  */
 
 export const CARD_THEME_IDS = ["linen", "candlelight"] as const;
@@ -17,21 +13,20 @@ export type CardThemeId = (typeof CARD_THEME_IDS)[number];
 export const DEFAULT_CARD_THEME: CardThemeId = "linen";
 
 export type CardTheme = {
-  /** Canvas behind everything. */
   paper: string;
-  /** Raised surfaces: the "You owe" box, pay rows, link boxes. */
   sheet: string;
   ink: string;
   inkSoft: string;
   muted: string;
-  /** Hairlines, dividers, tear lines. */
   border: string;
-  /** Sticky bottom chrome — warmer than paper. */
   chrome: string;
   chromeBorder: string;
   merlot: string;
   merlotFg: string;
-  /** Selected claim lines — bottle green, contrasts merlot CTAs on warm paper. */
+  merlotPressed: string;
+  disabledSurface: string;
+  disabledFg: string;
+  focusRing: string;
   select: string;
   selectWash: string;
   danger: string;
@@ -39,9 +34,7 @@ export type CardTheme = {
   kindDrinkWash: string;
   kindFood: string;
   kindFoodWash: string;
-  /** Watermark tint for the `split-wash` motif. Carries its own alpha. */
   wash: string;
-  /** Paper-grain opacity, capped at 2–4% per `ui-enhance.guide.md` §4. */
   grain: string;
 };
 
@@ -50,7 +43,6 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     paper: "#f6f4f1",
     sheet: "#fffcf8",
     ink: "#2a241c",
-    // v2 contrast: shared secondary/tertiary across variants (AA on paper).
     inkSoft: "#6e6253",
     muted: "#71675d",
     border: "#e6e0d8",
@@ -58,6 +50,10 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     chromeBorder: "#d4cdc3",
     merlot: "#6e2e35",
     merlotFg: "#fbf8f5",
+    merlotPressed: "#5a252c",
+    disabledSurface: "#e6e0d8",
+    disabledFg: "#71675d",
+    focusRing: "#6e2e35",
     select: "#2f5d50",
     selectWash: "rgba(47, 93, 80, 0.14)",
     danger: "#a33b32",
@@ -68,13 +64,6 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     wash: "rgba(110, 46, 53, 0.05)",
     grain: "0.035",
   },
-  /**
-   * Dusk variant — the same identity dimmed, never a second brand. Applied by the
-   * clock only (§3.3). Washes lift slightly because the warmer paper swallows them;
-   * `select`, `danger`, and the kind hues are deliberately unchanged so "claimed",
-   * "destructive", and food/drink keep meaning exactly what they mean by day.
-   * `inkSoft` / `muted` match linen so secondary copy stays AA when the paper warms.
-   */
   candlelight: {
     paper: "#efe7dc",
     sheet: "#f8f2e8",
@@ -86,6 +75,10 @@ export const cardThemes: Record<CardThemeId, CardTheme> = {
     chromeBorder: "#cdbfa9",
     merlot: "#7a2630",
     merlotFg: "#fbf5ec",
+    merlotPressed: "#642028",
+    disabledSurface: "#dcd0be",
+    disabledFg: "#71675d",
+    focusRing: "#7a2630",
     select: "#2f5d50",
     selectWash: "rgba(47, 93, 80, 0.16)",
     danger: "#a33b32",
@@ -110,6 +103,10 @@ export const CARD_THEME_VARS: Record<keyof CardTheme, string> = {
   chromeBorder: "--stw-chrome-border",
   merlot: "--stw-merlot",
   merlotFg: "--stw-merlot-fg",
+  merlotPressed: "--stw-merlot-pressed",
+  disabledSurface: "--stw-disabled-surface",
+  disabledFg: "--stw-disabled-fg",
+  focusRing: "--stw-focus-ring",
   select: "--stw-select",
   selectWash: "--stw-select-wash",
   danger: "--stw-danger",

@@ -86,7 +86,7 @@
   --canvas: oklch(0.988 0.004 95);
   --ink-soft: oklch(0.52 0.012 55);
 
-  /* Card theme: linen (default). Values match the shipped palette exactly, and
+  /* Card theme: linen (default). Values match design-tokens/card-theme.json.
      apply with no `data-card-theme` set so the page is correct before the dusk
      script runs — and if it never runs. See plans/card-design-themes.md §3. */
   --stw-paper: #f6f4f1;
@@ -99,6 +99,10 @@
   --stw-chrome-border: #d4cdc3;
   --stw-merlot: #6e2e35;
   --stw-merlot-fg: #fbf8f5;
+  --stw-merlot-pressed: #5a252c;
+  --stw-disabled-surface: #e6e0d8;
+  --stw-disabled-fg: #71675d;
+  --stw-focus-ring: #6e2e35;
   --stw-select: #2f5d50;
   --stw-select-wash: rgba(47, 93, 80, 0.14);
   --stw-danger: #a33b32;
@@ -126,8 +130,16 @@
   --stw-chrome-border: #cdbfa9;
   --stw-merlot: #7a2630;
   --stw-merlot-fg: #fbf5ec;
+  --stw-merlot-pressed: #642028;
+  --stw-disabled-surface: #dcd0be;
+  --stw-disabled-fg: #71675d;
+  --stw-focus-ring: #7a2630;
+  --stw-select: #2f5d50;
   --stw-select-wash: rgba(47, 93, 80, 0.16);
+  --stw-danger: #a33b32;
+  --stw-kind-drink: #9c1f3d;
   --stw-kind-drink-wash: rgba(156, 31, 61, 0.18);
+  --stw-kind-food: #c9892a;
   --stw-kind-food-wash: rgba(201, 137, 42, 0.24);
   --stw-wash: rgba(201, 137, 42, 0.09);
   --stw-grain: 0.05;
