@@ -1,8 +1,12 @@
 # Split the Wine — theme spec (one file)
 
-Brand identity for **marketing (`www`)** and the product **linen** day theme. Use this for second opinions, video end cards, and AI generators.
+Brand identity for **marketing (`www`)**, **mobile (Expo)**, and **web claim UI**. Use this for second opinions, video end cards, and AI generators.
 
-Sources (canonical code): [`marketing/index.html`](index.html) · [`src/lib/card-theme/themes.ts`](../src/lib/card-theme/themes.ts) · [`plans/card-design-themes.md`](../plans/card-design-themes.md) · [`marketing/strategy.md`](strategy.md)
+Sources (canonical code):
+- Marketing: [`marketing/index.html`](index.html)
+- Mobile tokens: [`apps/mobile/src/lib/card-theme/themes.ts`](../apps/mobile/src/lib/card-theme/themes.ts) · [`apps/mobile/src/lib/theme.ts`](../apps/mobile/src/lib/theme.ts) · dusk: [`apps/mobile/src/lib/card-theme/dusk.ts`](../apps/mobile/src/lib/card-theme/dusk.ts)
+- Web tokens (must match mobile byte-for-byte): [`src/lib/card-theme/themes.ts`](../src/lib/card-theme/themes.ts)
+- Plan: [`plans/card-design-themes.md`](../plans/card-design-themes.md) · strategy: [`marketing/strategy.md`](strategy.md)
 
 ---
 
@@ -19,7 +23,7 @@ Sources (canonical code): [`marketing/index.html`](index.html) · [`src/lib/card
 | Role | Token | Hex | Use |
 |------|--------|-----|-----|
 | Canvas | `paper` | `#F6F4F1` | Page / app background |
-| Raised surface | `sheet` | `#FFFC8` → `#fffcf8` | Cards, “You owe”, link boxes (app; marketing often uses pure white — see gaps) |
+| Raised surface | `sheet` | `#fffcf8` | Cards, “You owe”, link boxes (app; marketing often uses pure white — see gaps) |
 | Body text | `ink` | `#2A241C` | Headlines, primary copy |
 | Secondary text | `inkSoft` | `#7A7268` | Supporting lines |
 | Tertiary | `muted` | `#8A847C` | Hints, placeholders |
@@ -49,7 +53,66 @@ border   #E6E0D8   (hardcoded, not always a token)
 
 ---
 
-## Dusk variant (app only — not www)
+## Mobile app theme (Expo)
+
+Same palette as web product. Native keeps a **copy** of the token map under `apps/mobile` (Metro root); a test fails if it drifts from web.
+
+### How color is applied
+
+| Mechanism | Behavior |
+|-----------|----------|
+| `colors` from `@/lib/theme` | Always **`cardThemes.linen`**. Used by ~250 `StyleSheet.create` call sites evaluated at import — **cannot** follow the clock. |
+| `useCardTheme()` | Opt-in at render time. Returns linen by day, **candlelight** after local 19:00 (until 06:00). Re-checks on `AppState` → `active` only — no timer mid-dinner. |
+| Theme picker | **None.** Clock decides dusk; no setting, no receipt column. |
+
+So: most of the app is linen forever unless a screen explicitly reads `useCardTheme()`. Marketing screenshots of the product are linen.
+
+### Spacing (`space` in `theme.ts`)
+
+| Token | px |
+|-------|-----|
+| hairline | 1 |
+| xs | 4 |
+| sm | 8 |
+| md | 12 |
+| lg | 16 |
+| xl | 20 |
+| xxl | 24 |
+
+### Type scale (`type` in `theme.ts`)
+
+| Token | Size | Typical use |
+|-------|------|-------------|
+| step | 12 | “N of M” progress |
+| small | 12 | Captions |
+| kicker | 13 | Section kicker + motif |
+| body | 15 | Rows, buttons, hints |
+| title | 28 | Interview H1 (sparse titles go ~30 in chrome) |
+
+Interview chrome also uses dense (~22) and sparse (~30) title variants. Motifs beside kickers: merlot at ~0.8 opacity.
+
+### Mobile UI roles (same hexes as core table)
+
+| UI | Token |
+|----|--------|
+| Screen background | `paper` |
+| Claim / settle cards | `sheet` |
+| Primary button | `merlot` + `merlotFg` |
+| Footer / host tab bar | `chrome` + `chromeBorder` |
+| Tapped claim line | `select` + `selectWash` |
+| Food / drink chips | `kindFood` / `kindDrink` (+ washes) |
+| Errors | `danger` |
+| Venue name emphasis (capture title) | `merlot` + italic bold |
+
+### Native-only notes
+
+- Payment method tiles stay **official brand colors** (Venmo/Cash App/PayPal), not merlot-tinted.
+- No Three.js / WebGL on native for v1.
+- Light `userInterfaceStyle` in app config — identity is warm paper, not system dark mode.
+
+---
+
+## Dusk variant (product apps only — not www)
 
 **`candlelight`** after local 19:00 until 06:00. Same identity, warmer/dimmer. No picker; clock only.
 
@@ -155,14 +218,17 @@ No custom webfont on marketing today. Product UI also leans system/native defaul
 
 ```
 paper     #F6F4F1
-sheet     #FFFC8
+sheet     #fffcf8
 ink       #2A241C
 inkSoft   #7A7268
 muted     #8A847C
 border    #E6E0D8
+chrome    #EDE8E1
 merlot    #6E2E35
 merlotFg  #FBF8F5
 select    #2F5D50
 ```
+
+(Mobile: `colors` = linen; dusk via `useCardTheme()` only.)
 
 Negative vibes to avoid: purple gradients, cold fintech blue UI, glossy crypto, inventing a green brand CTA, dark-mode marketing.
